@@ -1,0 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* OpenGym Brand Colors - Bold, flat, saturated like sports gear */
+    --background: 50 100% 97.5%;
+    --foreground: 0 0% 13%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 13%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 13%;
+    
+    /* Primary Blue - Trust, courts, base surfaces */
+    --primary: 216 98% 52%;
+    --primary-foreground: 0 0% 100%;
+    
+    /* Energy Yellow - Momentum, anticipation */
+    --secondary: 48 100% 50%;
+    --secondary-foreground: 0 0% 13%;
+    
+    /* Yellow - Human actions, join/leave */
+    --accent: 42 100% 50%;
+    --accent-foreground: 0 0% 13%;
+    
+    /* Game Green - Success, full games, locked */
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    
+    --muted: 0 0% 85%;
+    --muted-foreground: 0 0% 45%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 92%;
+    --input: 0 0% 95%;
+    --ring: 216 98% 52%;
+    --radius: 1.25rem;
+  }
+
+  .dark {
+    --background: 0 0% 13%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 18%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 18%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 216 98% 60%;
+    --primary-foreground: 0 0% 13%;
+    --secondary: 48 100% 55%;
+    --secondary-foreground: 0 0% 13%;
+    --accent: 42 100% 55%;
+    --accent-foreground: 0 0% 13%;
+    --success: 142 71% 50%;
+    --success-foreground: 0 0% 13%;
+    --muted: 0 0% 30%;
+    --muted-foreground: 0 0% 70%;
+    --destructive: 0 84.2% 65%;
+    --destructive-foreground: 0 0% 13%;
+    --border: 0 0% 25%;
+    --input: 0 0% 20%;
+    --ring: 216 98% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* react-day-picker (shadcn calendar) styles */
+.rdp {
+  --rdp-cell-size: 36px;
+  --rdp-caption-font-size: 14px;
+  --rdp-accent-color: hsl(var(--primary));
+  --rdp-background-color: hsl(var(--primary) / 0.1);
+  margin: 0;
+}
+
+.rdp-button_reset {
+  cursor: pointer;
+}

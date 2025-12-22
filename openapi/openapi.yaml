@@ -1,0 +1,759 @@
+openapi: 3.0.0
+info:
+  title: opengym API
+  version: 1.0.0
+  description: API for opengym
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+paths:
+  /api/auth/{provider}/login:
+    get:
+      summary: Initiate OAuth login with a provider
+      description: Redirects the user to the OAuth provider's authorization page
+      tags:
+        - Authentication
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [google]
+          description: The OAuth provider to use for authentication
+      responses:
+        '302':
+          description: Redirect to provider's OAuth authorization page
+          headers:
+            Location:
+              schema:
+                type: string
+              description: URL to the OAuth provider's authorization page
+        '400':
+          description: Invalid provider specified
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/{provider}/callback:
+    get:
+      summary: OAuth callback endpoint
+      description: Handles the OAuth provider's redirect after user grants or denies authorization
+      tags:
+        - Authentication
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [google]
+          description: The OAuth provider
+        - name: code
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Authorization code returned by the provider on success
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+          description: State parameter for CSRF protection
+        - name: error
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Error code if authorization failed
+        - name: error_description
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Human-readable error description
+      responses:
+        '200':
+          description: Successfully authenticated user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '302':
+          description: Redirect to frontend with token or error
+          headers:
+            Location:
+              schema:
+                type: string
+              description: Frontend URL with token or error in query params
+        '400':
+          description: Invalid request or error from provider
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication failed
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/me:
+    get:
+      summary: Get authenticated user
+      description: Returns the currently authenticated user
+      tags:
+        - Authentication
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Authenticated user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized - invalid or missing token
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/demo/users/{userId}/impersonate:
+    post:
+      summary: Impersonate a demo user
+      description: opengym can be started in demo mode, in which case authentication is replaced with impersonation of a demo user
+      tags:
+        - Demo
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the demo user to impersonate
+      responses:
+        '200':
+          description: Successfully impersonated demo user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '403':
+          description: The back-end was not started in demo mode so this endpoint is disabled.
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/demo/users:
+    get:
+      summary: List demo users
+      description: Returns all demo users
+      tags:
+        - Demo
+      responses:
+        '200':
+          description: List of demo users retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '403':
+          description: The back-end was not started in demo mode so this endpoint is disabled.
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/games:
+    get:
+      summary: List user's games
+      description: Returns all games the authenticated user is either organizing or participating in
+      tags:
+        - Games
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+          description: Page number (1-based) for pagination
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 25
+          description: Number of games per page (max 25)
+      responses:
+        '200':
+          description: List of games retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameListResponse'
+        '401':
+          description: Unauthorized - invalid or missing token
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Create a new game
+      description: Creates a new game. The game is created as a draft and is only visible to the organizer until it is published via the update endpoint.
+      tags:
+        - Games
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGameRequest'
+      responses:
+        '200':
+          description: Game created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameDetail'
+        '400':
+          description: Invalid request data
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - invalid or missing token
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/games/{id}:
+    get:
+      summary: Get a game by ID
+      description: Retrieves a single game by its ID
+      tags:
+        - Games
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The game ID
+      responses:
+        '200':
+          description: Game retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameDetail'
+        '404':
+          description: Game not found
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    patch:
+      summary: Update a game
+      description: Updates an existing game. Only the organizer can update their game. Publishing is irreversible once the publish time has passed. If `publishedAt` is in the future, the organizer may reschedule it or cancel publishing (unset the field) until it becomes effective.
+      tags:
+        - Games
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The game ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateGameRequest'
+      responses:
+        '200':
+          description: Game updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameDetail'
+        '400':
+          description: Invalid request data
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - invalid or missing token
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - not the game organizer
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Game not found
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/games/{id}/participants:
+    get:
+      summary: List game participants
+      description: Returns all participants for the specified game with their computed participation status. The status is computed based on the order participants signed up (going) and the max_players limit.
+      tags:
+        - Games
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The game ID
+      responses:
+        '200':
+          description: List of participants retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ParticipantWithUser'
+        '401':
+          description: Unauthorized - invalid or missing token
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Game not found
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    post:
+      summary: Set participation status
+      description: Creates or updates the authenticated user's participation status for the specified game.
+      tags:
+        - Games
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The game ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateGameParticipationRequest'
+      responses:
+        '200':
+          description: Participation status updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameParticipation'
+        '400':
+          description: Invalid request data
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - invalid or missing token
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Game not found
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  
+  schemas:
+    AuthResponse:
+      type: object
+      required:
+        - token
+        - user
+      properties:
+        token:
+          type: string
+          description: JWT or session token for authenticating subsequent requests
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        refreshToken:
+          type: string
+          description: Optional refresh token for obtaining new access tokens
+        expiresIn:
+          type: integer
+          description: Token expiration time in seconds
+          example: 3600
+        user:
+          $ref: '#/components/schemas/User'
+
+    User:
+      type: object
+      required:
+        - id
+        - email
+        - isDemo
+      properties:
+        id:
+          type: string
+          description: Unique user identifier
+          example: "12345"
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: user@example.com
+        name:
+          type: string
+          description: User's full name
+          example: John Doe
+        picture:
+          type: string
+          format: uri
+          description: URL to user's profile picture
+          example: https://example.com/avatar.jpg
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when user was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp when user was last updated
+        isDemo:
+          type: boolean
+          description: Whether the user is a demo user
+          example: false
+
+    GameFields:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name of the game
+          example: "Sunday Morning Volleyball"
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          description: Description of the game
+          example: "Indoor volleyball - all levels welcome!"
+          maxLength: 1000
+        totalPriceCents:
+          type: integer
+          description: Total price in cents
+          example: 1500
+          format: int64
+        location:
+          type: string
+          description: Location where the game will be held
+          example: "123 Main St, Downtown"
+        startsAt:
+          type: string
+          format: date-time
+          description: When the game starts
+        durationMinutes:
+          type: integer
+          description: Duration of the game in minutes
+          example: 120
+          format: int64
+        maxPlayers:
+          type: integer
+          description: Maximum number of players (must be at least 1)
+          example: 12
+          format: int64
+          minimum: 1
+        maxWaitlistSize:
+          type: integer
+          description: Maximum waitlist size (0 to disable)
+          example: 5
+          format: int64
+          minimum: 0
+        maxGuestsPerPlayer:
+          type: integer
+          description: Maximum guests per player (0 to disable)
+          example: 2
+          format: int64
+          minimum: 0
+        gameSpotsLeft:
+          type: integer
+          description: Number of spots left in the game, excluding the waitlist
+          example: 10
+          format: int64
+          minimum: 0
+        waitlistSpotsLeft:
+          type: integer
+          description: Number of spots left in the waitlist
+          example: 5
+          format: int64
+          minimum: 0
+
+    CreateGameRequest:
+      allOf:
+        - $ref: '#/components/schemas/GameFields'
+        - type: object
+          required:
+            - name
+
+    UpdateGameRequest:
+      allOf:
+        - $ref: '#/components/schemas/GameFields'
+        - type: object
+          properties:
+            publishedAt:
+              type: string
+              format: date-time
+              description: When the game should become publicly visible. Past timestamps publish immediately. While in the future, it can be rescheduled or cleared.
+              nullable: true
+    Game:
+      allOf:
+        - $ref: '#/components/schemas/GameFields'
+        - type: object
+          required:
+            - id
+            - organizerId
+            - createdAt
+            - updatedAt
+            - name
+          properties:
+            id:
+              type: string
+              description: Unique game identifier
+              example: "aBc1"
+            organizerId:
+              type: integer
+              description: ID of the user who organized the game
+              example: 12345
+            publishedAt:
+              type: string
+              format: date-time
+              description: When the game is published (visible to others)
+            createdAt:
+              type: string
+              format: date-time
+              description: Timestamp when game was created
+            updatedAt:
+              type: string
+              format: date-time
+              description: Timestamp when game was last updated
+
+    GameDetail:
+      type: object
+      required:
+        - game
+        - organizer
+      properties:
+        game:
+          $ref: '#/components/schemas/Game'
+          description: The game object
+        organizer:
+          $ref: '#/components/schemas/User'
+          description: User information for the game organizer
+
+    ParticipationStatus:
+      description: Participation status of the authenticated user
+      oneOf:
+        - $ref: '#/components/schemas/ParticipationStatusUpdate'
+        - type: string
+          enum:
+            - waitlisted
+
+    ParticipationStatusUpdate:
+      description: Allowed participation statuses that a user can set directly
+      type: string
+      enum:
+        - going
+        - not_going
+
+    GameParticipation:
+      type: object
+      required:
+        - status
+        - userId
+        - gameId
+      properties:
+        status:
+          $ref: '#/components/schemas/ParticipationStatus'
+        userId:
+          type: string
+          description: Identifier of the participant
+        gameId:
+          type: string
+          description: Identifier of the game
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when the participation record was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the participation record was last updated
+
+    ParticipantWithUser:
+      type: object
+      required:
+        - status
+        - user
+        - guests
+      properties:
+        status:
+          $ref: '#/components/schemas/ParticipationStatus'
+          description: Computed participation status (going, waitlisted, or not_going)
+        guests:
+          type: integer
+          description: Number of guests the participant is bringing
+        user:
+          $ref: '#/components/schemas/User'
+          description: User information for the participant
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when the participation record was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the participation record was last updated
+
+    UpdateGameParticipationRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          $ref: '#/components/schemas/ParticipationStatusUpdate'
+          description: Desired participation status for the authenticated user
+        confirmed:
+          type: boolean
+          description: If the participant has confirmed (can only be set to false by the server when important details are changed on the game)
+          enum: [true]
+        guests:
+          type: integer
+          description: Number of guests the participant is bringing
+
+    GameListItem:
+      type: object
+      required:
+        - id
+        - name
+        - isOrganizer
+        - organizer
+        - updatedAt
+      properties:
+        id:
+          type: string
+          description: Unique game identifier
+          example: "aBc1"
+        name:
+          type: string
+          description: Name of the game
+          example: "Sunday Morning Volleyball"
+        isOrganizer:
+          type: boolean
+          description: Whether the authenticated user is the organizer of this game
+          example: true
+        organizer:
+          $ref: '#/components/schemas/User'
+          description: User information for the game organizer
+        location:
+          type: string
+          description: Location where the game will be held
+          example: "123 Main St, Downtown"
+        startsAt:
+          type: string
+          format: date-time
+          description: When the game starts
+          nullable: true
+        publishedAt:
+          type: string
+          format: date-time
+          description: When the game is published (visible to others)
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp when game was last updated
+
+    Pagination:
+      type: object
+      required:
+        - total
+        - page
+        - pageSize
+      properties:
+        total:
+          type: integer
+          description: Total number of items
+          example: 42
+        page:
+          type: integer
+          description: Current page number (1-based)
+          example: 1
+        pageSize:
+          type: integer
+          description: Number of items per page
+          example: 10
+
+    GameListResponse:
+      allOf:
+        - $ref: '#/components/schemas/Pagination'
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/GameListItem'
+              description: Array of games for the current page
+
+    Error:
+      type: string
+      description: Error message string

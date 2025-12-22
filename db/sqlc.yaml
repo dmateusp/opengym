@@ -1,0 +1,13 @@
+version: "2"
+sql:
+  - engine: "sqlite"
+    queries: "*.sql"
+    schema: "migrations"
+    database:
+      uri: "file:../opengym.db"
+    gen:
+      go:
+        emit_pointers_for_null_types: false
+        package: "db"
+        out: "."
+        emit_interface: true

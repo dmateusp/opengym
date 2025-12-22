@@ -1,0 +1,4 @@
+opengym.db
+opengym_demo.db
+frontend/dist
+node_modules/
