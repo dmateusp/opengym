@@ -1,0 +1,183 @@
+openapi: 3.0.0
+info:
+  title: opengym API
+  version: 1.0.0
+  description: API for opengym
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+paths:
+  /auth/{provider}/login:
+    get:
+      summary: Initiate OAuth login with a provider
+      description: Redirects the user to the OAuth provider's authorization page
+      tags:
+        - Authentication
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [google]
+          description: The OAuth provider to use for authentication
+      responses:
+        '302':
+          description: Redirect to provider's OAuth authorization page
+          headers:
+            Location:
+              schema:
+                type: string
+              description: URL to the OAuth provider's authorization page
+        '400':
+          description: Invalid provider specified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/{provider}/callback:
+    get:
+      summary: OAuth callback endpoint
+      description: Handles the OAuth provider's redirect after user grants or denies authorization
+      tags:
+        - Authentication
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [google]
+          description: The OAuth provider
+        - name: code
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Authorization code returned by the provider on success
+        - name: state
+          in: query
+          required: false
+          schema:
+            type: string
+          description: State parameter for CSRF protection
+        - name: error
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Error code if authorization failed
+        - name: error_description
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Human-readable error description
+      responses:
+        '200':
+          description: Successfully authenticated user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '302':
+          description: Redirect to frontend with token or error
+          headers:
+            Location:
+              schema:
+                type: string
+              description: Frontend URL with token or error in query params
+        '400':
+          description: Invalid request or error from provider
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    AuthResponse:
+      type: object
+      required:
+        - token
+        - user
+      properties:
+        token:
+          type: string
+          description: JWT or session token for authenticating subsequent requests
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        refreshToken:
+          type: string
+          description: Optional refresh token for obtaining new access tokens
+        expiresIn:
+          type: integer
+          description: Token expiration time in seconds
+          example: 3600
+        user:
+          $ref: '#/components/schemas/User'
+
+    User:
+      type: object
+      required:
+        - id
+        - email
+        - provider
+      properties:
+        id:
+          type: string
+          description: Unique user identifier
+          example: "12345"
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: user@example.com
+        name:
+          type: string
+          description: User's full name
+          example: John Doe
+        picture:
+          type: string
+          format: uri
+          description: URL to user's profile picture
+          example: https://example.com/avatar.jpg
+        provider:
+          type: string
+          enum: [google]
+          description: OAuth provider used for authentication
+          example: google
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when user was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp when user was last updated
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error code
+          example: invalid_request
+        message:
+          type: string
+          description: Human-readable error message
+          example: Invalid OAuth provider specified
+        details:
+          type: string
+          description: Additional error details
