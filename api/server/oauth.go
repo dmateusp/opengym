@@ -27,7 +27,7 @@ func (srv *server) GetAuthProviderCallback(w http.ResponseWriter, r *http.Reques
 }
 
 func (srv *server) GetAuthProviderLogin(w http.ResponseWriter, r *http.Request, provider api.GetAuthProviderLoginParamsProvider) {
-	redirectUrl, err := url.JoinPath(*baseUrl, "oauth2", string(provider), "callback")
+	redirectUrl, err := url.JoinPath(*baseUrl, "auth", string(provider), "callback")
 	if err != nil {
 		http.Error(w, fmt.Sprintf("could not construct the callback url: %s", err.Error()), http.StatusInternalServerError)
 		return
@@ -40,8 +40,11 @@ func (srv *server) GetAuthProviderLogin(w http.ResponseWriter, r *http.Request, 
 			ClientID:     *googleClientId,
 			ClientSecret: *googleClientSecret,
 			RedirectURL:  redirectUrl,
-			Scopes:       []string{},
-			Endpoint:     google.Endpoint,
+			Scopes: []string{
+				"https://www.googleapis.com/auth/userinfo.profile",
+				"https://www.googleapis.com/auth/userinfo.email",
+			},
+			Endpoint: google.Endpoint,
 		}
 	default:
 		http.Error(w, fmt.Sprintf("provider %s is not supported", provider), http.StatusBadRequest)
