@@ -2,11 +2,11 @@
 -- +goose StatementBegin
 create table users (
   id integer primary key,
-  name text null,
+  name text,
   email text not null unique,
-  photo text null,
-  created_at datetime default current_timestamp,
-  updated_at datetime default current_timestamp
+  photo text,
+  created_at datetime default current_timestamp not null,
+  updated_at datetime default current_timestamp not null
 );
 -- +goose StatementEnd
 

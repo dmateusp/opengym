@@ -13,12 +13,15 @@ import (
 	"time"
 
 	"github.com/dmateusp/opengym/api"
+	"github.com/dmateusp/opengym/db"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
 	"google.golang.org/api/people/v1"
+
+	_ "modernc.org/sqlite"
 )
 
 var (
@@ -86,6 +89,12 @@ func (srv *server) GetAuthProviderCallback(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	redirectUrl, err := url.JoinPath(*baseUrl, "auth", string(provider), "callback")
+	if err != nil {
+		http.Error(w, fmt.Sprintf("could not construct the callback url: %s", err.Error()), http.StatusInternalServerError)
+		return
+	}
+
 	// State verfication
 	if params.State == nil || *params.State == "" {
 		http.Error(w, "missing oauth state", http.StatusBadRequest)
@@ -129,10 +138,14 @@ func (srv *server) GetAuthProviderCallback(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	var upsertDbUser db.UserUpsertRetuningIdParams
 	switch provider {
 	case api.GetAuthProviderCallbackParamsProviderGoogle:
 		oauthConfig := &oauth2.Config{
-			Endpoint: google.Endpoint,
+			Endpoint:     google.Endpoint,
+			ClientID:     *googleClientId,
+			ClientSecret: *googleClientSecret,
+			RedirectURL:  redirectUrl,
 		}
 
 		token, err := oauthConfig.Exchange(
@@ -152,16 +165,35 @@ func (srv *server) GetAuthProviderCallback(w http.ResponseWriter, r *http.Reques
 			return
 		}
 
-		person, err := peopleService.People.Get("people/me").Do()
+		person, err := peopleService.People.Get("people/me").PersonFields("names,photos,emailAddresses").Do()
 		if err != nil {
 			http.Error(w, fmt.Sprintf("failed to get basic information from Google: %s", err.Error()), http.StatusInternalServerError)
 			return
 		}
 
-		// TODO: store person data as a user in our DB
-		var _ = person
+		if len(person.EmailAddresses) == 0 {
+			http.Error(w, "no email address found", http.StatusBadRequest)
+			return
+		}
+		upsertDbUser.Email = person.EmailAddresses[0].Value
+		if len(person.Names) > 0 {
+			upsertDbUser.Name = &person.Names[0].DisplayName
+		}
+		if len(person.Photos) > 0 {
+			upsertDbUser.Photo = &person.Photos[0].Url
+		}
+
 	default:
 		http.Error(w, fmt.Sprintf("provider %s is not supported", provider), http.StatusBadRequest)
+		return
+	}
+
+	userId, err := srv.querier.UserUpsertRetuningId(
+		r.Context(),
+		upsertDbUser,
+	)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to upsert user: %s", err.Error()), http.StatusInternalServerError)
 		return
 	}
 
@@ -170,12 +202,12 @@ func (srv *server) GetAuthProviderCallback(w http.ResponseWriter, r *http.Reques
 		jwt.SigningMethodHS256,
 		jwt.RegisteredClaims{
 			Issuer:    "opengym",
-			Subject:   "userId", // TODO: replace with actual user ID
+			Subject:   strconv.FormatInt(userId, 10),
 			ExpiresAt: jwt.NewNumericDate(now.Add(4 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(now),
 		},
 	)
-	signedJwt, err := jwtToken.SignedString(signingSecret)
+	signedJwt, err := jwtToken.SignedString([]byte(*signingSecret))
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to sign jwt token: %s", err.Error()), http.StatusInternalServerError)
 		return

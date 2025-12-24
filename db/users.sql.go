@@ -24,9 +24,9 @@ returning id
 `
 
 type UserUpsertRetuningIdParams struct {
-	Name  interface{}
+	Name  *string
 	Email string
-	Photo interface{}
+	Photo *string
 }
 
 func (q *Queries) UserUpsertRetuningId(ctx context.Context, arg UserUpsertRetuningIdParams) (int64, error) {

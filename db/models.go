@@ -5,14 +5,14 @@
 package db
 
 import (
-	"database/sql"
+	"time"
 )
 
 type User struct {
 	ID        int64
-	Name      interface{}
+	Name      *string
 	Email     string
-	Photo     interface{}
-	CreatedAt sql.NullTime
-	UpdatedAt sql.NullTime
+	Photo     *string
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }

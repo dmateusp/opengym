@@ -3,7 +3,11 @@ sql:
   - engine: "sqlite"
     queries: "db/*.sql"
     schema: "db/migrations"
+    database:
+      uri: "file:opengym.db"
     gen:
       go:
+        emit_pointers_for_null_types: true
         package: "db"
         out: "db"
+        emit_interface: true

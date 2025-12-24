@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"flag"
 	"log/slog"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/dmateusp/opengym/api"
 	"github.com/dmateusp/opengym/api/server"
+	"github.com/dmateusp/opengym/db"
 	"github.com/dmateusp/opengym/flagfromenv"
 	"github.com/dmateusp/opengym/log"
 
@@ -18,6 +20,7 @@ import (
 
 var (
 	serverAddr = flag.String("server-addr", ":8080", "server address")
+	dbPath     = flag.String("db-path", "./opengym.db", "database path")
 )
 
 func main() {
@@ -43,7 +46,14 @@ func main() {
 
 	logger.InfoContext(ctx, "Starting opengym server", slog.String("server_addr", *serverAddr))
 
-	err = http.ListenAndServe(*serverAddr, api.HandlerWithOptions(server.NewServer(), api.StdHTTPServerOptions{
+	dbConn, err := sql.Open("sqlite", *dbPath)
+	if err != nil {
+		logger.ErrorContext(ctx, "Failed to open database", "error", err)
+		os.Exit(1)
+	}
+	defer dbConn.Close()
+
+	err = http.ListenAndServe(*serverAddr, api.HandlerWithOptions(server.NewServer(db.New(dbConn)), api.StdHTTPServerOptions{
 		Middlewares: []api.MiddlewareFunc{ // Middleware is executed last to first
 			log.LogRequestsAndResponsesMiddleware(),
 			log.AddLoggerToContextMiddleware(logger), // this is the one that executes first
