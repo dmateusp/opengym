@@ -5,6 +5,8 @@
 * API development is spec-driven. We generate the server code from our openapi spec located in [./openapi](./openapi).
   * Code is generated using `go generate ./...`.
 * The OpenAPI code generator creates an interface called `ServerInterface` which we implement in the various files of our [./api/server](./api/server) package (one file per REST resource).
+* We use `goose` for database migrations (`go tool goose -h`).
+* We use `sqlc` for database code generation (`go tool sqlc generate`), it is configured to work with `goose`.
 
 ### Back-end code style
 
