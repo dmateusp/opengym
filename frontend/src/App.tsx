@@ -1,5 +1,5 @@
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import OAuthLogin from "@/components/auth/OAuthLogin"
 
 function App() {
   return (
@@ -55,24 +55,10 @@ function App() {
         </div>
 
         {/* CTA Section */}
-        <Card className="max-w-2xl mx-auto">
-          <CardHeader>
-            <CardTitle className="text-2xl text-center">Ready to organize your next game?</CardTitle>
-            <CardDescription className="text-center">
-              Join the community of players who've moved beyond WhatsApp polls
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <div className="flex gap-4 justify-center">
-              <Button size="lg" onClick={() => alert('Sign in coming soon!')}>
-                Sign In
-              </Button>
-              <Button size="lg" variant="outline" onClick={() => alert('Learn more coming soon!')}>
-                Learn More
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <OAuthLogin
+          title="Ready to organize your next game?"
+          description="To do this you must be authenticated."
+        />
       </div>
     </div>
   )
