@@ -44,7 +44,7 @@ func (srv *server) GetAuthProviderLogin(w http.ResponseWriter, r *http.Request, 
 			Endpoint:     google.Endpoint,
 		}
 	default:
-		http.Error(w, fmt.Sprintf("provider %s is not supported", provider), http.StatusNotImplemented)
+		http.Error(w, fmt.Sprintf("provider %s is not supported", provider), http.StatusBadRequest)
 		return
 	}
 

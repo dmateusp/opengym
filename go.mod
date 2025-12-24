@@ -9,7 +9,10 @@ require (
 	github.com/oapi-codegen/runtime v1.1.2
 )
 
-require cloud.google.com/go/compute/metadata v0.3.0 // indirect
+require (
+	cloud.google.com/go/compute/metadata v0.3.0 // indirect
+	github.com/lmittmann/tint v1.1.2 // indirect
+)
 
 require (
 	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect

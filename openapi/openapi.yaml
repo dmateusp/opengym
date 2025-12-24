@@ -34,7 +34,7 @@ paths:
         '400':
           description: Invalid provider specified
           content:
-            application/json:
+            text/plain:
               schema:
                 $ref: '#/components/schemas/Error'
 
@@ -93,13 +93,13 @@ paths:
         '400':
           description: Invalid request or error from provider
           content:
-            application/json:
+            text/plain:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
           description: Authentication failed
           content:
-            application/json:
+            text/plain:
               schema:
                 $ref: '#/components/schemas/Error'
 
@@ -163,21 +163,6 @@ components:
           type: string
           format: date-time
           description: Timestamp when user was last updated
-
     Error:
-      type: object
-      required:
-        - error
-        - message
-      properties:
-        error:
-          type: string
-          description: Error code
-          example: invalid_request
-        message:
-          type: string
-          description: Human-readable error message
-          example: Invalid OAuth provider specified
-        details:
-          type: string
-          description: Additional error details
+      type: string
+      description: Error message string

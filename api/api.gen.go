@@ -49,17 +49,8 @@ type AuthResponse struct {
 	User  User   `json:"user"`
 }
 
-// Error defines model for Error.
-type Error struct {
-	// Details Additional error details
-	Details *string `json:"details,omitempty"`
-
-	// Error Error code
-	Error string `json:"error"`
-
-	// Message Human-readable error message
-	Message string `json:"message"`
-}
+// Error Error message string
+type Error = string
 
 // User defines model for User.
 type User struct {
@@ -342,27 +333,26 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"H4sIAAAAAAAC/8xXYW/UOBP+K5bfV+LLstlSQFw+XdU7IBU6UIG7k1CFvPEkMSS2a09alqr//TSO000a",
-	"F6h0SPdpdxN7nplnZp6ZveKl6azRoNHz/Ir7soFOhK9HPTan4K3RHui3dcaCQwXhLXyxyoEvNP2Q4Eun",
-	"LCqjec7fmc+gWTgg6BFD1QFTmnkojZaerzh8EZ1tgeeHTzebFcedBZ5zpRFqcPx6xR1UDnwTTC0RXocv",
-	"omXxGMMAWRnHzBaF0krXTMMlE2UJ3g+vCTcCeXRK14SDaYCTv94x45gH70MAN+ZFjw1oVKVAwvD91sN5",
-	"DxqZo0+Ps+g47E6a7YtSvVYnxfuvxcEfqvCFPn1SHhdPi8/27z+PT35Zr9cpz3oPjhz7v4OK5/x/2T5R",
-	"WcxS9p7OXAe6znvlQPL8QwwpGji7sWy2n6BEsvy7c8YtMyoBhWr9kowjKVXkG+gqG08mvIbR9txEgGSl",
-	"kTCjR+kL0Sr5MXKXMtiB96KGpcmXfSf0QwdCim0L0bPx9BSkGEDYaypoZp25UBIc8xZKVSmQS9RbhA4x",
-	"7V1Jcfo+ZmtOaelAIMgjTDSJ6sCj6Cy7bEAzSha7FJ7FK3zFK+M6gTznUiA8pB5KEt4J1S7Nkz8PPAtv",
-	"mZDSgZ9XJgH+Gn+uS9NNAQebCTAlE0hanfcwBKAk9UalwM2wDh4dPn6SsqdFB3f6XvVty8KJqa0T02j2",
-	"m0lyYVWJvUtZPH3F0AQfH3gqgUq1wMbjU/MNovV5lk2YycSFQOHWn2w9Jal3KulDrK+EaM3rr/cgF5Ji",
-	"qHFB9x3VXW1M3YZy2/sXn6X0wsr71lorPLJ47wcL7lZrKLo3lstN6MsGoXtKVyYhLm+KQbct6HpHZYgK",
-	"Q6jxCTt6U/AVvwDnhxsH6816QxHTAWEVz/lheLTiVmATGi8jUrOr0aPrrBRtuxXlZ3pZQ4Kjl0LLFjzD",
-	"Bm4pxQPPHEjloEQmKhxS51jthEbPghxqBT7k0Tj1dUwjCUH4Xkie8xeAZPVNNHo8+kNOO9EBgvM8/7BI",
-	"3cIdTkzyPMTKxxbik7f7/KDrYRVHepjZi8JaZHeRnmlQQcCZA+ydBsm2u8DWTUUbzXwfBu7o43kPbrd3",
-	"Mur/3qHvwr9FgcBuGAqVcvz29DmBIpSR6RSWp5v3A9sPKaaqeTpZJVQbmiSFNQ6Ie2Alp9f0yDeQPs7P",
-	"3Y16RsUwLHChKx5tNmEqGY2gQw8Ia9soPNknb/R+Bfze6jHbDkN/38rcUAkk4rupxIEM7UP9e7h5tOzD",
-	"07HV0LDKBU8lu1Q47njGsZHuBoQMXXPFX5mongt7z0cbNAMSdmgvDSQPVea/SSiF+fhfJHHYxBLsjTtL",
-	"XIz23lbOdHspCO4c/Hx3jmYjamwGOuf7rhNudzPeRp1loKU1SoedTtQkbbes8DO6vxDq1tRK36nSY3UM",
-	"Oh10GE1as+f9a4et8Jua/CpA31uQ42aRnuU/T6pvN/d3u2nCzRBAkqEfaqq4T/047/+hlkr8AZgXcqEV",
-	"Kho7Q2ihIAflENMhfHdVkzVwF+n6IVJbJuECWmM7+uM4nKU/bK6NG2ieZS2da4zH/Nnm2YZfn13/EwAA",
-	"//+4ekckqw8AAA==",
+	"H4sIAAAAAAAC/8xX0U/cuBP+Vyz/flJftpultFUvT4e4axuEDkTL3UkVOnnjSWJIbGNPFraI//00TrKb",
+	"JabAQ6V72iS2Z76Z+eYb7x3PTWONBo2ep3fc5xU0IjwetFidgbdGe6B364wFhwrCKtxa5cBnml4k+Nwp",
+	"i8ponvKv5go0CxsEfWKoGmBKMw+50dLzGYdb0dgaeLr/frGYcVxb4ClXGqEEx+9n3EHhwFfB1NTDSXgQ",
+	"Neu3MQwuC+OYWaJQWumSabhhIs/B+26Z/PaOPDqlS/KDcQdHf31lxjEP3ocANuZFixVoVLlA8uHbpYfr",
+	"FjQyR78ed6LjsD6qlp9ydaKOsvPv2d4fKvOZPnuXH2bvsyv795+HR7/M5/MYstaDI2D/d1DwlP8v2RYq",
+	"6auUnNOe+5Cu61Y5kDz91ofUG7jYWDbLS8iRLP/unHHTmMNn1oD3ogTWA4kAO++B7fIhdyAQ5AFG+KAa",
+	"8Cgay24q0IxwsRvhWX+Ez3hhXCOQp1wKhNdEl5hjaISqp+YJzyvPwioTUjrwu0Ugh7/2r/PcNGOHnc2I",
+	"MyUjnrS6bqELQEmiQaHA7fjae7P/9l3MnhYNPIq9aOuahR1jW0em0uw3E82FVTm2Lmbx7JihCRhfeWad",
+	"KVQNbNg+Nl8hWp8mySgziVgJFG5+actxklqnohicWSkJESqdkHawYZ3AyEn3GOIo6LYhzpbGlDUQW7f4",
+	"+m+x1rDypVyrhUfWn3sm4R60laJzA102oU/7i84pXZgptoPTrJMoC7pcEw1RYQi1/8IOTjM+4ytwvjux",
+	"N1/MFxQxbRBW8ZTvh08zbgVWofESSmpyNyC6T3JR10uRX9FiCZEcfRZa1uAZVsB2K/XKMwdSOciRiQK7",
+	"0jlWOqHRkyBK0Ap8qKNx6vtQRhKC8JxJnvJPgGT1tDd6OOAh0E40gOA8T79NSjeBwymTPA2x8qGF+Gh1",
+	"Wx90Lcz66RXG04RYk+pOyjMOiuVGAnOArdMg2XIdsrVhtNHMt2G2DBivW3DrLUg6zseAnnT/BQUC22Qo",
+	"MOXwy9lHcoqQ95mO+fJ08mXOOq0PMapit5ysEKoOTRLzBWF2vMjX57YR+rUDIcWyBhYssPGWH3j6Z3ff",
+	"414viAzdXSV0xZvFIkwloxF06AFhbd0LT3Lpjd7edp6asjsXodDfDyrXMYFEfD2WOJChfah/9xdvpn14",
+	"NrQaGla4gFSyG4XDdcY4NqS7AiFD19zxY9Or58Tex8EGzYCIHbqChSR3LPM/TCiF+XaSRIRbTGwt1AvS",
+	"1103InnL9ErUSg43py3OwplmKwIByN7PBHKwM5aGBqB9vm0a4dabkTZoKwMtrVEaScRFSXL2wAq/oPMT",
+	"ca5N2UGOKvPAiE6bg/aiiev0bs9aUcJTOnwcXL9YhPvbRHx+/zx5ftjQT3bQKDddANEMPauR+jvU8/P+",
+	"n2ijTcG8hZxupg8pnGmFioZMF1SgYqcTYjxyH+czWQO3ijOH0lkzCSuojW3oH1G3l/6JuLq/b6ZJUtO+",
+	"ynhMPyw+LPj9xf2/AQAA//+7qWiKhA4AAA==",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file
