@@ -16,3 +16,4 @@
 * We use pnpm, React, TypeScript, Vite, Tailwind and Shadcn.
 * We generate the client code from the OpenAPI spec using `pnpm run openapi-ts`. The generated code is located in [frontend/src/opengym/client](./frontend/src/opengym/client).
 * We import ui components from Shadcn using the CLI e.g. `pnpm dlx shadcn@latest add button card --overwrite --yes`.
+* We use Ladle for component development (`pnpm ladle serve`).
