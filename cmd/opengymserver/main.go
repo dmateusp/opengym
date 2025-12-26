@@ -12,6 +12,7 @@ import (
 	"github.com/dmateusp/opengym/api"
 	"github.com/dmateusp/opengym/api/server"
 	"github.com/dmateusp/opengym/auth"
+	"github.com/dmateusp/opengym/cors"
 	"github.com/dmateusp/opengym/db"
 	"github.com/dmateusp/opengym/flagfromenv"
 	"github.com/dmateusp/opengym/log"
@@ -59,13 +60,19 @@ func main() {
 	}
 	defer dbConn.Close()
 
-	err = http.ListenAndServe(*serverAddr, api.HandlerWithOptions(server.NewServer(db.New(dbConn), server.NewRandomAlphanumericGenerator()), api.StdHTTPServerOptions{
+	// Create the API handler with auth and logging middleware
+	apiHandler := api.HandlerWithOptions(server.NewServer(db.New(dbConn), server.NewRandomAlphanumericGenerator()), api.StdHTTPServerOptions{
 		Middlewares: []api.MiddlewareFunc{ // Middleware is executed last to first
 			auth.AuthMiddleware,
 			log.LogRequestsAndResponsesMiddleware,
-			log.AddLoggerToContextMiddleware(logger), // this is the one that executes first
+			log.AddLoggerToContextMiddleware(logger),
 		},
-	}))
+	})
+
+	// Wrap entire handler with CORS middleware to handle OPTIONS before routing
+	handler := cors.CORSMiddleware(apiHandler)
+
+	err = http.ListenAndServe(*serverAddr, handler)
 	if err != nil {
 		logger.ErrorContext(ctx, "Failed to start server", "error", err)
 		os.Exit(1)
