@@ -15,6 +15,7 @@ import (
 	"github.com/dmateusp/opengym/auth"
 	"github.com/dmateusp/opengym/db"
 	dbtesting "github.com/dmateusp/opengym/db/testing"
+	"github.com/dmateusp/opengym/ptr"
 )
 
 func TestPostApiGames_Success(t *testing.T) {
@@ -28,14 +29,14 @@ func TestPostApiGames_Success(t *testing.T) {
 	now := time.Now()
 	req := api.CreateGameRequest{
 		Name:               "Sunday Morning Volleyball",
-		Description:        stringPtr("Indoor volleyball - all levels welcome!"),
-		TotalPriceCents:    intPtr(1500),
-		Location:           stringPtr("123 Main St, Downtown"),
+		Description:        ptr.Ptr("Indoor volleyball - all levels welcome!"),
+		TotalPriceCents:    ptr.Ptr(int64(1500)),
+		Location:           ptr.Ptr("123 Main St, Downtown"),
 		StartsAt:           &now,
-		DurationMinutes:    intPtr(120),
-		MaxPlayers:         intPtr(12),
-		MaxWaitlistSize:    intPtr(5),
-		MaxGuestsPerPlayer: intPtr(2),
+		DurationMinutes:    ptr.Ptr(int64(120)),
+		MaxPlayers:         ptr.Ptr(int64(12)),
+		MaxWaitlistSize:    ptr.Ptr(int64(5)),
+		MaxGuestsPerPlayer: ptr.Ptr(int64(2)),
 	}
 
 	body, _ := json.Marshal(req)
@@ -276,7 +277,7 @@ func TestPatchApiGamesId_Unauthorized(t *testing.T) {
 	srv := server.NewServer(querier)
 
 	req := api.UpdateGameRequest{
-		Name: stringPtr("Test"),
+		Name: ptr.Ptr("Test"),
 	}
 	body, _ := json.Marshal(req)
 	r := httptest.NewRequest(http.MethodPatch, "/api/games/abc1", bytes.NewReader(body))
@@ -299,7 +300,7 @@ func TestPatchApiGamesId_NotFound(t *testing.T) {
 	srv := server.NewServer(querier)
 
 	req := api.UpdateGameRequest{
-		Name: stringPtr("Test"),
+		Name: ptr.Ptr("Test"),
 	}
 	body, _ := json.Marshal(req)
 	r := httptest.NewRequest(http.MethodPatch, "/api/games/notfound", bytes.NewReader(body))
@@ -344,7 +345,7 @@ func TestPatchApiGamesId_Forbidden(t *testing.T) {
 
 	// Try to update as different user
 	req := api.UpdateGameRequest{
-		Name: stringPtr("Hacked Name"),
+		Name: ptr.Ptr("Hacked Name"),
 	}
 	body, _ = json.Marshal(req)
 	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+gameID, bytes.NewReader(body))
@@ -390,16 +391,4 @@ func TestPatchApiGamesId_InvalidRequestBody(t *testing.T) {
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("Expected status %d, got %d", http.StatusBadRequest, w.Code)
 	}
-}
-
-// TestPatchApiGamesId_DatabaseErrorOnUpdate and TestPatchApiGamesId_DatabaseErrorOnRetrieve
-// are skipped when using real database. Database errors are better tested through integration tests.
-
-// Helper functions
-func stringPtr(s string) *string {
-	return &s
-}
-
-func intPtr(i int) *int {
-	return &i
 }
