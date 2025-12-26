@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"math/rand"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/dmateusp/opengym/api"
@@ -14,19 +14,11 @@ import (
 	"github.com/dmateusp/opengym/db"
 )
 
-const gameIDChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-
 var (
 	gameIDLength = flag.Int("game.id-length", 4, "Length of the game ID, keep it short for easier sharing, but not too short to avoid collisions. 4 = 62^4 possibilities.")
 )
 
-func generateGameID() string {
-	b := make([]byte, *gameIDLength)
-	for i := range b {
-		b[i] = gameIDChars[rand.Intn(len(gameIDChars))]
-	}
-	return string(b)
-}
+const maxGameIDAttempts = 3
 
 func (srv *server) PostApiGames(w http.ResponseWriter, r *http.Request) {
 	authInfo, ok := auth.FromCtx(r.Context())
@@ -41,51 +33,67 @@ func (srv *server) PostApiGames(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	gameID := generateGameID()
+	var game db.Game
+	var err error
 
-	params := db.GameCreateParams{
-		ID:          gameID,
-		OrganizerID: int64(authInfo.UserId),
-		Name:        req.Name,
-	}
+	// Try up to maxGameIDAttempts times to create a game with a unique ID
+	for attempt := range maxGameIDAttempts {
+		gameID := srv.randomAlphanumericGenerator.Generate(*gameIDLength)
 
-	if req.Description != nil {
-		params.Description.String = *req.Description
-		params.Description.Valid = true
-	}
+		params := db.GameCreateParams{
+			ID:          gameID,
+			OrganizerID: int64(authInfo.UserId),
+			Name:        req.Name,
+		}
 
-	if req.TotalPriceCents != nil {
-		params.TotalPriceCents = int64(*req.TotalPriceCents)
-	}
+		if req.Description != nil {
+			params.Description.String = *req.Description
+			params.Description.Valid = true
+		}
 
-	if req.Location != nil {
-		params.Location.String = *req.Location
-		params.Location.Valid = true
-	}
+		if req.TotalPriceCents != nil {
+			params.TotalPriceCents = int64(*req.TotalPriceCents)
+		}
 
-	if req.StartsAt != nil {
-		params.StartsAt.Time = *req.StartsAt
-		params.StartsAt.Valid = true
-	}
+		if req.Location != nil {
+			params.Location.String = *req.Location
+			params.Location.Valid = true
+		}
 
-	if req.DurationMinutes != nil {
-		params.DurationMinutes = int64(*req.DurationMinutes)
-	}
+		if req.StartsAt != nil {
+			params.StartsAt.Time = *req.StartsAt
+			params.StartsAt.Valid = true
+		}
 
-	if req.MaxPlayers != nil {
-		params.MaxPlayers = int64(*req.MaxPlayers)
-	}
+		if req.DurationMinutes != nil {
+			params.DurationMinutes = int64(*req.DurationMinutes)
+		}
 
-	if req.MaxGuestsPerPlayer != nil {
-		params.MaxGuestsPerPlayer = int64(*req.MaxGuestsPerPlayer)
-	}
+		if req.MaxPlayers != nil {
+			params.MaxPlayers = int64(*req.MaxPlayers)
+		}
 
-	if req.MaxWaitlistSize != nil {
-		params.MaxWaitlistSize = int64(*req.MaxWaitlistSize)
-	}
+		if req.MaxGuestsPerPlayer != nil {
+			params.MaxGuestsPerPlayer = int64(*req.MaxGuestsPerPlayer)
+		}
 
-	game, err := srv.querier.GameCreate(r.Context(), params)
-	if err != nil {
+		if req.MaxWaitlistSize != nil {
+			params.MaxWaitlistSize = int64(*req.MaxWaitlistSize)
+		}
+
+		game, err = srv.querier.GameCreate(r.Context(), params)
+		if err == nil {
+			// Successfully created, break out of retry loop
+			break
+		}
+
+		// Check if this is a constraint violation (duplicate ID)
+		if attempt < maxGameIDAttempts-1 && isConstraintError(err) {
+			// Try again with a new ID
+			continue
+		}
+
+		// For other errors or last attempt, return error
 		http.Error(w, fmt.Sprintf("failed to create game: %s", err.Error()), http.StatusInternalServerError)
 		return
 	}
@@ -99,6 +107,13 @@ func (srv *server) PostApiGames(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("failed to encode response: %s", err.Error()), http.StatusInternalServerError)
 		return
 	}
+}
+
+func isConstraintError(err error) bool {
+	if err == nil {
+		return false
+	}
+	return strings.Contains(err.Error(), "UNIQUE constraint failed: games.id")
 }
 
 func (srv *server) PatchApiGamesId(w http.ResponseWriter, r *http.Request, id string) {

@@ -12,12 +12,14 @@ var (
 )
 
 type server struct {
-	querier db.Querier
+	querier                     db.Querier
+	randomAlphanumericGenerator RandomAlphanumericGenerator
 }
 
-func NewServer(querier db.Querier) *server {
+func NewServer(querier db.Querier, randomAlphanumericGenerator RandomAlphanumericGenerator) *server {
 	return &server{
-		querier: querier,
+		querier:                     querier,
+		randomAlphanumericGenerator: randomAlphanumericGenerator,
 	}
 }
 

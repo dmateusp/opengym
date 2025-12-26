@@ -59,7 +59,7 @@ func main() {
 	}
 	defer dbConn.Close()
 
-	err = http.ListenAndServe(*serverAddr, api.HandlerWithOptions(server.NewServer(db.New(dbConn)), api.StdHTTPServerOptions{
+	err = http.ListenAndServe(*serverAddr, api.HandlerWithOptions(server.NewServer(db.New(dbConn), server.NewRandomAlphanumericGenerator()), api.StdHTTPServerOptions{
 		Middlewares: []api.MiddlewareFunc{ // Middleware is executed last to first
 			auth.AuthMiddleware,
 			log.LogRequestsAndResponsesMiddleware,

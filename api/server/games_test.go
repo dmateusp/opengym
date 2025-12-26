@@ -2,6 +2,7 @@ package server_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/dmateusp/opengym/api"
 	"github.com/dmateusp/opengym/api/server"
+	servertesting "github.com/dmateusp/opengym/api/server/testing"
 	"github.com/dmateusp/opengym/auth"
 	"github.com/dmateusp/opengym/db"
 	dbtesting "github.com/dmateusp/opengym/db/testing"
@@ -24,7 +26,7 @@ func TestPostApiGames_Success(t *testing.T) {
 
 	testUserID := dbtesting.CreateTestUser(t, sqlDB)
 	querier := db.New(sqlDB)
-	srv := server.NewServer(querier)
+	srv := server.NewServer(querier, server.NewRandomAlphanumericGenerator())
 
 	now := time.Now()
 	req := api.CreateGameRequest{
@@ -87,7 +89,7 @@ func TestPostApiGames_MinimalRequest(t *testing.T) {
 
 	testUserID := dbtesting.CreateTestUser(t, sqlDB)
 	querier := db.New(sqlDB)
-	srv := server.NewServer(querier)
+	srv := server.NewServer(querier, server.NewRandomAlphanumericGenerator())
 
 	// Only required field per OpenAPI spec
 	req := api.CreateGameRequest{
@@ -120,7 +122,7 @@ func TestPostApiGames_Unauthorized(t *testing.T) {
 	defer sqlDB.Close()
 
 	querier := db.New(sqlDB)
-	srv := server.NewServer(querier)
+	srv := server.NewServer(querier, server.NewRandomAlphanumericGenerator())
 
 	req := api.CreateGameRequest{
 		Name: "Test Game",
@@ -143,7 +145,7 @@ func TestPostApiGames_InvalidRequestBody(t *testing.T) {
 
 	testUserID := dbtesting.CreateTestUser(t, sqlDB)
 	querier := db.New(sqlDB)
-	srv := server.NewServer(querier)
+	srv := server.NewServer(querier, server.NewRandomAlphanumericGenerator())
 
 	r := httptest.NewRequest(http.MethodPost, "/api/games", bytes.NewReader([]byte("invalid json")))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(testUserID)}))
@@ -156,6 +158,56 @@ func TestPostApiGames_InvalidRequestBody(t *testing.T) {
 	}
 }
 
+func TestPostApiGames_IDClashRetry(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+
+	testUserID := dbtesting.CreateTestUser(t, sqlDB)
+	querier := db.New(sqlDB)
+
+	srv := server.NewServer(querier, servertesting.NewTestAlphanumericGenerator("foo", "bar"))
+
+	// Pre-populate the database with a game that has ID "test"
+	// to demonstrate that the retry logic works
+	params := db.GameCreateParams{
+		ID:          "foo",
+		OrganizerID: int64(testUserID),
+		Name:        "Existing Game",
+	}
+	_, err := querier.GameCreate(context.Background(), params)
+	if err != nil {
+		t.Fatalf("Failed to pre-populate game: %v", err)
+	}
+
+	req := api.CreateGameRequest{
+		Name: "New Game",
+	}
+
+	body, _ := json.Marshal(req)
+	r := httptest.NewRequest(http.MethodPost, "/api/games", bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(testUserID)}))
+	w := httptest.NewRecorder()
+
+	srv.PostApiGames(w, r)
+
+	if w.Code != http.StatusCreated {
+		t.Errorf("Expected status %d, got %d. Body: %s", http.StatusCreated, w.Code, w.Body.String())
+	}
+
+	var response api.Game
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	if response.Id == "" {
+		t.Error("Expected id to be set")
+	}
+
+	if response.Id != "bar" {
+		t.Error("Expected id to be 'bar'")
+	}
+}
+
 // TestPostApiGames_DatabaseError is skipped when using real database
 // Database errors are better tested through integration tests
 
@@ -165,7 +217,7 @@ func TestPatchApiGamesId_Success(t *testing.T) {
 
 	testUserID := dbtesting.CreateTestUser(t, sqlDB)
 	querier := db.New(sqlDB)
-	srv := server.NewServer(querier)
+	srv := server.NewServer(querier, server.NewRandomAlphanumericGenerator())
 
 	// Create a game first
 	createReq := api.CreateGameRequest{
@@ -226,7 +278,7 @@ func TestPatchApiGamesId_PartialUpdate(t *testing.T) {
 
 	testUserID := dbtesting.CreateTestUser(t, sqlDB)
 	querier := db.New(sqlDB)
-	srv := server.NewServer(querier)
+	srv := server.NewServer(querier, server.NewRandomAlphanumericGenerator())
 
 	// Create a game first
 	createReq := api.CreateGameRequest{
@@ -274,7 +326,7 @@ func TestPatchApiGamesId_Unauthorized(t *testing.T) {
 	defer sqlDB.Close()
 
 	querier := db.New(sqlDB)
-	srv := server.NewServer(querier)
+	srv := server.NewServer(querier, server.NewRandomAlphanumericGenerator())
 
 	req := api.UpdateGameRequest{
 		Name: ptr.Ptr("Test"),
@@ -297,7 +349,7 @@ func TestPatchApiGamesId_NotFound(t *testing.T) {
 
 	testUserID := dbtesting.CreateTestUser(t, sqlDB)
 	querier := db.New(sqlDB)
-	srv := server.NewServer(querier)
+	srv := server.NewServer(querier, server.NewRandomAlphanumericGenerator())
 
 	req := api.UpdateGameRequest{
 		Name: ptr.Ptr("Test"),
@@ -321,7 +373,7 @@ func TestPatchApiGamesId_Forbidden(t *testing.T) {
 	// Create organizer user and their game
 	organizerID := dbtesting.CreateTestUser(t, sqlDB)
 	querier := db.New(sqlDB)
-	srv := server.NewServer(querier)
+	srv := server.NewServer(querier, server.NewRandomAlphanumericGenerator())
 
 	createReq := api.CreateGameRequest{
 		Name: "Test Game",
@@ -365,7 +417,7 @@ func TestPatchApiGamesId_InvalidRequestBody(t *testing.T) {
 
 	testUserID := dbtesting.CreateTestUser(t, sqlDB)
 	querier := db.New(sqlDB)
-	srv := server.NewServer(querier)
+	srv := server.NewServer(querier, server.NewRandomAlphanumericGenerator())
 
 	// Create a game first
 	createReq := api.CreateGameRequest{
