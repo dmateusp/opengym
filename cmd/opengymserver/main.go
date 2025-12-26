@@ -11,6 +11,7 @@ import (
 
 	"github.com/dmateusp/opengym/api"
 	"github.com/dmateusp/opengym/api/server"
+	"github.com/dmateusp/opengym/auth"
 	"github.com/dmateusp/opengym/db"
 	"github.com/dmateusp/opengym/flagfromenv"
 	"github.com/dmateusp/opengym/log"
@@ -38,6 +39,11 @@ func main() {
 
 	flag.Parse()
 
+	if auth.GetSigningSecret() == "" {
+		logger.ErrorContext(ctx, "Please set a signing secret with the flag -auth.signing-secret, using the output of `openssl rand -hex 32` for example (save it somewhere)")
+		os.Exit(1)
+	}
+
 	err := flagfromenv.Parse("OPENGYM")
 	if err != nil {
 		logger.ErrorContext(ctx, "Failed to parse flags from environment", "error", err)
@@ -55,7 +61,8 @@ func main() {
 
 	err = http.ListenAndServe(*serverAddr, api.HandlerWithOptions(server.NewServer(db.New(dbConn)), api.StdHTTPServerOptions{
 		Middlewares: []api.MiddlewareFunc{ // Middleware is executed last to first
-			log.LogRequestsAndResponsesMiddleware(),
+			auth.AuthMiddleware,
+			log.LogRequestsAndResponsesMiddleware,
 			log.AddLoggerToContextMiddleware(logger), // this is the one that executes first
 		},
 	}))

@@ -8,3 +8,4 @@ output: api.gen.go
 output-options:
   skip-prune: true
   skip-fmt: false
+  nullable-type: true

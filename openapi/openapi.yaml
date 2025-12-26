@@ -9,7 +9,7 @@ servers:
     description: Local development server
 
 paths:
-  /auth/{provider}/login:
+  /api/auth/{provider}/login:
     get:
       summary: Initiate OAuth login with a provider
       description: Redirects the user to the OAuth provider's authorization page
@@ -38,7 +38,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /auth/{provider}/callback:
+  /api/auth/{provider}/callback:
     get:
       summary: OAuth callback endpoint
       description: Handles the OAuth provider's redirect after user grants or denies authorization
@@ -103,7 +103,100 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /api/games:
+    post:
+      summary: Create a new game
+      description: Creates a new game. The game is only visible to the organizer initially unless publish is set to true.
+      tags:
+        - Games
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGameRequest'
+      responses:
+        '201':
+          description: Game created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Game'
+        '400':
+          description: Invalid request data
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - invalid or missing token
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/games/{id}:
+    patch:
+      summary: Update a game
+      description: Updates an existing game. Only the organizer can update their game.
+      tags:
+        - Games
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The game ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateGameRequest'
+      responses:
+        '200':
+          description: Game updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Game'
+        '400':
+          description: Invalid request data
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - invalid or missing token
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - not the game organizer
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Game not found
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  
   schemas:
     AuthResponse:
       type: object
@@ -163,6 +256,164 @@ components:
           type: string
           format: date-time
           description: Timestamp when user was last updated
+
+    CreateGameRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: Name of the game
+          example: "Sunday Morning Volleyball"
+        description:
+          type: string
+          description: Description of the game
+          example: "Indoor volleyball - all levels welcome!"
+        totalPriceCents:
+          type: integer
+          description: Total price in cents
+          example: 1500
+        location:
+          type: string
+          description: Location where the game will be held
+          example: "123 Main St, Downtown"
+        startsAt:
+          type: string
+          format: date-time
+          description: When the game starts
+        durationMinutes:
+          type: integer
+          description: Duration of the game in minutes
+          example: 120
+        maxPlayers:
+          type: integer
+          description: Maximum number of players (-1 for unlimited)
+          example: 12
+        maxWaitlistSize:
+          type: integer
+          description: Maximum waitlist size (0 to disable, -1 for unlimited)
+          example: 5
+        maxGuestsPerPlayer:
+          type: integer
+          description: Maximum guests per player (0 to disable, -1 for unlimited)
+          example: 2
+
+    UpdateGameRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name of the game
+          example: "Sunday Morning Volleyball"
+        description:
+          type: string
+          description: Description of the game
+          example: "Beach volleyball - all levels welcome!"
+        publish:
+          type: boolean
+          description: Whether to make the game publicly visible
+          example: true
+        totalPriceCents:
+          type: integer
+          description: Total price in cents
+          example: 1500
+        location:
+          type: string
+          description: Location where the game will be held
+          example: "Beach Volleyball Courts, Santa Monica"
+        startsAt:
+          type: string
+          format: date-time
+          description: When the game starts
+        durationMinutes:
+          type: integer
+          description: Duration of the game in minutes
+          example: 120
+        maxPlayers:
+          type: integer
+          description: Maximum number of players (-1 for unlimited)
+          example: 12
+        maxWaitlistSize:
+          type: integer
+          description: Maximum waitlist size (0 to disable, -1 for unlimited)
+          example: 5
+        maxGuestsPerPlayer:
+          type: integer
+          description: Maximum guests per player (0 to disable, -1 for unlimited)
+          example: 2
+
+    Game:
+      type: object
+      required:
+        - id
+        - organizerId
+        - name
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          description: Unique game identifier
+          example: "aBc1"
+        organizerId:
+          type: integer
+          description: ID of the user who organized the game
+          example: 12345
+        name:
+          type: string
+          description: Name of the game
+          example: "Friday Evening Volleyball"
+        description:
+          type: string
+          description: Description of the game
+          example: "Indoor volleyball tournament - intermediate level"
+        publishedAt:
+          type: string
+          format: date-time
+          description: When the game is published (visible to others)
+        totalPriceCents:
+          type: integer
+          description: Total price in cents
+          example: 2000
+          format: int64
+        location:
+          type: string
+          description: Location where the game will be held
+          example: "Indoor Volleyball Arena, Downtown"
+        startsAt:
+          type: string
+          format: date-time
+          description: When the game starts
+        durationMinutes:
+          type: integer
+          description: Duration of the game in minutes
+          example: 120
+          format: int64
+        maxPlayers:
+          type: integer
+          description: Maximum number of players (-1 for unlimited)
+          example: 12
+          format: int64
+        maxWaitlistSize:
+          type: integer
+          description: Maximum waitlist size (0 to disable, -1 for unlimited)
+          example: 5
+          format: int64
+        maxGuestsPerPlayer:
+          type: integer
+          description: Maximum guests per player (0 to disable, -1 for unlimited)
+          example: 2
+          format: int64
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when game was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp when game was last updated
+
     Error:
       type: string
       description: Error message string

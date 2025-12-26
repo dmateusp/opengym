@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 )
 
 const userUpsertRetuningId = `-- name: UserUpsertRetuningId :one
@@ -24,9 +25,9 @@ returning id
 `
 
 type UserUpsertRetuningIdParams struct {
-	Name  *string
+	Name  sql.NullString
 	Email string
-	Photo *string
+	Photo sql.NullString
 }
 
 func (q *Queries) UserUpsertRetuningId(ctx context.Context, arg UserUpsertRetuningIdParams) (int64, error) {

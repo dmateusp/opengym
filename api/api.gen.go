@@ -8,6 +8,7 @@ package api
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"encoding/base64"
 	"fmt"
 	"net/http"
@@ -21,19 +22,23 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+const (
+	BearerAuthScopes = "bearerAuth.Scopes"
+)
+
 // Defines values for UserProvider.
 const (
 	UserProviderGoogle UserProvider = "google"
 )
 
-// Defines values for GetAuthProviderCallbackParamsProvider.
+// Defines values for GetApiAuthProviderCallbackParamsProvider.
 const (
-	GetAuthProviderCallbackParamsProviderGoogle GetAuthProviderCallbackParamsProvider = "google"
+	GetApiAuthProviderCallbackParamsProviderGoogle GetApiAuthProviderCallbackParamsProvider = "google"
 )
 
-// Defines values for GetAuthProviderLoginParamsProvider.
+// Defines values for GetApiAuthProviderLoginParamsProvider.
 const (
-	Google GetAuthProviderLoginParamsProvider = "google"
+	Google GetApiAuthProviderLoginParamsProvider = "google"
 )
 
 // AuthResponse defines model for AuthResponse.
@@ -49,8 +54,116 @@ type AuthResponse struct {
 	User  User   `json:"user"`
 }
 
+// CreateGameRequest defines model for CreateGameRequest.
+type CreateGameRequest struct {
+	// Description Description of the game
+	Description *string `json:"description,omitempty"`
+
+	// DurationMinutes Duration of the game in minutes
+	DurationMinutes *int `json:"durationMinutes,omitempty"`
+
+	// Location Location where the game will be held
+	Location *string `json:"location,omitempty"`
+
+	// MaxGuestsPerPlayer Maximum guests per player (0 to disable, -1 for unlimited)
+	MaxGuestsPerPlayer *int `json:"maxGuestsPerPlayer,omitempty"`
+
+	// MaxPlayers Maximum number of players (-1 for unlimited)
+	MaxPlayers *int `json:"maxPlayers,omitempty"`
+
+	// MaxWaitlistSize Maximum waitlist size (0 to disable, -1 for unlimited)
+	MaxWaitlistSize *int `json:"maxWaitlistSize,omitempty"`
+
+	// Name Name of the game
+	Name string `json:"name"`
+
+	// StartsAt When the game starts
+	StartsAt *time.Time `json:"startsAt,omitempty"`
+
+	// TotalPriceCents Total price in cents
+	TotalPriceCents *int `json:"totalPriceCents,omitempty"`
+}
+
 // Error Error message string
 type Error = string
+
+// Game defines model for Game.
+type Game struct {
+	// CreatedAt Timestamp when game was created
+	CreatedAt time.Time `json:"createdAt"`
+
+	// Description Description of the game
+	Description *string `json:"description,omitempty"`
+
+	// DurationMinutes Duration of the game in minutes
+	DurationMinutes *int64 `json:"durationMinutes,omitempty"`
+
+	// Id Unique game identifier
+	Id string `json:"id"`
+
+	// Location Location where the game will be held
+	Location *string `json:"location,omitempty"`
+
+	// MaxGuestsPerPlayer Maximum guests per player (0 to disable, -1 for unlimited)
+	MaxGuestsPerPlayer *int64 `json:"maxGuestsPerPlayer,omitempty"`
+
+	// MaxPlayers Maximum number of players (-1 for unlimited)
+	MaxPlayers *int64 `json:"maxPlayers,omitempty"`
+
+	// MaxWaitlistSize Maximum waitlist size (0 to disable, -1 for unlimited)
+	MaxWaitlistSize *int64 `json:"maxWaitlistSize,omitempty"`
+
+	// Name Name of the game
+	Name string `json:"name"`
+
+	// OrganizerId ID of the user who organized the game
+	OrganizerId int `json:"organizerId"`
+
+	// PublishedAt When the game is published (visible to others)
+	PublishedAt *time.Time `json:"publishedAt,omitempty"`
+
+	// StartsAt When the game starts
+	StartsAt *time.Time `json:"startsAt,omitempty"`
+
+	// TotalPriceCents Total price in cents
+	TotalPriceCents *int64 `json:"totalPriceCents,omitempty"`
+
+	// UpdatedAt Timestamp when game was last updated
+	UpdatedAt time.Time `json:"updatedAt"`
+}
+
+// UpdateGameRequest defines model for UpdateGameRequest.
+type UpdateGameRequest struct {
+	// Description Description of the game
+	Description *string `json:"description,omitempty"`
+
+	// DurationMinutes Duration of the game in minutes
+	DurationMinutes *int `json:"durationMinutes,omitempty"`
+
+	// Location Location where the game will be held
+	Location *string `json:"location,omitempty"`
+
+	// MaxGuestsPerPlayer Maximum guests per player (0 to disable, -1 for unlimited)
+	MaxGuestsPerPlayer *int `json:"maxGuestsPerPlayer,omitempty"`
+
+	// MaxPlayers Maximum number of players (-1 for unlimited)
+	MaxPlayers *int `json:"maxPlayers,omitempty"`
+
+	// MaxWaitlistSize Maximum waitlist size (0 to disable, -1 for unlimited)
+	MaxWaitlistSize *int `json:"maxWaitlistSize,omitempty"`
+
+	// Name Name of the game
+	Name *string `json:"name,omitempty"`
+
+	// Publish Whether to make the game publicly visible
+	Publish *bool `json:"publish,omitempty"`
+
+	// StartsAt When the game starts
+	StartsAt *time.Time `json:"startsAt,omitempty"`
+
+	// TotalPriceCents Total price in cents
+	TotalPriceCents *int `json:"totalPriceCents,omitempty"`
+}
 
 // User defines model for User.
 type User struct {
@@ -79,8 +192,8 @@ type User struct {
 // UserProvider OAuth provider used for authentication
 type UserProvider string
 
-// GetAuthProviderCallbackParams defines parameters for GetAuthProviderCallback.
-type GetAuthProviderCallbackParams struct {
+// GetApiAuthProviderCallbackParams defines parameters for GetApiAuthProviderCallback.
+type GetApiAuthProviderCallbackParams struct {
 	// Code Authorization code returned by the provider on success
 	Code *string `form:"code,omitempty" json:"code,omitempty"`
 
@@ -94,20 +207,32 @@ type GetAuthProviderCallbackParams struct {
 	ErrorDescription *string `form:"error_description,omitempty" json:"error_description,omitempty"`
 }
 
-// GetAuthProviderCallbackParamsProvider defines parameters for GetAuthProviderCallback.
-type GetAuthProviderCallbackParamsProvider string
+// GetApiAuthProviderCallbackParamsProvider defines parameters for GetApiAuthProviderCallback.
+type GetApiAuthProviderCallbackParamsProvider string
 
-// GetAuthProviderLoginParamsProvider defines parameters for GetAuthProviderLogin.
-type GetAuthProviderLoginParamsProvider string
+// GetApiAuthProviderLoginParamsProvider defines parameters for GetApiAuthProviderLogin.
+type GetApiAuthProviderLoginParamsProvider string
+
+// PostApiGamesJSONRequestBody defines body for PostApiGames for application/json ContentType.
+type PostApiGamesJSONRequestBody = CreateGameRequest
+
+// PatchApiGamesIdJSONRequestBody defines body for PatchApiGamesId for application/json ContentType.
+type PatchApiGamesIdJSONRequestBody = UpdateGameRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// OAuth callback endpoint
-	// (GET /auth/{provider}/callback)
-	GetAuthProviderCallback(w http.ResponseWriter, r *http.Request, provider GetAuthProviderCallbackParamsProvider, params GetAuthProviderCallbackParams)
+	// (GET /api/auth/{provider}/callback)
+	GetApiAuthProviderCallback(w http.ResponseWriter, r *http.Request, provider GetApiAuthProviderCallbackParamsProvider, params GetApiAuthProviderCallbackParams)
 	// Initiate OAuth login with a provider
-	// (GET /auth/{provider}/login)
-	GetAuthProviderLogin(w http.ResponseWriter, r *http.Request, provider GetAuthProviderLoginParamsProvider)
+	// (GET /api/auth/{provider}/login)
+	GetApiAuthProviderLogin(w http.ResponseWriter, r *http.Request, provider GetApiAuthProviderLoginParamsProvider)
+	// Create a new game
+	// (POST /api/games)
+	PostApiGames(w http.ResponseWriter, r *http.Request)
+	// Update a game
+	// (PATCH /api/games/{id})
+	PatchApiGamesId(w http.ResponseWriter, r *http.Request, id string)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -119,13 +244,13 @@ type ServerInterfaceWrapper struct {
 
 type MiddlewareFunc func(http.Handler) http.Handler
 
-// GetAuthProviderCallback operation middleware
-func (siw *ServerInterfaceWrapper) GetAuthProviderCallback(w http.ResponseWriter, r *http.Request) {
+// GetApiAuthProviderCallback operation middleware
+func (siw *ServerInterfaceWrapper) GetApiAuthProviderCallback(w http.ResponseWriter, r *http.Request) {
 
 	var err error
 
 	// ------------- Path parameter "provider" -------------
-	var provider GetAuthProviderCallbackParamsProvider
+	var provider GetApiAuthProviderCallbackParamsProvider
 
 	err = runtime.BindStyledParameterWithOptions("simple", "provider", r.PathValue("provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {
@@ -134,7 +259,7 @@ func (siw *ServerInterfaceWrapper) GetAuthProviderCallback(w http.ResponseWriter
 	}
 
 	// Parameter object where we will unmarshal all parameters from the context
-	var params GetAuthProviderCallbackParams
+	var params GetApiAuthProviderCallbackParams
 
 	// ------------- Optional query parameter "code" -------------
 
@@ -169,7 +294,7 @@ func (siw *ServerInterfaceWrapper) GetAuthProviderCallback(w http.ResponseWriter
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetAuthProviderCallback(w, r, provider, params)
+		siw.Handler.GetApiAuthProviderCallback(w, r, provider, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -179,13 +304,13 @@ func (siw *ServerInterfaceWrapper) GetAuthProviderCallback(w http.ResponseWriter
 	handler.ServeHTTP(w, r)
 }
 
-// GetAuthProviderLogin operation middleware
-func (siw *ServerInterfaceWrapper) GetAuthProviderLogin(w http.ResponseWriter, r *http.Request) {
+// GetApiAuthProviderLogin operation middleware
+func (siw *ServerInterfaceWrapper) GetApiAuthProviderLogin(w http.ResponseWriter, r *http.Request) {
 
 	var err error
 
 	// ------------- Path parameter "provider" -------------
-	var provider GetAuthProviderLoginParamsProvider
+	var provider GetApiAuthProviderLoginParamsProvider
 
 	err = runtime.BindStyledParameterWithOptions("simple", "provider", r.PathValue("provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {
@@ -194,7 +319,58 @@ func (siw *ServerInterfaceWrapper) GetAuthProviderLogin(w http.ResponseWriter, r
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetAuthProviderLogin(w, r, provider)
+		siw.Handler.GetApiAuthProviderLogin(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostApiGames operation middleware
+func (siw *ServerInterfaceWrapper) PostApiGames(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostApiGames(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PatchApiGamesId operation middleware
+func (siw *ServerInterfaceWrapper) PatchApiGamesId(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PatchApiGamesId(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -324,8 +500,10 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 		ErrorHandlerFunc:   options.ErrorHandlerFunc,
 	}
 
-	m.HandleFunc("GET "+options.BaseURL+"/auth/{provider}/callback", wrapper.GetAuthProviderCallback)
-	m.HandleFunc("GET "+options.BaseURL+"/auth/{provider}/login", wrapper.GetAuthProviderLogin)
+	m.HandleFunc("GET "+options.BaseURL+"/api/auth/{provider}/callback", wrapper.GetApiAuthProviderCallback)
+	m.HandleFunc("GET "+options.BaseURL+"/api/auth/{provider}/login", wrapper.GetApiAuthProviderLogin)
+	m.HandleFunc("POST "+options.BaseURL+"/api/games", wrapper.PostApiGames)
+	m.HandleFunc("PATCH "+options.BaseURL+"/api/games/{id}", wrapper.PatchApiGamesId)
 
 	return m
 }
@@ -333,26 +511,41 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"H4sIAAAAAAAC/8xX0U/cuBP+Vyz/flJftpultFUvT4e4axuEDkTL3UkVOnnjSWJIbGNPFraI//00TrKb",
-	"JabAQ6V72iS2Z76Z+eYb7x3PTWONBo2ep3fc5xU0IjwetFidgbdGe6B364wFhwrCKtxa5cBnml4k+Nwp",
-	"i8ponvKv5go0CxsEfWKoGmBKMw+50dLzGYdb0dgaeLr/frGYcVxb4ClXGqEEx+9n3EHhwFfB1NTDSXgQ",
-	"Neu3MQwuC+OYWaJQWumSabhhIs/B+26Z/PaOPDqlS/KDcQdHf31lxjEP3ocANuZFixVoVLlA8uHbpYfr",
-	"FjQyR78ed6LjsD6qlp9ydaKOsvPv2d4fKvOZPnuXH2bvsyv795+HR7/M5/MYstaDI2D/d1DwlP8v2RYq",
-	"6auUnNOe+5Cu61Y5kDz91ofUG7jYWDbLS8iRLP/unHHTmMNn1oD3ogTWA4kAO++B7fIhdyAQ5AFG+KAa",
-	"8Cgay24q0IxwsRvhWX+Ez3hhXCOQp1wKhNdEl5hjaISqp+YJzyvPwioTUjrwu0Ugh7/2r/PcNGOHnc2I",
-	"MyUjnrS6bqELQEmiQaHA7fjae7P/9l3MnhYNPIq9aOuahR1jW0em0uw3E82FVTm2Lmbx7JihCRhfeWad",
-	"KVQNbNg+Nl8hWp8mySgziVgJFG5+actxklqnohicWSkJESqdkHawYZ3AyEn3GOIo6LYhzpbGlDUQW7f4",
-	"+m+x1rDypVyrhUfWn3sm4R60laJzA102oU/7i84pXZgptoPTrJMoC7pcEw1RYQi1/8IOTjM+4ytwvjux",
-	"N1/MFxQxbRBW8ZTvh08zbgVWofESSmpyNyC6T3JR10uRX9FiCZEcfRZa1uAZVsB2K/XKMwdSOciRiQK7",
-	"0jlWOqHRkyBK0Ap8qKNx6vtQRhKC8JxJnvJPgGT1tDd6OOAh0E40gOA8T79NSjeBwymTPA2x8qGF+Gh1",
-	"Wx90Lcz66RXG04RYk+pOyjMOiuVGAnOArdMg2XIdsrVhtNHMt2G2DBivW3DrLUg6zseAnnT/BQUC22Qo",
-	"MOXwy9lHcoqQ95mO+fJ08mXOOq0PMapit5ysEKoOTRLzBWF2vMjX57YR+rUDIcWyBhYssPGWH3j6Z3ff",
-	"414viAzdXSV0xZvFIkwloxF06AFhbd0LT3Lpjd7edp6asjsXodDfDyrXMYFEfD2WOJChfah/9xdvpn14",
-	"NrQaGla4gFSyG4XDdcY4NqS7AiFD19zxY9Or58Tex8EGzYCIHbqChSR3LPM/TCiF+XaSRIRbTGwt1AvS",
-	"1103InnL9ErUSg43py3OwplmKwIByN7PBHKwM5aGBqB9vm0a4dabkTZoKwMtrVEaScRFSXL2wAq/oPMT",
-	"ca5N2UGOKvPAiE6bg/aiiev0bs9aUcJTOnwcXL9YhPvbRHx+/zx5ftjQT3bQKDddANEMPauR+jvU8/P+",
-	"n2ijTcG8hZxupg8pnGmFioZMF1SgYqcTYjxyH+czWQO3ijOH0lkzCSuojW3oH1G3l/6JuLq/b6ZJUtO+",
-	"ynhMPyw+LPj9xf2/AQAA//+7qWiKhA4AAA==",
+	"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",
+	"zo9+GfwyYNcfr/8bAAD//xtBTb5EJQAA",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

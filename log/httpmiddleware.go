@@ -10,11 +10,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/dmateusp/opengym/api"
 	"github.com/google/uuid"
 )
 
-func AddLoggerToContextMiddleware(logger *slog.Logger) api.MiddlewareFunc {
+func AddLoggerToContextMiddleware(logger *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			next.ServeHTTP(w, r.WithContext(WithLogger(r.Context(), logger.With(slog.String("request_id", uuid.NewString())))))
@@ -76,47 +75,45 @@ func (rw *responseRecorder) Push(target string, opts *http.PushOptions) error {
 	return http.ErrNotSupported
 }
 
-func LogRequestsAndResponsesMiddleware() api.MiddlewareFunc {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			logger := FromCtx(r.Context())
-			var payload string
+func LogRequestsAndResponsesMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		logger := FromCtx(r.Context())
+		var payload string
 
-			if r.Body != nil {
-				// Read and then restore the request body so downstream handlers can read it again
-				bodyBytes, err := io.ReadAll(r.Body)
-				if err != nil {
-					logger.WarnContext(r.Context(), "Failed to read request body",
-						slog.String("error", err.Error()),
-					)
-				} else {
-					payload = string(bodyBytes)
-				}
-				// Always restore the body for the next handler
-				r.Body.Close()
-				r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+		if r.Body != nil {
+			// Read and then restore the request body so downstream handlers can read it again
+			bodyBytes, err := io.ReadAll(r.Body)
+			if err != nil {
+				logger.WarnContext(r.Context(), "Failed to read request body",
+					slog.String("error", err.Error()),
+				)
+			} else {
+				payload = string(bodyBytes)
 			}
+			// Always restore the body for the next handler
+			r.Body.Close()
+			r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+		}
 
-			logger.InfoContext(r.Context(), "Request received",
-				slog.String("method", r.Method),
-				slog.String("url", r.URL.String()),
-				slog.String("host", r.Host),
-				slog.String("remote_addr", r.RemoteAddr),
-				slog.String("user_agent", r.UserAgent()),
-				slog.String("payload", payload),
-			)
-			start := time.Now()
-			rr := &responseRecorder{ResponseWriter: w}
-			next.ServeHTTP(rr, r)
+		logger.InfoContext(r.Context(), "Request received",
+			slog.String("method", r.Method),
+			slog.String("url", r.URL.String()),
+			slog.String("host", r.Host),
+			slog.String("remote_addr", r.RemoteAddr),
+			slog.String("user_agent", r.UserAgent()),
+			slog.String("payload", payload),
+		)
+		start := time.Now()
+		rr := &responseRecorder{ResponseWriter: w}
+		next.ServeHTTP(rr, r)
 
-			respPayload := rr.buf.String()
-			logger.InfoContext(r.Context(), "Response sent",
-				slog.Int("status", rr.status),
-				slog.Int64("bytes", rr.bytesWritten),
-				slog.String("content_type", rr.Header().Get("Content-Type")),
-				slog.Duration("duration", time.Since(start)),
-				slog.String("payload", respPayload),
-			)
-		})
-	}
+		respPayload := rr.buf.String()
+		logger.InfoContext(r.Context(), "Response sent",
+			slog.Int("status", rr.status),
+			slog.Int64("bytes", rr.bytesWritten),
+			slog.String("content_type", rr.Header().Get("Content-Type")),
+			slog.Duration("duration", time.Since(start)),
+			slog.String("payload", respPayload),
+		)
+	})
 }

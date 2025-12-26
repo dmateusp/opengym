@@ -3,6 +3,7 @@ package server
 import (
 	"crypto/hmac"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/base64"
 	"flag"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"github.com/dmateusp/opengym/api"
+	"github.com/dmateusp/opengym/auth"
 	"github.com/dmateusp/opengym/db"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -27,7 +29,6 @@ import (
 var (
 	googleClientId     = flag.String("auth.google.client-id", "", "Google client ID")
 	googleClientSecret = flag.String("auth.google.client-secret", "", "Google client secret")
-	signingSecret      = flag.String("auth.signing-secret", "", "Secret used to sign OAuth2 state and JWTs")
 )
 
 const (
@@ -35,12 +36,8 @@ const (
 	cookieOAuthVerifier = "oauth2_verifier"
 )
 
-const (
-	JTWCookie = "opengym_jwt"
-)
-
 func computeStateSignature(nonce string, exp int64) []byte {
-	mac := hmac.New(sha256.New, []byte(*signingSecret))
+	mac := hmac.New(sha256.New, []byte(auth.GetSigningSecret()))
 	mac.Write([]byte(nonce))
 	mac.Write([]byte(":"))
 	mac.Write([]byte(strconv.FormatInt(exp, 10)))
@@ -79,7 +76,7 @@ func verifyStateToken(token string) bool {
 	return hmac.Equal(expected, provided)
 }
 
-func (srv *server) GetAuthProviderCallback(w http.ResponseWriter, r *http.Request, provider api.GetAuthProviderCallbackParamsProvider, params api.GetAuthProviderCallbackParams) {
+func (srv *server) GetApiAuthProviderCallback(w http.ResponseWriter, r *http.Request, provider api.GetApiAuthProviderCallbackParamsProvider, params api.GetApiAuthProviderCallbackParams) {
 	if params.Error != nil {
 		errorMsg := "authorization failed: " + *params.Error
 		if params.ErrorDescription != nil {
@@ -140,7 +137,7 @@ func (srv *server) GetAuthProviderCallback(w http.ResponseWriter, r *http.Reques
 
 	var upsertDbUser db.UserUpsertRetuningIdParams
 	switch provider {
-	case api.GetAuthProviderCallbackParamsProviderGoogle:
+	case api.GetApiAuthProviderCallbackParamsProviderGoogle:
 		oauthConfig := &oauth2.Config{
 			Endpoint:     google.Endpoint,
 			ClientID:     *googleClientId,
@@ -177,10 +174,16 @@ func (srv *server) GetAuthProviderCallback(w http.ResponseWriter, r *http.Reques
 		}
 		upsertDbUser.Email = person.EmailAddresses[0].Value
 		if len(person.Names) > 0 {
-			upsertDbUser.Name = &person.Names[0].DisplayName
+			upsertDbUser.Name = sql.NullString{
+				String: person.Names[0].DisplayName,
+				Valid:  true,
+			}
 		}
 		if len(person.Photos) > 0 {
-			upsertDbUser.Photo = &person.Photos[0].Url
+			upsertDbUser.Photo = sql.NullString{
+				String: person.Photos[0].Url,
+				Valid:  true,
+			}
 		}
 
 	default:
@@ -201,13 +204,13 @@ func (srv *server) GetAuthProviderCallback(w http.ResponseWriter, r *http.Reques
 	jwtToken := jwt.NewWithClaims(
 		jwt.SigningMethodHS256,
 		jwt.RegisteredClaims{
-			Issuer:    "opengym",
+			Issuer:    auth.Issuer,
 			Subject:   strconv.FormatInt(userId, 10),
 			ExpiresAt: jwt.NewNumericDate(now.Add(4 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(now),
 		},
 	)
-	signedJwt, err := jwtToken.SignedString([]byte(*signingSecret))
+	signedJwt, err := jwtToken.SignedString([]byte(auth.GetSigningSecret()))
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to sign jwt token: %s", err.Error()), http.StatusInternalServerError)
 		return
@@ -216,7 +219,7 @@ func (srv *server) GetAuthProviderCallback(w http.ResponseWriter, r *http.Reques
 	http.SetCookie(
 		w,
 		&http.Cookie{
-			Name:     JTWCookie,
+			Name:     auth.JTWCookie,
 			Value:    signedJwt,
 			Path:     "/",
 			HttpOnly: true,
@@ -229,7 +232,7 @@ func (srv *server) GetAuthProviderCallback(w http.ResponseWriter, r *http.Reques
 	// TODO: redirect to the page it came from
 }
 
-func (srv *server) GetAuthProviderLogin(w http.ResponseWriter, r *http.Request, provider api.GetAuthProviderLoginParamsProvider) {
+func (srv *server) GetApiAuthProviderLogin(w http.ResponseWriter, r *http.Request, provider api.GetApiAuthProviderLoginParamsProvider) {
 	redirectUrl, err := url.JoinPath(*baseUrl, "auth", string(provider), "callback")
 	if err != nil {
 		http.Error(w, fmt.Sprintf("could not construct the callback url: %s", err.Error()), http.StatusInternalServerError)
@@ -251,11 +254,6 @@ func (srv *server) GetAuthProviderLogin(w http.ResponseWriter, r *http.Request, 
 		}
 	default:
 		http.Error(w, fmt.Sprintf("provider %s is not supported", provider), http.StatusBadRequest)
-		return
-	}
-
-	if signingSecret == nil || *signingSecret == "" {
-		http.Error(w, "missing signing secret", http.StatusInternalServerError)
 		return
 	}
 

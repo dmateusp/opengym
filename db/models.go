@@ -5,14 +5,32 @@
 package db
 
 import (
+	"database/sql"
 	"time"
 )
 
+type Game struct {
+	ID                 string
+	OrganizerID        int64
+	Name               string
+	Description        sql.NullString
+	PublishedAt        sql.NullTime
+	TotalPriceCents    int64
+	Location           sql.NullString
+	StartsAt           sql.NullTime
+	DurationMinutes    int64
+	MaxPlayers         int64
+	MaxWaitlistSize    int64
+	MaxGuestsPerPlayer int64
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+}
+
 type User struct {
 	ID        int64
-	Name      *string
+	Name      sql.NullString
 	Email     string
-	Photo     *string
+	Photo     sql.NullString
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

@@ -7,7 +7,7 @@ sql:
       uri: "file:opengym.db"
     gen:
       go:
-        emit_pointers_for_null_types: true
+        emit_pointers_for_null_types: false
         package: "db"
         out: "db"
         emit_interface: true
