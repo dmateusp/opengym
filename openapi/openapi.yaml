@@ -138,6 +138,32 @@ paths:
                 $ref: '#/components/schemas/Error'
 
   /api/games/{id}:
+    get:
+      summary: Get a game by ID
+      description: Retrieves a single game by its ID
+      tags:
+        - Games
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The game ID
+      responses:
+        '200':
+          description: Game retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Game'
+        '404':
+          description: Game not found
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+
     patch:
       summary: Update a game
       description: Updates an existing game. Only the organizer can update their game.

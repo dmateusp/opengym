@@ -116,6 +116,28 @@ func isConstraintError(err error) bool {
 	return strings.Contains(err.Error(), "UNIQUE constraint failed: games.id")
 }
 
+func (srv *server) GetApiGamesId(w http.ResponseWriter, r *http.Request, id string) {
+	game, err := srv.querier.GameGetById(r.Context(), id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "game not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, fmt.Sprintf("failed to retrieve game: %s", err.Error()), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	var apiGame api.Game
+	apiGame.FromDb(game)
+	err = json.NewEncoder(w).Encode(apiGame)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to encode response: %s", err.Error()), http.StatusInternalServerError)
+		return
+	}
+}
+
 func (srv *server) PatchApiGamesId(w http.ResponseWriter, r *http.Request, id string) {
 	authInfo, ok := auth.FromCtx(r.Context())
 	if !ok {

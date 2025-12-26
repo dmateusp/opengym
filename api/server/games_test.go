@@ -444,3 +444,74 @@ func TestPatchApiGamesId_InvalidRequestBody(t *testing.T) {
 		t.Errorf("Expected status %d, got %d", http.StatusBadRequest, w.Code)
 	}
 }
+
+func TestGetApiGamesId_Success(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+
+	testUserID := dbtesting.CreateTestUser(t, sqlDB)
+	querier := db.New(sqlDB)
+	srv := server.NewServer(querier, server.NewRandomAlphanumericGenerator())
+
+	// Create a game first
+	createReq := api.CreateGameRequest{
+		Name:        "Test Game",
+		Description: ptr.Ptr("Test Description"),
+	}
+	body, _ := json.Marshal(createReq)
+	r := httptest.NewRequest(http.MethodPost, "/api/games", bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(testUserID)}))
+	w := httptest.NewRecorder()
+	srv.PostApiGames(w, r)
+
+	var createdGame api.Game
+	json.NewDecoder(w.Body).Decode(&createdGame)
+	gameID := createdGame.Id
+
+	// Now retrieve it
+	r = httptest.NewRequest(http.MethodGet, "/api/games/"+gameID, nil)
+	w = httptest.NewRecorder()
+
+	srv.GetApiGamesId(w, r, gameID)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d. Body: %s", http.StatusOK, w.Code, w.Body.String())
+	}
+
+	var retrievedGame api.Game
+	if err := json.NewDecoder(w.Body).Decode(&retrievedGame); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	// Verify retrieved game matches created game
+	if retrievedGame.Id != createdGame.Id {
+		t.Errorf("Expected id %s, got %s", createdGame.Id, retrievedGame.Id)
+	}
+	if retrievedGame.Name != createdGame.Name {
+		t.Errorf("Expected name %s, got %s", createdGame.Name, retrievedGame.Name)
+	}
+	if retrievedGame.OrganizerId != createdGame.OrganizerId {
+		t.Errorf("Expected organizer ID %d, got %d", createdGame.OrganizerId, retrievedGame.OrganizerId)
+	}
+	if retrievedGame.Description == nil || *retrievedGame.Description != *createdGame.Description {
+		t.Errorf("Expected description %v, got %v", createdGame.Description, retrievedGame.Description)
+	}
+}
+
+func TestGetApiGamesId_NotFound(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+
+	querier := db.New(sqlDB)
+	srv := server.NewServer(querier, server.NewRandomAlphanumericGenerator())
+
+	// Try to retrieve a non-existent game
+	r := httptest.NewRequest(http.MethodGet, "/api/games/nonexistent", nil)
+	w := httptest.NewRecorder()
+
+	srv.GetApiGamesId(w, r, "nonexistent")
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("Expected status %d, got %d", http.StatusNotFound, w.Code)
+	}
+}
