@@ -51,12 +51,153 @@ export type User = {
     updatedAt?: string;
 };
 
+export type CreateGameRequest = {
+    /**
+     * Name of the game
+     */
+    name: string;
+    /**
+     * Description of the game
+     */
+    description?: string;
+    /**
+     * Total price in cents
+     */
+    totalPriceCents?: number;
+    /**
+     * Location where the game will be held
+     */
+    location?: string;
+    /**
+     * When the game starts
+     */
+    startsAt?: string;
+    /**
+     * Duration of the game in minutes
+     */
+    durationMinutes?: number;
+    /**
+     * Maximum number of players (-1 for unlimited)
+     */
+    maxPlayers?: number;
+    /**
+     * Maximum waitlist size (0 to disable, -1 for unlimited)
+     */
+    maxWaitlistSize?: number;
+    /**
+     * Maximum guests per player (0 to disable, -1 for unlimited)
+     */
+    maxGuestsPerPlayer?: number;
+};
+
+export type UpdateGameRequest = {
+    /**
+     * Name of the game
+     */
+    name?: string;
+    /**
+     * Description of the game
+     */
+    description?: string;
+    /**
+     * Whether to make the game publicly visible
+     */
+    publish?: boolean;
+    /**
+     * Total price in cents
+     */
+    totalPriceCents?: number;
+    /**
+     * Location where the game will be held
+     */
+    location?: string;
+    /**
+     * When the game starts
+     */
+    startsAt?: string;
+    /**
+     * Duration of the game in minutes
+     */
+    durationMinutes?: number;
+    /**
+     * Maximum number of players (-1 for unlimited)
+     */
+    maxPlayers?: number;
+    /**
+     * Maximum waitlist size (0 to disable, -1 for unlimited)
+     */
+    maxWaitlistSize?: number;
+    /**
+     * Maximum guests per player (0 to disable, -1 for unlimited)
+     */
+    maxGuestsPerPlayer?: number;
+};
+
+export type Game = {
+    /**
+     * Unique game identifier
+     */
+    id: string;
+    /**
+     * ID of the user who organized the game
+     */
+    organizerId: number;
+    /**
+     * Name of the game
+     */
+    name: string;
+    /**
+     * Description of the game
+     */
+    description?: string;
+    /**
+     * When the game is published (visible to others)
+     */
+    publishedAt?: string;
+    /**
+     * Total price in cents
+     */
+    totalPriceCents?: number;
+    /**
+     * Location where the game will be held
+     */
+    location?: string;
+    /**
+     * When the game starts
+     */
+    startsAt?: string;
+    /**
+     * Duration of the game in minutes
+     */
+    durationMinutes?: number;
+    /**
+     * Maximum number of players (-1 for unlimited)
+     */
+    maxPlayers?: number;
+    /**
+     * Maximum waitlist size (0 to disable, -1 for unlimited)
+     */
+    maxWaitlistSize?: number;
+    /**
+     * Maximum guests per player (0 to disable, -1 for unlimited)
+     */
+    maxGuestsPerPlayer?: number;
+    /**
+     * Timestamp when game was created
+     */
+    createdAt: string;
+    /**
+     * Timestamp when game was last updated
+     */
+    updatedAt: string;
+};
+
 /**
  * Error message string
  */
 export type Error = string;
 
-export type GetAuthByProviderLoginData = {
+export type GetApiAuthByProviderLoginData = {
     body?: never;
     path: {
         /**
@@ -65,19 +206,19 @@ export type GetAuthByProviderLoginData = {
         provider: 'google';
     };
     query?: never;
-    url: '/auth/{provider}/login';
+    url: '/api/auth/{provider}/login';
 };
 
-export type GetAuthByProviderLoginErrors = {
+export type GetApiAuthByProviderLoginErrors = {
     /**
      * Invalid provider specified
      */
     400: Error;
 };
 
-export type GetAuthByProviderLoginError = GetAuthByProviderLoginErrors[keyof GetAuthByProviderLoginErrors];
+export type GetApiAuthByProviderLoginError = GetApiAuthByProviderLoginErrors[keyof GetApiAuthByProviderLoginErrors];
 
-export type GetAuthByProviderCallbackData = {
+export type GetApiAuthByProviderCallbackData = {
     body?: never;
     path: {
         /**
@@ -103,10 +244,10 @@ export type GetAuthByProviderCallbackData = {
          */
         error_description?: string;
     };
-    url: '/auth/{provider}/callback';
+    url: '/api/auth/{provider}/callback';
 };
 
-export type GetAuthByProviderCallbackErrors = {
+export type GetApiAuthByProviderCallbackErrors = {
     /**
      * Invalid request or error from provider
      */
@@ -117,13 +258,84 @@ export type GetAuthByProviderCallbackErrors = {
     401: Error;
 };
 
-export type GetAuthByProviderCallbackError = GetAuthByProviderCallbackErrors[keyof GetAuthByProviderCallbackErrors];
+export type GetApiAuthByProviderCallbackError = GetApiAuthByProviderCallbackErrors[keyof GetApiAuthByProviderCallbackErrors];
 
-export type GetAuthByProviderCallbackResponses = {
+export type GetApiAuthByProviderCallbackResponses = {
     /**
      * Successfully authenticated user
      */
     200: AuthResponse;
 };
 
-export type GetAuthByProviderCallbackResponse = GetAuthByProviderCallbackResponses[keyof GetAuthByProviderCallbackResponses];
+export type GetApiAuthByProviderCallbackResponse = GetApiAuthByProviderCallbackResponses[keyof GetApiAuthByProviderCallbackResponses];
+
+export type PostApiGamesData = {
+    body: CreateGameRequest;
+    path?: never;
+    query?: never;
+    url: '/api/games';
+};
+
+export type PostApiGamesErrors = {
+    /**
+     * Invalid request data
+     */
+    400: Error;
+    /**
+     * Unauthorized - invalid or missing token
+     */
+    401: Error;
+};
+
+export type PostApiGamesError = PostApiGamesErrors[keyof PostApiGamesErrors];
+
+export type PostApiGamesResponses = {
+    /**
+     * Game created successfully
+     */
+    200: Game;
+};
+
+export type PostApiGamesResponse = PostApiGamesResponses[keyof PostApiGamesResponses];
+
+export type PatchApiGamesByIdData = {
+    body: UpdateGameRequest;
+    path: {
+        /**
+         * The game ID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/games/{id}';
+};
+
+export type PatchApiGamesByIdErrors = {
+    /**
+     * Invalid request data
+     */
+    400: Error;
+    /**
+     * Unauthorized - invalid or missing token
+     */
+    401: Error;
+    /**
+     * Forbidden - not the game organizer
+     */
+    403: Error;
+    /**
+     * Game not found
+     */
+    404: Error;
+};
+
+export type PatchApiGamesByIdError = PatchApiGamesByIdErrors[keyof PatchApiGamesByIdErrors];
+
+export type PatchApiGamesByIdResponses = {
+    /**
+     * Game updated successfully
+     */
+    200: Game;
+};
+
+export type PatchApiGamesByIdResponse = PatchApiGamesByIdResponses[keyof PatchApiGamesByIdResponses];

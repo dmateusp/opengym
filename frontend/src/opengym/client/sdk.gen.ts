@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetAuthByProviderCallbackData, GetAuthByProviderCallbackErrors, GetAuthByProviderCallbackResponses, GetAuthByProviderLoginData, GetAuthByProviderLoginErrors } from './types.gen';
+import type { GetApiAuthByProviderCallbackData, GetApiAuthByProviderCallbackErrors, GetApiAuthByProviderCallbackResponses, GetApiAuthByProviderLoginData, GetApiAuthByProviderLoginErrors, PatchApiGamesByIdData, PatchApiGamesByIdErrors, PatchApiGamesByIdResponses, PostApiGamesData, PostApiGamesErrors, PostApiGamesResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -23,11 +23,41 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
  *
  * Redirects the user to the OAuth provider's authorization page
  */
-export const getAuthByProviderLogin = <ThrowOnError extends boolean = false>(options: Options<GetAuthByProviderLoginData, ThrowOnError>) => (options.client ?? client).get<unknown, GetAuthByProviderLoginErrors, ThrowOnError>({ url: '/auth/{provider}/login', ...options });
+export const getApiAuthByProviderLogin = <ThrowOnError extends boolean = false>(options: Options<GetApiAuthByProviderLoginData, ThrowOnError>) => (options.client ?? client).get<unknown, GetApiAuthByProviderLoginErrors, ThrowOnError>({ url: '/api/auth/{provider}/login', ...options });
 
 /**
  * OAuth callback endpoint
  *
  * Handles the OAuth provider's redirect after user grants or denies authorization
  */
-export const getAuthByProviderCallback = <ThrowOnError extends boolean = false>(options: Options<GetAuthByProviderCallbackData, ThrowOnError>) => (options.client ?? client).get<GetAuthByProviderCallbackResponses, GetAuthByProviderCallbackErrors, ThrowOnError>({ url: '/auth/{provider}/callback', ...options });
+export const getApiAuthByProviderCallback = <ThrowOnError extends boolean = false>(options: Options<GetApiAuthByProviderCallbackData, ThrowOnError>) => (options.client ?? client).get<GetApiAuthByProviderCallbackResponses, GetApiAuthByProviderCallbackErrors, ThrowOnError>({ url: '/api/auth/{provider}/callback', ...options });
+
+/**
+ * Create a new game
+ *
+ * Creates a new game. The game is only visible to the organizer initially unless publish is set to true.
+ */
+export const postApiGames = <ThrowOnError extends boolean = false>(options: Options<PostApiGamesData, ThrowOnError>) => (options.client ?? client).post<PostApiGamesResponses, PostApiGamesErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/games',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Update a game
+ *
+ * Updates an existing game. Only the organizer can update their game.
+ */
+export const patchApiGamesById = <ThrowOnError extends boolean = false>(options: Options<PatchApiGamesByIdData, ThrowOnError>) => (options.client ?? client).patch<PatchApiGamesByIdResponses, PatchApiGamesByIdErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/games/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
