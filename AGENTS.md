@@ -11,6 +11,7 @@
 ### Back-end code style
 
 * If an error is returned by a function, we should always wrap it with more information: `return nil, err // bad`, `return nil, fmt.Errorf("the user could not be created: %w", err) // good`.
+* We have a generic function `ptr.Ptr` to return a pointer from a value.
 
 ## Front-end development
 

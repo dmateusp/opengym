@@ -99,7 +99,6 @@ func (srv *server) PostApiGames(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("failed to encode response: %s", err.Error()), http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
 }
 
 func (srv *server) PatchApiGamesId(w http.ResponseWriter, r *http.Request, id string) {
@@ -192,6 +191,7 @@ func (srv *server) PatchApiGamesId(w http.ResponseWriter, r *http.Request, id st
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 	var apiGame api.Game
 	apiGame.FromDb(updatedGame)
 	err = json.NewEncoder(w).Encode(apiGame)
@@ -199,5 +199,4 @@ func (srv *server) PatchApiGamesId(w http.ResponseWriter, r *http.Request, id st
 		http.Error(w, fmt.Sprintf("failed to encode response: %s", err.Error()), http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
 }
