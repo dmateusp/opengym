@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetApiAuthByProviderCallbackData, GetApiAuthByProviderCallbackErrors, GetApiAuthByProviderCallbackResponses, GetApiAuthByProviderLoginData, GetApiAuthByProviderLoginErrors, PatchApiGamesByIdData, PatchApiGamesByIdErrors, PatchApiGamesByIdResponses, PostApiGamesData, PostApiGamesErrors, PostApiGamesResponses } from './types.gen';
+import type { GetApiAuthByProviderCallbackData, GetApiAuthByProviderCallbackErrors, GetApiAuthByProviderCallbackResponses, GetApiAuthByProviderLoginData, GetApiAuthByProviderLoginErrors, GetApiAuthMeData, GetApiAuthMeErrors, GetApiAuthMeResponses, GetApiGamesByIdData, GetApiGamesByIdErrors, GetApiGamesByIdResponses, PatchApiGamesByIdData, PatchApiGamesByIdErrors, PatchApiGamesByIdResponses, PostApiGamesData, PostApiGamesErrors, PostApiGamesResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -33,6 +33,17 @@ export const getApiAuthByProviderLogin = <ThrowOnError extends boolean = false>(
 export const getApiAuthByProviderCallback = <ThrowOnError extends boolean = false>(options: Options<GetApiAuthByProviderCallbackData, ThrowOnError>) => (options.client ?? client).get<GetApiAuthByProviderCallbackResponses, GetApiAuthByProviderCallbackErrors, ThrowOnError>({ url: '/api/auth/{provider}/callback', ...options });
 
 /**
+ * Get authenticated user
+ *
+ * Returns the currently authenticated user
+ */
+export const getApiAuthMe = <ThrowOnError extends boolean = false>(options?: Options<GetApiAuthMeData, ThrowOnError>) => (options?.client ?? client).get<GetApiAuthMeResponses, GetApiAuthMeErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/auth/me',
+    ...options
+});
+
+/**
  * Create a new game
  *
  * Creates a new game. The game is only visible to the organizer initially unless publish is set to true.
@@ -46,6 +57,13 @@ export const postApiGames = <ThrowOnError extends boolean = false>(options: Opti
         ...options.headers
     }
 });
+
+/**
+ * Get a game by ID
+ *
+ * Retrieves a single game by its ID
+ */
+export const getApiGamesById = <ThrowOnError extends boolean = false>(options: Options<GetApiGamesByIdData, ThrowOnError>) => (options.client ?? client).get<GetApiGamesByIdResponses, GetApiGamesByIdErrors, ThrowOnError>({ url: '/api/games/{id}', ...options });
 
 /**
  * Update a game

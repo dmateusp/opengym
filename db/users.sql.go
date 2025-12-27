@@ -10,6 +10,27 @@ import (
 	"database/sql"
 )
 
+const userGetById = `-- name: UserGetById :one
+select id, name, email, photo, created_at, updated_at
+from users
+where id = ?
+limit 1
+`
+
+func (q *Queries) UserGetById(ctx context.Context, id int64) (User, error) {
+	row := q.db.QueryRowContext(ctx, userGetById, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Email,
+		&i.Photo,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const userUpsertRetuningId = `-- name: UserUpsertRetuningId :one
 insert into users(
     name,

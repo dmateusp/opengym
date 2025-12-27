@@ -1,8 +1,11 @@
 package api
 
 import (
+	"strconv"
+
 	"github.com/dmateusp/opengym/db"
 	"github.com/dmateusp/opengym/ptr"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 func (game *Game) FromDb(dbGame db.Game) {
@@ -39,4 +42,25 @@ func (game *Game) FromDb(dbGame db.Game) {
 
 	game.CreatedAt = dbGame.CreatedAt
 	game.UpdatedAt = dbGame.UpdatedAt
+}
+
+func (user *User) FromDb(dbUser db.User) {
+	user.Id = strconv.FormatInt(dbUser.ID, 10)
+	user.Email = openapi_types.Email(dbUser.Email)
+
+	if dbUser.Name.Valid {
+		name := dbUser.Name.String
+		user.Name = &name
+	}
+
+	if dbUser.Photo.Valid {
+		photo := dbUser.Photo.String
+		user.Picture = &photo
+	}
+
+	// Optional timestamps
+	tCreated := dbUser.CreatedAt
+	user.CreatedAt = &tCreated
+	tUpdated := dbUser.UpdatedAt
+	user.UpdatedAt = &tUpdated
 }

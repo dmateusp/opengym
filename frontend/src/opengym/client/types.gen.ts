@@ -51,46 +51,7 @@ export type User = {
     updatedAt?: string;
 };
 
-export type CreateGameRequest = {
-    /**
-     * Name of the game
-     */
-    name: string;
-    /**
-     * Description of the game
-     */
-    description?: string;
-    /**
-     * Total price in cents
-     */
-    totalPriceCents?: number;
-    /**
-     * Location where the game will be held
-     */
-    location?: string;
-    /**
-     * When the game starts
-     */
-    startsAt?: string;
-    /**
-     * Duration of the game in minutes
-     */
-    durationMinutes?: number;
-    /**
-     * Maximum number of players (-1 for unlimited)
-     */
-    maxPlayers?: number;
-    /**
-     * Maximum waitlist size (0 to disable, -1 for unlimited)
-     */
-    maxWaitlistSize?: number;
-    /**
-     * Maximum guests per player (0 to disable, -1 for unlimited)
-     */
-    maxGuestsPerPlayer?: number;
-};
-
-export type UpdateGameRequest = {
+export type GameFields = {
     /**
      * Name of the game
      */
@@ -100,10 +61,6 @@ export type UpdateGameRequest = {
      */
     description?: string;
     /**
-     * Whether to make the game publicly visible
-     */
-    publish?: boolean;
-    /**
      * Total price in cents
      */
     totalPriceCents?: number;
@@ -133,7 +90,18 @@ export type UpdateGameRequest = {
     maxGuestsPerPlayer?: number;
 };
 
-export type Game = {
+export type CreateGameRequest = GameFields & {
+    [key: string]: unknown;
+};
+
+export type UpdateGameRequest = GameFields & {
+    /**
+     * Whether to make the game publicly visible
+     */
+    publish?: boolean;
+};
+
+export type Game = GameFields & {
     /**
      * Unique game identifier
      */
@@ -143,45 +111,9 @@ export type Game = {
      */
     organizerId: number;
     /**
-     * Name of the game
-     */
-    name: string;
-    /**
-     * Description of the game
-     */
-    description?: string;
-    /**
      * When the game is published (visible to others)
      */
     publishedAt?: string;
-    /**
-     * Total price in cents
-     */
-    totalPriceCents?: number;
-    /**
-     * Location where the game will be held
-     */
-    location?: string;
-    /**
-     * When the game starts
-     */
-    startsAt?: string;
-    /**
-     * Duration of the game in minutes
-     */
-    durationMinutes?: number;
-    /**
-     * Maximum number of players (-1 for unlimited)
-     */
-    maxPlayers?: number;
-    /**
-     * Maximum waitlist size (0 to disable, -1 for unlimited)
-     */
-    maxWaitlistSize?: number;
-    /**
-     * Maximum guests per player (0 to disable, -1 for unlimited)
-     */
-    maxGuestsPerPlayer?: number;
     /**
      * Timestamp when game was created
      */
@@ -269,6 +201,31 @@ export type GetApiAuthByProviderCallbackResponses = {
 
 export type GetApiAuthByProviderCallbackResponse = GetApiAuthByProviderCallbackResponses[keyof GetApiAuthByProviderCallbackResponses];
 
+export type GetApiAuthMeData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/auth/me';
+};
+
+export type GetApiAuthMeErrors = {
+    /**
+     * Unauthorized - invalid or missing token
+     */
+    401: Error;
+};
+
+export type GetApiAuthMeError = GetApiAuthMeErrors[keyof GetApiAuthMeErrors];
+
+export type GetApiAuthMeResponses = {
+    /**
+     * Authenticated user
+     */
+    200: User;
+};
+
+export type GetApiAuthMeResponse = GetApiAuthMeResponses[keyof GetApiAuthMeResponses];
+
 export type PostApiGamesData = {
     body: CreateGameRequest;
     path?: never;
@@ -297,6 +254,36 @@ export type PostApiGamesResponses = {
 };
 
 export type PostApiGamesResponse = PostApiGamesResponses[keyof PostApiGamesResponses];
+
+export type GetApiGamesByIdData = {
+    body?: never;
+    path: {
+        /**
+         * The game ID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/games/{id}';
+};
+
+export type GetApiGamesByIdErrors = {
+    /**
+     * Game not found
+     */
+    404: Error;
+};
+
+export type GetApiGamesByIdError = GetApiGamesByIdErrors[keyof GetApiGamesByIdErrors];
+
+export type GetApiGamesByIdResponses = {
+    /**
+     * Game retrieved successfully
+     */
+    200: Game;
+};
+
+export type GetApiGamesByIdResponse = GetApiGamesByIdResponses[keyof GetApiGamesByIdResponses];
 
 export type PatchApiGamesByIdData = {
     body: UpdateGameRequest;

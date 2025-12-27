@@ -330,7 +330,7 @@ func (srv *server) GetApiAuthProviderLogin(w http.ResponseWriter, r *http.Reques
 
 	var oauthConfig *oauth2.Config
 	switch provider {
-	case api.Google:
+	case api.GetApiAuthProviderLoginParamsProviderGoogle:
 		if *googleClientId == "" || *googleClientSecret == "" {
 			log.FromCtx(r.Context()).ErrorContext(r.Context(), "Google client ID or client secret not set")
 			http.Error(w, "the back-end is not configured to handle Google auth", http.StatusBadRequest)
@@ -389,4 +389,52 @@ func (srv *server) GetApiAuthProviderLogin(w http.ResponseWriter, r *http.Reques
 	)
 
 	http.Redirect(w, r, oauthConfig.AuthCodeURL(state, oauth2.AccessTypeOnline, oauth2.S256ChallengeOption(verifier)), http.StatusFound)
+}
+
+func (srv *server) GetApiAuthMe(w http.ResponseWriter, r *http.Request) {
+	jwtCookie, err := r.Cookie(auth.JTWCookie)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	jwtToken, err := jwt.ParseWithClaims(jwtCookie.Value, jwt.RegisteredClaims{}, func(token *jwt.Token) (any, error) {
+		return []byte(auth.GetSigningSecret()), nil
+	}, jwt.WithIssuer(auth.Issuer), jwt.WithExpirationRequired(), jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Name}))
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	sub, err := jwtToken.Claims.GetSubject()
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	userId, err := strconv.Atoi(sub)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	dbUser, err := srv.querier.UserGetById(r.Context(), int64(userId))
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		http.Error(w, fmt.Sprintf("failed to retrieve user: %s", err.Error()), http.StatusInternalServerError)
+		return
+	}
+
+	var apiUser api.User
+	apiUser.FromDb(dbUser)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(apiUser); err != nil {
+		http.Error(w, fmt.Sprintf("failed to encode response: %s", err.Error()), http.StatusInternalServerError)
+		return
+	}
 }
