@@ -398,7 +398,7 @@ func (srv *server) GetApiAuthMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jwtToken, err := jwt.ParseWithClaims(jwtCookie.Value, jwt.RegisteredClaims{}, func(token *jwt.Token) (any, error) {
+	jwtToken, err := jwt.ParseWithClaims(jwtCookie.Value, &jwt.RegisteredClaims{}, func(token *jwt.Token) (any, error) {
 		return []byte(auth.GetSigningSecret()), nil
 	}, jwt.WithIssuer(auth.Issuer), jwt.WithExpirationRequired(), jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Name}))
 	if err != nil {

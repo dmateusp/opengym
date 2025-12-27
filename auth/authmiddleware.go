@@ -25,7 +25,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		jwtToken, err := jwt.ParseWithClaims(jwtCookie.Value, jwt.RegisteredClaims{}, func(token *jwt.Token) (any, error) {
+		jwtToken, err := jwt.ParseWithClaims(jwtCookie.Value, &jwt.RegisteredClaims{}, func(token *jwt.Token) (any, error) {
 			return []byte(*signingSecret), nil
 		}, jwt.WithIssuer(Issuer), jwt.WithExpirationRequired(), jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Name}))
 		if err != nil {
