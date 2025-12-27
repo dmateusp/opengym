@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/base64"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"net/http"
@@ -16,6 +17,7 @@ import (
 	"github.com/dmateusp/opengym/api"
 	"github.com/dmateusp/opengym/auth"
 	"github.com/dmateusp/opengym/db"
+	"github.com/dmateusp/opengym/log"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"golang.org/x/oauth2"
@@ -36,44 +38,120 @@ const (
 	cookieOAuthVerifier = "oauth2_verifier"
 )
 
-func computeStateSignature(nonce string, exp int64) []byte {
+type OAuthState struct {
+	Nonce        string `json:"nonce"`         // random UUID
+	RedirectPage string `json:"redirect_page"` // relative path to page the user was on when the oauth flow was initiated
+}
+
+func computeStateSignature(encodedPayload string, exp int64) []byte {
 	mac := hmac.New(sha256.New, []byte(auth.GetSigningSecret()))
-	mac.Write([]byte(nonce))
+	mac.Write([]byte(encodedPayload))
 	mac.Write([]byte(":"))
 	mac.Write([]byte(strconv.FormatInt(exp, 10)))
 	return mac.Sum(nil)
 }
 
-func makeStateToken(ttl time.Duration) (string, int64) {
-	nonce := uuid.NewString()
-	exp := time.Now().Add(ttl).Unix()
-	sig := base64.RawURLEncoding.EncodeToString(computeStateSignature(nonce, exp))
-	return nonce + ":" + strconv.FormatInt(exp, 10) + ":" + sig, exp
+func normalizeRedirectPage(raw string) (string, error) {
+	if raw == "" {
+		return "/", nil
+	}
+
+	if !strings.HasPrefix(raw, "/") {
+		raw = "/" + raw
+	}
+
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return "", fmt.Errorf("invalid redirect page: %w", err)
+	}
+
+	if parsed.IsAbs() || parsed.Host != "" {
+		return "", fmt.Errorf("redirect page must be a relative path")
+	}
+
+	normalized := parsed.Path
+	if parsed.RawQuery != "" {
+		normalized += "?" + parsed.RawQuery
+	}
+	if parsed.Fragment != "" {
+		normalized += "#" + parsed.Fragment
+	}
+
+	return normalized, nil
 }
 
-func verifyStateToken(token string) bool {
+func makeStateToken(ttl time.Duration, redirectPage string) (string, int64, error) {
+	normalizedRedirect, err := normalizeRedirectPage(redirectPage)
+	if err != nil {
+		return "", 0, err
+	}
+
+	state := OAuthState{
+		Nonce:        uuid.NewString(),
+		RedirectPage: normalizedRedirect,
+	}
+
+	encodedPayload, err := json.Marshal(state)
+	if err != nil {
+		return "", 0, fmt.Errorf("failed to marshal oauth state: %w", err)
+	}
+
+	exp := time.Now().Add(ttl).Unix()
+	encodedPayloadStr := base64.RawURLEncoding.EncodeToString(encodedPayload)
+	sig := base64.RawURLEncoding.EncodeToString(computeStateSignature(encodedPayloadStr, exp))
+
+	return encodedPayloadStr + ":" + strconv.FormatInt(exp, 10) + ":" + sig, exp, nil
+}
+
+func parseStateToken(token string) (*OAuthState, error) {
 	parts := strings.Split(token, ":")
 	if len(parts) != 3 {
-		return false
+		return nil, fmt.Errorf("invalid oauth state format")
 	}
-	nonce := parts[0]
+
+	encodedPayload := parts[0]
 	expStr := parts[1]
 	sigStr := parts[2]
 
 	exp, err := strconv.ParseInt(expStr, 10, 64)
 	if err != nil {
-		return false
+		return nil, fmt.Errorf("invalid oauth state expiry: %w", err)
 	}
 	if time.Now().Unix() > exp {
-		return false
+		return nil, fmt.Errorf("oauth state expired")
 	}
 
-	expected := computeStateSignature(nonce, exp)
+	expected := computeStateSignature(encodedPayload, exp)
 	provided, err := base64.RawURLEncoding.DecodeString(sigStr)
 	if err != nil {
-		return false
+		return nil, fmt.Errorf("invalid oauth state signature encoding: %w", err)
 	}
-	return hmac.Equal(expected, provided)
+
+	if !hmac.Equal(expected, provided) {
+		return nil, fmt.Errorf("oauth state signature mismatch")
+	}
+
+	decodedPayload, err := base64.RawURLEncoding.DecodeString(encodedPayload)
+	if err != nil {
+		return nil, fmt.Errorf("invalid oauth state payload: %w", err)
+	}
+
+	var state OAuthState
+	if err := json.Unmarshal(decodedPayload, &state); err != nil {
+		return nil, fmt.Errorf("invalid oauth state payload: %w", err)
+	}
+
+	if state.Nonce == "" {
+		return nil, fmt.Errorf("missing nonce in oauth state")
+	}
+
+	normalizedRedirect, err := normalizeRedirectPage(state.RedirectPage)
+	if err != nil {
+		return nil, err
+	}
+	state.RedirectPage = normalizedRedirect
+
+	return &state, nil
 }
 
 func (srv *server) GetApiAuthProviderCallback(w http.ResponseWriter, r *http.Request, provider api.GetApiAuthProviderCallbackParamsProvider, params api.GetApiAuthProviderCallbackParams) {
@@ -86,7 +164,7 @@ func (srv *server) GetApiAuthProviderCallback(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	redirectUrl, err := url.JoinPath(*baseUrl, "auth", string(provider), "callback")
+	redirectUrl, err := url.JoinPath(*baseUrl, "api/auth", string(provider), "callback")
 	if err != nil {
 		http.Error(w, fmt.Sprintf("could not construct the callback url: %s", err.Error()), http.StatusInternalServerError)
 		return
@@ -109,8 +187,9 @@ func (srv *server) GetApiAuthProviderCallback(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	if !verifyStateToken(*params.State) {
-		http.Error(w, "invalid or expired oauth state", http.StatusBadRequest)
+	state, err := parseStateToken(*params.State)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("invalid or expired oauth state: %s", err.Error()), http.StatusBadRequest)
 		return
 	}
 
@@ -119,7 +198,7 @@ func (srv *server) GetApiAuthProviderCallback(w http.ResponseWriter, r *http.Req
 		Value:    "",
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   true,
+		Secure:   stateCookie.Secure,
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   -1,
 	})
@@ -134,6 +213,16 @@ func (srv *server) GetApiAuthProviderCallback(w http.ResponseWriter, r *http.Req
 		http.Error(w, "missing verifier cookie", http.StatusBadRequest)
 		return
 	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     cookieOAuthVerifier,
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   verifierCookie.Secure,
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   -1,
+	})
 
 	var upsertDbUser db.UserUpsertRetuningIdParams
 	switch provider {
@@ -229,11 +318,11 @@ func (srv *server) GetApiAuthProviderCallback(w http.ResponseWriter, r *http.Req
 		},
 	)
 
-	// TODO: redirect to the page it came from
+	http.Redirect(w, r, state.RedirectPage, http.StatusFound)
 }
 
 func (srv *server) GetApiAuthProviderLogin(w http.ResponseWriter, r *http.Request, provider api.GetApiAuthProviderLoginParamsProvider) {
-	redirectUrl, err := url.JoinPath(*baseUrl, "auth", string(provider), "callback")
+	redirectUrl, err := url.JoinPath(*baseUrl, "api/auth", string(provider), "callback")
 	if err != nil {
 		http.Error(w, fmt.Sprintf("could not construct the callback url: %s", err.Error()), http.StatusInternalServerError)
 		return
@@ -242,6 +331,11 @@ func (srv *server) GetApiAuthProviderLogin(w http.ResponseWriter, r *http.Reques
 	var oauthConfig *oauth2.Config
 	switch provider {
 	case api.Google:
+		if *googleClientId == "" || *googleClientSecret == "" {
+			log.FromCtx(r.Context()).ErrorContext(r.Context(), "Google client ID or client secret not set")
+			http.Error(w, "the back-end is not configured to handle Google auth", http.StatusBadRequest)
+			return
+		}
 		oauthConfig = &oauth2.Config{
 			ClientID:     *googleClientId,
 			ClientSecret: *googleClientSecret,
@@ -257,7 +351,11 @@ func (srv *server) GetApiAuthProviderLogin(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	state, exp := makeStateToken(5 * time.Minute)
+	state, exp, err := makeStateToken(5*time.Minute, r.URL.Query().Get("redirect_page"))
+	if err != nil {
+		http.Error(w, fmt.Sprintf("invalid redirect page: %s", err.Error()), http.StatusBadRequest)
+		return
+	}
 	verifier := oauth2.GenerateVerifier()
 
 	isHTTPS := false

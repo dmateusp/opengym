@@ -14,7 +14,7 @@ import (
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Unauthenticated path
-		if strings.HasPrefix(r.URL.Path, "/api/auth") {
+		if strings.HasPrefix(r.URL.EscapedPath(), "/api/auth") {
 			next.ServeHTTP(w, r)
 			return
 		}

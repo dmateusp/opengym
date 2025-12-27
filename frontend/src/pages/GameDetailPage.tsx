@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { API_BASE_URL } from '@/lib/api'
+import { API_BASE_URL, redirectToLogin } from '@/lib/api'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 
 interface Game {
@@ -37,6 +37,10 @@ export default function GameDetailPage() {
         })
 
         if (!response.ok) {
+          if (response.status === 401) {
+            redirectToLogin()
+            return
+          }
           if (response.status === 404) {
             throw new Error('Game not found')
           }

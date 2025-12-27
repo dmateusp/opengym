@@ -1,18 +1,20 @@
 import { Button } from "../ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
-import { oauthLoginUrl } from "../../lib/api";
+import { oauthLoginUrl, API_BASE_URL } from "../../lib/api";
 
 type OAuthLoginProps = {
   title?: string;
   description?: string;
+  redirectPage?: string;
 };
 
 export function OAuthLogin({
   title = "Authentication Required",
   description = "To do this you must be authenticated.",
+  redirectPage,
 }: OAuthLoginProps) {
   const onGoogleLogin = () => {
-    window.location.href = oauthLoginUrl("google");
+    window.location.href = API_BASE_URL + oauthLoginUrl("google", redirectPage);
   };
 
   return (

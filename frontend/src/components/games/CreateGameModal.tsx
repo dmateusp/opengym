@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { API_BASE_URL } from '@/lib/api'
+import { API_BASE_URL, redirectToLogin } from '@/lib/api'
 import { Loader2 } from 'lucide-react'
 
 interface CreateGameModalProps {
@@ -41,6 +41,10 @@ export default function CreateGameModal({ isOpen, onClose }: CreateGameModalProp
       })
 
       if (!response.ok) {
+        if (response.status === 401) {
+          redirectToLogin()
+          return
+        }
         const errorText = await response.text()
         throw new Error(errorText || 'Failed to create game')
       }

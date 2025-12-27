@@ -65,7 +65,7 @@ func main() {
 		Middlewares: []api.MiddlewareFunc{ // Middleware is executed last to first
 			auth.AuthMiddleware,
 			log.LogRequestsAndResponsesMiddleware,
-			log.AddLoggerToContextMiddleware(logger),
+			log.AddLoggerToContextMiddleware(logger), // runs first
 		},
 	})
 
