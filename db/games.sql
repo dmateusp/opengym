@@ -39,6 +39,7 @@ select
   id,
   name,
   location,
+  starts_at,
   published_at,
   updated_at,
   organizer_id = ? as is_organizer

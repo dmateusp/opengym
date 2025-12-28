@@ -4,12 +4,14 @@ import { API_BASE_URL, redirectToLogin } from '@/lib/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Loader2, CheckCircle2, CircleDashed, Crown } from 'lucide-react'
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
+import { formatDistanceToNow, format } from 'date-fns'
 
 interface GameListItem {
   id: string
   name: string
   isOrganizer: boolean
   location?: string
+  startsAt?: string | null
   publishedAt?: string | null
   updatedAt: string
 }
@@ -31,7 +33,9 @@ export default function GamesList() {
   const [error, setError] = useState<string | null>(null)
   const sentinelRef = useRef<HTMLDivElement | null>(null)
   const hasMore = useMemo(() => items.length < total, [items.length, total])
-  const [hoveredOrganizerId, setHoveredOrganizerId] = useState<string | null>(null)
+  const [hoveredCrowId, setHoveredCrowId] = useState<string | null>(null)
+  const [hoveredWhenId, setHoveredWhenId] = useState<string | null>(null)
+  const [hoveredTimestampId, setHoveredTimestampId] = useState<string | null>(null)
 
   async function fetchPage(p: number) {
     try {
@@ -104,9 +108,10 @@ export default function GamesList() {
         {/* Table Header */}
         <div className="grid grid-cols-12 gap-4 px-3 py-2 text-xs font-semibold text-gray-500 border-b">
           <div className="col-span-5">Name</div>
-          <div className="col-span-3">Location</div>
+          <div className="col-span-2">Location</div>
+          <div className="col-span-2">When</div>
           <div className="col-span-2">Status</div>
-          <div className="col-span-2 text-right">Updated</div>
+          <div className="col-span-1 text-right">Updated</div>
         </div>
 
         {/* Rows */}
@@ -120,10 +125,10 @@ export default function GamesList() {
               <div className="col-span-5 flex items-center gap-2">
                 {it.isOrganizer && (
                   <div
-                    onMouseEnter={() => setHoveredOrganizerId(it.id)}
-                    onMouseLeave={() => setHoveredOrganizerId(null)}
+                    onMouseEnter={() => setHoveredCrowId(it.id)}
+                    onMouseLeave={() => setHoveredCrowId(null)}
                   >
-                    <Popover open={hoveredOrganizerId === it.id}>
+                    <Popover open={hoveredCrowId === it.id}>
                       <PopoverAnchor asChild>
                         <span className="inline-flex items-center" aria-label="Organizer">
                           <Crown className="h-4 w-4 text-amber-500" aria-hidden="true" />
@@ -137,8 +142,28 @@ export default function GamesList() {
                 )}
                 <span className="text-gray-900 font-medium">{it.name}</span>
               </div>
-              <div className="col-span-3 text-gray-600 truncate">
+              <div className="col-span-2 text-gray-600 truncate">
                 {it.location || '—'}
+              </div>
+              <div
+                className="col-span-2 text-gray-600 text-xs"
+                onMouseEnter={() => setHoveredWhenId(it.id)}
+                onMouseLeave={() => setHoveredWhenId(null)}
+              >
+                {it.startsAt ? (
+                  <Popover open={hoveredWhenId === it.id}>
+                    <PopoverAnchor asChild>
+                      <span className="inline-block">
+                        {format(new Date(it.startsAt), "EEEE, do 'of' MMMM 'at' h:mma")}
+                      </span>
+                    </PopoverAnchor>
+                    <PopoverContent side="bottom" className="text-gray-800 text-xs">
+                      {new Date(it.startsAt).toLocaleString()}
+                    </PopoverContent>
+                  </Popover>
+                ) : (
+                  '—'
+                )}
               </div>
               <div className="col-span-2">
                 {it.publishedAt ? (
@@ -153,8 +178,21 @@ export default function GamesList() {
                   </span>
                 )}
               </div>
-              <div className="col-span-2 text-right text-gray-500">
-                {new Date(it.updatedAt).toLocaleDateString()}
+              <div
+                className="col-span-1 text-right text-gray-500 text-xs"
+                onMouseEnter={() => setHoveredTimestampId(it.id)}
+                onMouseLeave={() => setHoveredTimestampId(null)}
+              >
+                <Popover open={hoveredTimestampId === it.id}>
+                  <PopoverAnchor asChild>
+                    <span className="inline-block">
+                      {formatDistanceToNow(new Date(it.updatedAt), { addSuffix: true })}
+                    </span>
+                  </PopoverAnchor>
+                  <PopoverContent side="bottom" className="text-gray-800 text-xs">
+                    {new Date(it.updatedAt).toLocaleString()}
+                  </PopoverContent>
+                </Popover>
               </div>
             </button>
           ))}

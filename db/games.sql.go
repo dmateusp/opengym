@@ -123,6 +123,7 @@ select
   id,
   name,
   location,
+  starts_at,
   published_at,
   updated_at,
   organizer_id = ? as is_organizer
@@ -143,6 +144,7 @@ type GameListByUserRow struct {
 	ID          string
 	Name        string
 	Location    sql.NullString
+	StartsAt    sql.NullTime
 	PublishedAt sql.NullTime
 	UpdatedAt   time.Time
 	IsOrganizer bool
@@ -166,6 +168,7 @@ func (q *Queries) GameListByUser(ctx context.Context, arg GameListByUserParams) 
 			&i.ID,
 			&i.Name,
 			&i.Location,
+			&i.StartsAt,
 			&i.PublishedAt,
 			&i.UpdatedAt,
 			&i.IsOrganizer,

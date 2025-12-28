@@ -163,6 +163,10 @@ func (srv *server) GetApiGames(w http.ResponseWriter, r *http.Request, params ap
 			loc := row.Location.String
 			item.Location = &loc
 		}
+		if row.StartsAt.Valid {
+			item.StartsAt = nullable.Nullable[time.Time]{}
+			item.StartsAt.Set(row.StartsAt.Time)
+		}
 		if row.PublishedAt.Valid {
 			item.PublishedAt = nullable.Nullable[time.Time]{}
 			item.PublishedAt.Set(row.PublishedAt.Time)

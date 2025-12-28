@@ -457,6 +457,11 @@ components:
           type: string
           description: Location where the game will be held
           example: "123 Main St, Downtown"
+        startsAt:
+          type: string
+          format: date-time
+          description: When the game starts
+          nullable: true
         publishedAt:
           type: string
           format: date-time

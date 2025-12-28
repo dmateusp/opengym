@@ -138,6 +138,10 @@ export type GameListItem = {
      */
     location?: string;
     /**
+     * When the game starts
+     */
+    startsAt?: string | null;
+    /**
      * When the game is published (visible to others)
      */
     publishedAt?: string | null;
