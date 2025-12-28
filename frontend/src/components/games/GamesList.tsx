@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Loader2, CheckCircle2, CircleDashed, Crown } from 'lucide-react'
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
 import { formatDistanceToNow, format } from 'date-fns'
+import { TimeDisplay } from '@/components/ui/TimeDisplay'
 
 interface GameListItem {
   id: string
@@ -34,8 +35,6 @@ export default function GamesList() {
   const sentinelRef = useRef<HTMLDivElement | null>(null)
   const hasMore = useMemo(() => items.length < total, [items.length, total])
   const [hoveredCrowId, setHoveredCrowId] = useState<string | null>(null)
-  const [hoveredWhenId, setHoveredWhenId] = useState<string | null>(null)
-  const [hoveredTimestampId, setHoveredTimestampId] = useState<string | null>(null)
 
   async function fetchPage(p: number) {
     try {
@@ -145,22 +144,13 @@ export default function GamesList() {
               <div className="col-span-2 text-gray-600 truncate">
                 {it.location || '—'}
               </div>
-              <div
-                className="col-span-2 text-gray-600 text-xs"
-                onMouseEnter={() => setHoveredWhenId(it.id)}
-                onMouseLeave={() => setHoveredWhenId(null)}
-              >
+              <div className="col-span-2 text-gray-600 text-xs">
                 {it.startsAt ? (
-                  <Popover open={hoveredWhenId === it.id}>
-                    <PopoverAnchor asChild>
-                      <span className="inline-block">
-                        {format(new Date(it.startsAt), "EEEE, do 'of' MMMM 'at' h:mma")}
-                      </span>
-                    </PopoverAnchor>
-                    <PopoverContent side="bottom" className="text-gray-800 text-xs">
-                      {new Date(it.startsAt).toLocaleString()}
-                    </PopoverContent>
-                  </Popover>
+                  <TimeDisplay 
+                    timestamp={it.startsAt} 
+                    displayFormat="friendly"
+                    className="text-gray-600 decoration-gray-400"
+                  />
                 ) : (
                   '—'
                 )}
@@ -178,21 +168,12 @@ export default function GamesList() {
                   </span>
                 )}
               </div>
-              <div
-                className="col-span-1 text-right text-gray-500 text-xs"
-                onMouseEnter={() => setHoveredTimestampId(it.id)}
-                onMouseLeave={() => setHoveredTimestampId(null)}
-              >
-                <Popover open={hoveredTimestampId === it.id}>
-                  <PopoverAnchor asChild>
-                    <span className="inline-block">
-                      {formatDistanceToNow(new Date(it.updatedAt), { addSuffix: true })}
-                    </span>
-                  </PopoverAnchor>
-                  <PopoverContent side="bottom" className="text-gray-800 text-xs">
-                    {new Date(it.updatedAt).toLocaleString()}
-                  </PopoverContent>
-                </Popover>
+              <div className="col-span-1 text-right text-gray-500 text-xs">
+                <TimeDisplay 
+                  timestamp={it.updatedAt} 
+                  displayFormat="relative"
+                  className="text-gray-500 decoration-gray-400"
+                />
               </div>
             </button>
           ))}

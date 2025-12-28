@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer'
 import { PriceDisplay } from '@/components/games/PriceDisplay'
 import { Popover, PopoverContent, PopoverAnchor } from '@/components/ui/popover'
+import { TimeDisplay } from '@/components/ui/TimeDisplay'
 
 interface Game {
   id: string
@@ -356,7 +357,12 @@ export default function GameDetailPage() {
             
             <div className="flex items-center gap-2 text-sm text-white/80">
               <Calendar className="h-4 w-4" />
-              <span>Created {new Date(game?.createdAt || '').toLocaleDateString()}</span>
+              <TimeDisplay 
+                timestamp={game?.createdAt || ''} 
+                displayFormat="relative" 
+                prefix="Created"
+                className="text-white/80 decoration-white/40"
+              />
             </div>
           </div>
 
@@ -493,12 +499,20 @@ export default function GameDetailPage() {
                     )}
                   </div>
                 ) : (
-                  <p 
-                    className={`text-gray-700 ${isOrganizer ? 'cursor-pointer hover:text-gray-900' : ''}`}
+                  <div
+                    className={isOrganizer ? 'cursor-pointer hover:text-gray-900' : ''}
                     onClick={() => isOrganizer && startEditing('startsAt', game?.startsAt ? toLocalInputValue(game.startsAt) : '')}
                   >
-                    {game?.startsAt ? new Date(game.startsAt).toLocaleString() : (isOrganizer ? 'Click to set time...' : '—')}
-                  </p>
+                    {game?.startsAt ? (
+                      <TimeDisplay 
+                        timestamp={game.startsAt} 
+                        displayFormat="friendly"
+                        className="text-gray-700 decoration-gray-400"
+                      />
+                    ) : (
+                      <p className="text-gray-700">{isOrganizer ? 'Click to set time...' : '—'}</p>
+                    )}
+                  </div>
                 )}
               </div>
 
