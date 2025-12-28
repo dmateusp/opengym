@@ -189,18 +189,18 @@ func (q *Queries) GameListByUser(ctx context.Context, arg GameListByUserParams) 
 const gameUpdate = `-- name: GameUpdate :exec
 update games
 set
-  name = coalesce(?, name),
-  description = coalesce(?, description),
-  published_at = coalesce(?, published_at),
-  total_price_cents = coalesce(?, total_price_cents),
-  location = coalesce(?, location),
-  starts_at = coalesce(?, starts_at),
-  duration_minutes = coalesce(?, duration_minutes),
-  max_players = coalesce(?, max_players),
-  max_waitlist_size = coalesce(?, max_waitlist_size),
-  max_guests_per_player = coalesce(?, max_guests_per_player),
+  name = coalesce(?1, name),
+  description = coalesce(?2, description),
+  published_at = coalesce(?3, published_at),
+  total_price_cents = coalesce(?4, total_price_cents),
+  location = coalesce(?5, location),
+  starts_at = coalesce(?6, starts_at),
+  duration_minutes = coalesce(nullif(cast(?7 as integer), 0), duration_minutes),
+  max_players = coalesce(nullif(cast(?8 as integer), 0), max_players),
+  max_waitlist_size = coalesce(?9, max_waitlist_size),
+  max_guests_per_player = coalesce(?10, max_guests_per_player),
   updated_at = current_timestamp
-where id = ?
+where id = ?11
 `
 
 type GameUpdateParams struct {

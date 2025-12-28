@@ -2,7 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { API_BASE_URL, redirectToLogin } from '@/lib/api'
-import { ArrowLeft, Loader2, CheckCircle2, Edit2, Calendar, Clock, MapPin, Users, DollarSign, Crown, AlertCircle } from 'lucide-react'
+import { ArrowLeft, Loader2, CheckCircle2, Edit2, Calendar, Clock, MapPin, Users, DollarSign, Crown, AlertCircle, XCircle, Rocket } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer'
 import { PriceDisplay } from '@/components/games/PriceDisplay'
@@ -40,6 +40,8 @@ export default function GameDetailPage() {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [organizerHintOpen, setOrganizerHintOpen] = useState(false)
   const [draftHintOpen, setDraftHintOpen] = useState(false)
+  const [isPublishing, setIsPublishing] = useState(false)
+  const [publishError, setPublishError] = useState<string | null>(null)
 
   // Editing state
   const [editingField, setEditingField] = useState<string | null>(null)
@@ -107,6 +109,46 @@ export default function GameDetailPage() {
     return userIdNum === game.organizerId
   }, [game, user])
 
+  // Check if all publish requirements are met
+  const publishRequirements = useMemo(() => {
+    if (!game) return []
+    return [
+      {
+        label: 'Location set',
+        met: !!game.location,
+        field: 'location'
+      },
+      {
+        label: 'Start time set',
+        met: !!game.startsAt,
+        field: 'startsAt'
+      },
+      {
+        label: 'Duration set',
+        met: typeof game.durationMinutes === 'number' && game.durationMinutes > 0,
+        field: 'durationMinutes'
+      },
+      {
+        label: 'Max players set',
+        met: typeof game.maxPlayers === 'number' && game.maxPlayers > 0,
+        field: 'maxPlayers'
+      },
+      {
+        label: 'Pricing set',
+        met: typeof game.totalPriceCents === 'number' && game.totalPriceCents >= 0,
+        field: 'totalPriceCents'
+      }
+    ]
+  }, [game])
+
+  const canPublish = useMemo(() => {
+    return publishRequirements.every(req => req.met)
+  }, [publishRequirements])
+
+  const isPublished = useMemo(() => {
+    return !!game?.publishedAt
+  }, [game])
+
   // Focus input when editing starts
   useEffect(() => {
     if (editingField && inputRef.current) {
@@ -140,6 +182,35 @@ export default function GameDetailPage() {
         saveTimersRef.current[field] = undefined
       }
     })
+  }
+
+  async function handlePublish() {
+    if (!isOrganizer || !id || !canPublish) return
+    setIsPublishing(true)
+    setPublishError(null)
+    
+    try {
+      const resp = await fetch(`${API_BASE_URL}/api/games/${id}/publish`, {
+        method: 'POST',
+        credentials: 'include',
+      })
+      
+      if (!resp.ok) {
+        if (resp.status === 401) {
+          redirectToLogin()
+          return
+        }
+        const txt = await resp.text()
+        throw new Error(txt || 'Failed to publish game')
+      }
+      
+      const updated = await resp.json()
+      setGame(updated)
+    } catch (e) {
+      setPublishError(e instanceof Error ? e.message : 'Failed to publish game')
+    } finally {
+      setIsPublishing(false)
+    }
   }
 
   async function saveField(field: string, value: unknown) {
@@ -645,13 +716,122 @@ export default function GameDetailPage() {
 
             {/* Action Area */}
             <section className="border-t pt-6">
-              <div className="text-center py-4 text-gray-500">
-                {isOrganizer ? (
-                  <p className="text-sm">Click any field above to edit. Changes save automatically.</p>
+              {isOrganizer ? (
+                !isPublished ? (
+                  <div className="space-y-6">
+                    {/* Publish Requirements Checklist */}
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-100">
+                      <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                        <Rocket className="h-5 w-5 text-indigo-600" />
+                        Requirements to publish the game and let users join
+                      </h3>
+                      <div className="space-y-3 mb-6">
+                        {publishRequirements.map((req) => (
+                          <div key={req.field} className="flex items-center gap-3">
+                            {req.met ? (
+                              <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0" />
+                            ) : (
+                              <XCircle className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                            )}
+                            <span className={`text-sm ${req.met ? 'text-gray-700' : 'text-gray-500'}`}>
+                              {req.label}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {canPublish ? (
+                        <div className="space-y-3">
+                          <div className="bg-white rounded-lg p-4 border border-green-200">
+                            <div className="flex items-start gap-3">
+                              <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                              <div>
+                                <p className="font-medium text-gray-900">Ready to publish!</p>
+                                <p className="text-sm text-gray-600 mt-1">
+                                  Your game meets all requirements and can be published. Once published, 
+                                  other users will be able to view and join your game.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          <Button
+                            onClick={handlePublish}
+                            disabled={isPublishing}
+                            className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+                            size="lg"
+                          >
+                            {isPublishing ? (
+                              <>
+                                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                                Publishing...
+                              </>
+                            ) : (
+                              <>
+                                <Rocket className="mr-2 h-5 w-5" />
+                                Publish Game
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                          <div className="flex items-start gap-3">
+                            <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                            <div>
+                              <p className="text-sm text-gray-600">
+                                After publishing, you'll still be able to change game details. However, changes to 
+                                important details like Location, Time, and Price will require participants to re-cast their vote.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {publishError && (
+                        <div className="mt-3 bg-red-50 border border-red-200 rounded-lg p-4">
+                          <div className="flex items-center gap-2 text-red-800">
+                            <AlertCircle className="h-4 w-4" />
+                            <span className="text-sm font-medium">Error: {publishError}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="text-center text-sm text-gray-500">
+                      Click any field above to edit. Changes save automatically.
+                    </div>
+                  </div>
                 ) : (
+                  <div className="space-y-4">
+                    <div className="bg-green-50 rounded-lg p-6 border border-green-200">
+                      <div className="flex items-center gap-3 mb-2">
+                        <CheckCircle2 className="h-6 w-6 text-green-600" />
+                        <h3 className="font-semibold text-gray-900">Game Published</h3>
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        Your game is now live! Other users can view and join your game.
+                      </p>
+                      {game?.publishedAt && (
+                        <div className="mt-3 text-sm text-gray-500">
+                          <TimeDisplay 
+                            timestamp={game.publishedAt} 
+                            displayFormat="relative" 
+                            prefix="Published"
+                            className="text-gray-500 decoration-gray-400"
+                          />
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-center text-sm text-gray-500">
+                      You can still edit game details. Changes will be visible immediately.
+                    </div>
+                  </div>
+                )
+              ) : (
+                <div className="text-center py-4 text-gray-500">
                   <p className="text-sm">Player registration coming soon!</p>
-                )}
-              </div>
+                </div>
+              )}
             </section>
           </div>
         </div>
