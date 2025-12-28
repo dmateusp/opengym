@@ -2,11 +2,11 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { API_BASE_URL, redirectToLogin } from '@/lib/api'
-import { ArrowLeft, Loader2, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, Loader2, CheckCircle2, Edit2, Calendar, Clock, MapPin, Users, DollarSign } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer'
 import { PriceDisplay } from '@/components/games/PriceDisplay'
-import { Popover, PopoverTrigger, PopoverContent, PopoverAnchor } from '@/components/ui/popover'
+import { Popover, PopoverContent } from '@/components/ui/popover'
 
 interface Game {
   id: string
@@ -38,21 +38,17 @@ export default function GameDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [user, setUser] = useState<AuthUser | null>(null)
 
-  // Local editable state (no persistence yet)
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  const [location, setLocation] = useState('')
-  const [totalPriceCents, setTotalPriceCents] = useState<number | undefined>(undefined)
-  const [maxPlayers, setMaxPlayers] = useState<number | undefined>(undefined)
-  const [startsAt, setStartsAt] = useState('')
-  const [durationMinutes, setDurationMinutes] = useState<number | undefined>(undefined)
-
+  // Editing state
+  const [editingField, setEditingField] = useState<string | null>(null)
+  const [editValue, setEditValue] = useState<string>('')
+  
   // Autosave status per field
   const [saving, setSaving] = useState<Record<string, boolean>>({})
   const [saveErrors, setSaveErrors] = useState<Record<string, string | null>>({})
   const saveTimersRef = useRef<Record<string, number | undefined>>({})
   const [saved, setSaved] = useState<Record<string, boolean>>({})
   const savedTimersRef = useRef<Record<string, number | undefined>>({})
+  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null)
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -90,21 +86,6 @@ export default function GameDetailPage() {
         } catch {
           // ignore user fetch errors, treat as not logged in
         }
-
-        // Initialize local editable state
-        setName(gameData.name || '')
-        setDescription(gameData.description || '')
-        setLocation(gameData.location || '')
-        setTotalPriceCents(
-          typeof gameData.totalPriceCents === 'number' ? gameData.totalPriceCents : undefined
-        )
-        setMaxPlayers(
-          typeof gameData.maxPlayers === 'number' ? gameData.maxPlayers : undefined
-        )
-        setStartsAt(gameData.startsAt || '')
-        setDurationMinutes(
-          typeof gameData.durationMinutes === 'number' ? gameData.durationMinutes : undefined
-        )
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Something went wrong')
       } finally {
@@ -123,6 +104,41 @@ export default function GameDetailPage() {
     if (Number.isNaN(userIdNum)) return false
     return userIdNum === game.organizerId
   }, [game, user])
+
+  // Focus input when editing starts
+  useEffect(() => {
+    if (editingField && inputRef.current) {
+      inputRef.current.focus()
+    }
+  }, [editingField])
+
+  function startEditing(field: string, currentValue: unknown) {
+    if (!isOrganizer) return
+    setEditingField(field)
+    if (typeof currentValue === 'number') {
+      setEditValue(String(currentValue))
+    } else if (typeof currentValue === 'string') {
+      setEditValue(currentValue)
+    } else {
+      setEditValue('')
+    }
+  }
+
+  function cancelEditing() {
+    setEditingField(null)
+    setEditValue('')
+    cancelAllDebounces()
+  }
+
+  function cancelAllDebounces() {
+    Object.keys(saveTimersRef.current).forEach(field => {
+      const timerId = saveTimersRef.current[field]
+      if (timerId !== undefined) {
+        clearTimeout(timerId)
+        saveTimersRef.current[field] = undefined
+      }
+    })
+  }
 
   async function saveField(field: string, value: unknown) {
     if (!isOrganizer || !id) return
@@ -149,6 +165,7 @@ export default function GameDetailPage() {
       }
       const updated = await resp.json()
       setGame(updated)
+      setEditingField(null)
       // Show 'Saved' briefly
       setSaved((prev) => ({ ...prev, [field]: true }))
       const existing = savedTimersRef.current[field]
@@ -190,6 +207,34 @@ export default function GameDetailPage() {
     }, delay)
     saveTimersRef.current[field] = timerId
   }
+
+  function handleBlur(field: string) {
+    if (editingField !== field) return
+    cancelDebouncedSave(field)
+    
+    let valueToSave: unknown = editValue
+    if (field === 'totalPriceCents' || field === 'maxPlayers' || field === 'durationMinutes') {
+      const num = Number(editValue)
+      valueToSave = isNaN(num) ? undefined : num
+    } else if (field === 'startsAt') {
+      valueToSave = fromLocalInputValue(editValue)
+    }
+    
+    if (valueToSave !== undefined && valueToSave !== '') {
+      saveField(field, valueToSave)
+    } else {
+      cancelEditing()
+    }
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent, field: string) {
+    if (e.key === 'Escape') {
+      cancelEditing()
+    } else if (e.key === 'Enter' && field !== 'description') {
+      handleBlur(field)
+    }
+  }
+
 
   function cancelDebouncedSave(field: string) {
     const timers = saveTimersRef.current
@@ -253,7 +298,7 @@ export default function GameDetailPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
         <Button
           variant="ghost"
           onClick={() => navigate('/')}
@@ -263,281 +308,327 @@ export default function GameDetailPage() {
           Back to Games
         </Button>
 
-        <div className="bg-white rounded-lg shadow-lg p-8 space-y-8">
-          {/* Header: Name */}
-          <div>
-            <div className="flex items-center justify-between">
-              <h1 className="text-4xl font-bold text-gray-900 mb-2">Game</h1>
-              {isOrganizer && (
-                <span className="text-xs px-2 py-1 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">Organizer view</span>
-              )}
-            </div>
-            <div className="text-sm text-gray-500 mb-4">
-              Created on {new Date(game.createdAt).toLocaleDateString()}
-            </div>
-
-            {isOrganizer ? (
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                  <Popover open={!!saved['name'] && !saving['name'] && !saveErrors['name']}>
-                    <PopoverTrigger asChild>
-                      <span>Name</span>
-                    </PopoverTrigger>
-                    <PopoverContent side="right" className="flex items-center gap-2 text-green-700">
-                      <CheckCircle2 className="h-4 w-4" />
-                      <span>Saved</span>
-                    </PopoverContent>
-                  </Popover>
-                  {/* Removed inline saving indicator; popover handles saved feedback */}
-                </label>
+        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+          {/* Hero Header */}
+          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-8 py-12 text-white relative">
+            {isOrganizer && (
+              <div className="absolute top-4 right-4">
+                <span className="text-xs px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm border border-white/30">
+                  <Edit2 className="inline h-3 w-3 mr-1" />
+                  Organizer
+                </span>
+              </div>
+            )}
+            
+            {/* Title - Inline Editable */}
+            {editingField === 'name' && isOrganizer ? (
+              <div className="relative">
                 <Input
-                  value={name}
-                  onChange={(e) => {
-                    const v = e.target.value
-                    setName(v)
-                    scheduleDebouncedSave('name', v)
-                  }}
-                  onBlur={() => {
-                    cancelDebouncedSave('name')
-                    saveField('name', name)
-                  }}
+                  ref={inputRef as React.RefObject<HTMLInputElement>}
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onBlur={() => handleBlur('name')}
+                  onKeyDown={(e) => handleKeyDown(e, 'name')}
+                  className="text-4xl font-bold bg-white/10 border-white/30 text-white placeholder:text-white/50"
                 />
                 {saveErrors['name'] && (
-                  <div className="text-xs text-red-600">{saveErrors['name']}</div>
+                  <div className="text-xs text-red-200 mt-2">{saveErrors['name']}</div>
                 )}
               </div>
             ) : (
-              <h2 className="text-3xl font-semibold text-gray-900">{game.name}</h2>
+              <h1 
+                className={`text-4xl font-bold mb-4 ${isOrganizer ? 'cursor-pointer hover:text-white/90 transition-colors' : ''}`}
+                onClick={() => isOrganizer && startEditing('name', game?.name)}
+              >
+                {game?.name || 'Untitled Game'}
+              </h1>
             )}
+            
+            <div className="flex items-center gap-2 text-sm text-white/80">
+              <Calendar className="h-4 w-4" />
+              <span>Created {new Date(game?.createdAt || '').toLocaleDateString()}</span>
+            </div>
           </div>
 
-          {/* Description */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">Description</h3>
-            {isOrganizer ? (
-              <div className="space-y-3">
-                <Popover open={!!saved['description'] && !saving['description'] && !saveErrors['description']}>
-                  <PopoverAnchor asChild>
-                    <textarea
-                      className="w-full min-h-[140px] rounded-md border border-gray-300 bg-white px-3 py-2 text-base text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                      value={description}
-                      onChange={(e) => {
-                        const v = e.target.value
-                        setDescription(v)
-                        scheduleDebouncedSave('description', v)
-                      }}
-                      placeholder="Markdown supported"
-                      onBlur={() => {
-                        cancelDebouncedSave('description')
-                        saveField('description', description)
-                      }}
-                    />
-                  </PopoverAnchor>
-                  <PopoverContent side="right" className="flex items-center gap-2 text-green-700">
+          {/* Main Content */}
+          <div className="p-8 space-y-8">
+            {/* Description Section */}
+            <section>
+              <div className="flex items-center gap-2 mb-4">
+                <h2 className="text-xl font-semibold text-gray-900">About</h2>
+                {isOrganizer && editingField !== 'description' && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => startEditing('description', game?.description || '')}
+                    className="h-7 px-2 text-gray-500 hover:text-gray-900"
+                  >
+                    <Edit2 className="h-3 w-3" />
+                  </Button>
+                )}
+                <Popover open={!!saved['description']}>
+                  <PopoverContent side="right" className="flex items-center gap-2 text-green-700 w-auto">
                     <CheckCircle2 className="h-4 w-4" />
                     <span>Saved</span>
                   </PopoverContent>
                 </Popover>
-                {saveErrors['description'] && (
-                  <div className="text-xs text-red-600">{saveErrors['description']}</div>
-                )}
-                <div className="border-t pt-3">
-                  <div className="text-sm text-gray-500 mb-2">Preview</div>
-                  <MarkdownRenderer value={description || ''} />
-                </div>
               </div>
-            ) : (
-              game.description ? (
-                <MarkdownRenderer value={game.description} />
+              
+              {editingField === 'description' && isOrganizer ? (
+                <div className="space-y-3">
+                  <textarea
+                    ref={inputRef as React.RefObject<HTMLTextAreaElement>}
+                    className="w-full min-h-[200px] rounded-lg border border-gray-300 bg-white px-4 py-3 text-base text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    onBlur={() => handleBlur('description')}
+                    placeholder="Describe your game (Markdown supported)..."
+                  />
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={() => handleBlur('description')}>
+                      Save
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={cancelEditing}>
+                      Cancel
+                    </Button>
+                  </div>
+                  {saveErrors['description'] && (
+                    <div className="text-xs text-red-600">{saveErrors['description']}</div>
+                  )}
+                </div>
               ) : (
-                <div className="bg-gray-50 rounded-lg p-6 text-center text-gray-500">
-                  <p>No description yet.</p>
+                <div className={`prose prose-slate max-w-none ${isOrganizer && !game?.description ? 'cursor-pointer' : ''}`}
+                     onClick={() => isOrganizer && !game?.description && startEditing('description', '')}>
+                  {game?.description ? (
+                    <MarkdownRenderer value={game.description} />
+                  ) : (
+                    <div className="text-gray-400 italic py-8 text-center border-2 border-dashed border-gray-200 rounded-lg">
+                      {isOrganizer ? 'Click to add a description...' : 'No description yet.'}
+                    </div>
+                  )}
                 </div>
-              )
-            )}
-          </div>
+              )}
+            </section>
 
-          {/* Location */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">Location</h3>
-            {isOrganizer ? (
-              <div className="space-y-2">
-                <Popover open={!!saved['location'] && !saving['location'] && !saveErrors['location']}>
-                  <PopoverAnchor asChild>
-                    <Input
-                      value={location}
-                      onChange={(e) => {
-                        const v = e.target.value
-                        setLocation(v)
-                        scheduleDebouncedSave('location', v)
-                      }}
-                      onBlur={() => {
-                        cancelDebouncedSave('location')
-                        saveField('location', location)
-                      }}
-                      placeholder="e.g., 123 Main St, Downtown"
-                    />
-                  </PopoverAnchor>
-                  <PopoverContent side="right" className="flex items-center gap-2 text-green-700">
-                    <CheckCircle2 className="h-4 w-4" />
-                    <span>Saved</span>
-                  </PopoverContent>
-                </Popover>
-                {/* Removed inline saving indicator; popover handles saved feedback */}
-                {saveErrors['location'] && (
-                  <div className="text-xs text-red-600">{saveErrors['location']}</div>
-                )}
-              </div>
-            ) : (
-              <div className="text-gray-800">{game.location || '—'}</div>
-            )}
-          </div>
-
-          {/* Pricing */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">Price</h3>
-            {isOrganizer ? (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Total Price (cents)</label>
-                  <Popover open={!!saved['totalPriceCents'] && !saving['totalPriceCents'] && !saveErrors['totalPriceCents']}>
-                    <PopoverAnchor asChild>
-                      <Input
-                        type="number"
-                        value={typeof totalPriceCents === 'number' ? totalPriceCents : ''}
-                        onChange={(e) => {
-                          const v = e.target.value === '' ? undefined : Number(e.target.value)
-                          setTotalPriceCents(v)
-                          if (v !== undefined) scheduleDebouncedSave('totalPriceCents', v)
-                        }}
-                        onBlur={() => {
-                          cancelDebouncedSave('totalPriceCents')
-                          if (totalPriceCents !== undefined) saveField('totalPriceCents', totalPriceCents)
-                        }}
-                      />
-                    </PopoverAnchor>
-                    <PopoverContent side="right" className="flex items-center gap-2 text-green-700">
+            {/* Details Grid */}
+            <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Location */}
+              <div className="bg-gray-50 rounded-lg p-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="bg-indigo-100 rounded-full p-2">
+                    <MapPin className="h-5 w-5 text-indigo-600" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900">Location</h3>
+                  <Popover open={!!saved['location']}>
+                    <PopoverContent side="right" className="flex items-center gap-2 text-green-700 w-auto">
                       <CheckCircle2 className="h-4 w-4" />
                       <span>Saved</span>
                     </PopoverContent>
                   </Popover>
-                  {/* Removed inline saving indicator; popover handles saved feedback */}
+                </div>
+                
+                {editingField === 'location' && isOrganizer ? (
+                  <div>
+                    <Input
+                      ref={inputRef as React.RefObject<HTMLInputElement>}
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      onBlur={() => handleBlur('location')}
+                      onKeyDown={(e) => handleKeyDown(e, 'location')}
+                      placeholder="e.g., 123 Main St, Downtown"
+                      className="mb-2"
+                    />
+                    {saveErrors['location'] && (
+                      <div className="text-xs text-red-600">{saveErrors['location']}</div>
+                    )}
+                  </div>
+                ) : (
+                  <p 
+                    className={`text-gray-700 ${isOrganizer ? 'cursor-pointer hover:text-gray-900' : ''}`}
+                    onClick={() => isOrganizer && startEditing('location', game?.location || '')}
+                  >
+                    {game?.location || (isOrganizer ? 'Click to add location...' : '—')}
+                  </p>
+                )}
+              </div>
+
+              {/* Start Time */}
+              <div className="bg-gray-50 rounded-lg p-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="bg-green-100 rounded-full p-2">
+                    <Clock className="h-5 w-5 text-green-600" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900">Start Time</h3>
+                  <Popover open={!!saved['startsAt']}>
+                    <PopoverContent side="right" className="flex items-center gap-2 text-green-700 w-auto">
+                      <CheckCircle2 className="h-4 w-4" />
+                      <span>Saved</span>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                
+                {editingField === 'startsAt' && isOrganizer ? (
+                  <div>
+                    <Input
+                      ref={inputRef as React.RefObject<HTMLInputElement>}
+                      type="datetime-local"
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      onBlur={() => handleBlur('startsAt')}
+                      onKeyDown={(e) => handleKeyDown(e, 'startsAt')}
+                      className="mb-2"
+                    />
+                    {saveErrors['startsAt'] && (
+                      <div className="text-xs text-red-600">{saveErrors['startsAt']}</div>
+                    )}
+                  </div>
+                ) : (
+                  <p 
+                    className={`text-gray-700 ${isOrganizer ? 'cursor-pointer hover:text-gray-900' : ''}`}
+                    onClick={() => isOrganizer && startEditing('startsAt', game?.startsAt ? toLocalInputValue(game.startsAt) : '')}
+                  >
+                    {game?.startsAt ? new Date(game.startsAt).toLocaleString() : (isOrganizer ? 'Click to set time...' : '—')}
+                  </p>
+                )}
+              </div>
+
+              {/* Duration */}
+              <div className="bg-gray-50 rounded-lg p-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="bg-amber-100 rounded-full p-2">
+                    <Clock className="h-5 w-5 text-amber-600" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900">Duration</h3>
+                  <Popover open={!!saved['durationMinutes']}>
+                    <PopoverContent side="right" className="flex items-center gap-2 text-green-700 w-auto">
+                      <CheckCircle2 className="h-4 w-4" />
+                      <span>Saved</span>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                
+                {editingField === 'durationMinutes' && isOrganizer ? (
+                  <div>
+                    <Input
+                      ref={inputRef as React.RefObject<HTMLInputElement>}
+                      type="number"
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      onBlur={() => handleBlur('durationMinutes')}
+                      onKeyDown={(e) => handleKeyDown(e, 'durationMinutes')}
+                      placeholder="Minutes"
+                      className="mb-2"
+                    />
+                    {saveErrors['durationMinutes'] && (
+                      <div className="text-xs text-red-600">{saveErrors['durationMinutes']}</div>
+                    )}
+                  </div>
+                ) : (
+                  <p 
+                    className={`text-gray-700 ${isOrganizer ? 'cursor-pointer hover:text-gray-900' : ''}`}
+                    onClick={() => isOrganizer && startEditing('durationMinutes', game?.durationMinutes)}
+                  >
+                    {typeof game?.durationMinutes === 'number' ? `${game.durationMinutes} minutes` : (isOrganizer ? 'Click to set duration...' : '—')}
+                  </p>
+                )}
+              </div>
+
+              {/* Max Players */}
+              <div className="bg-gray-50 rounded-lg p-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="bg-blue-100 rounded-full p-2">
+                    <Users className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900">Max Players</h3>
+                  <Popover open={!!saved['maxPlayers']}>
+                    <PopoverContent side="right" className="flex items-center gap-2 text-green-700 w-auto">
+                      <CheckCircle2 className="h-4 w-4" />
+                      <span>Saved</span>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                
+                {editingField === 'maxPlayers' && isOrganizer ? (
+                  <div>
+                    <Input
+                      ref={inputRef as React.RefObject<HTMLInputElement>}
+                      type="number"
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      onBlur={() => handleBlur('maxPlayers')}
+                      onKeyDown={(e) => handleKeyDown(e, 'maxPlayers')}
+                      placeholder="Number of players"
+                      className="mb-2"
+                    />
+                    {saveErrors['maxPlayers'] && (
+                      <div className="text-xs text-red-600">{saveErrors['maxPlayers']}</div>
+                    )}
+                  </div>
+                ) : (
+                  <p 
+                    className={`text-gray-700 ${isOrganizer ? 'cursor-pointer hover:text-gray-900' : ''}`}
+                    onClick={() => isOrganizer && startEditing('maxPlayers', game?.maxPlayers)}
+                  >
+                    {typeof game?.maxPlayers === 'number' ? `${game.maxPlayers} players` : (isOrganizer ? 'Click to set max...' : '—')}
+                  </p>
+                )}
+              </div>
+            </section>
+
+            {/* Pricing Section */}
+            <section className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg p-6 border border-purple-100">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="bg-purple-100 rounded-full p-2">
+                  <DollarSign className="h-5 w-5 text-purple-600" />
+                </div>
+                <h3 className="font-semibold text-gray-900">Pricing</h3>
+                <Popover open={!!saved['totalPriceCents']}>
+                  <PopoverContent side="right" className="flex items-center gap-2 text-green-700 w-auto">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>Saved</span>
+                  </PopoverContent>
+                </Popover>
+              </div>
+              
+              {editingField === 'totalPriceCents' && isOrganizer ? (
+                <div>
+                  <div className="flex gap-2 items-center mb-2">
+                    <Input
+                      ref={inputRef as React.RefObject<HTMLInputElement>}
+                      type="number"
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      onBlur={() => handleBlur('totalPriceCents')}
+                      onKeyDown={(e) => handleKeyDown(e, 'totalPriceCents')}
+                      placeholder="Price in cents"
+                      className="max-w-xs"
+                    />
+                    <span className="text-sm text-gray-500">cents</span>
+                  </div>
                   {saveErrors['totalPriceCents'] && (
                     <div className="text-xs text-red-600">{saveErrors['totalPriceCents']}</div>
                   )}
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Max Players</label>
-                  <Popover open={!!saved['maxPlayers'] && !saving['maxPlayers'] && !saveErrors['maxPlayers']}>
-                    <PopoverAnchor asChild>
-                      <Input
-                        type="number"
-                        value={typeof maxPlayers === 'number' ? maxPlayers : ''}
-                        onChange={(e) => {
-                          const v = e.target.value === '' ? undefined : Number(e.target.value)
-                          setMaxPlayers(v)
-                          if (v !== undefined) scheduleDebouncedSave('maxPlayers', v)
-                        }}
-                        onBlur={() => {
-                          cancelDebouncedSave('maxPlayers')
-                          if (maxPlayers !== undefined) saveField('maxPlayers', maxPlayers)
-                        }}
-                      />
-                    </PopoverAnchor>
-                    <PopoverContent side="right" className="flex items-center gap-2 text-green-700">
-                      <CheckCircle2 className="h-4 w-4" />
-                      <span>Saved</span>
-                    </PopoverContent>
-                  </Popover>
-                  {/* Removed inline saving indicator; popover handles saved feedback */}
-                  {saveErrors['maxPlayers'] && (
-                    <div className="text-xs text-red-600">{saveErrors['maxPlayers']}</div>
-                  )}
+              ) : (
+                <div 
+                  className={isOrganizer ? 'cursor-pointer' : ''}
+                  onClick={() => isOrganizer && startEditing('totalPriceCents', game?.totalPriceCents)}
+                >
+                  <PriceDisplay totalPriceCents={game?.totalPriceCents} maxPlayers={game?.maxPlayers} />
                 </div>
-                <div className="text-sm text-gray-700">
-                  <PriceDisplay totalPriceCents={totalPriceCents} maxPlayers={maxPlayers} />
-                </div>
-              </div>
-            ) : (
-              <PriceDisplay totalPriceCents={game.totalPriceCents} maxPlayers={game.maxPlayers} />
-            )}
-          </div>
+              )}
+            </section>
 
-          {/* Timing */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">Schedule</h3>
-            {isOrganizer ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Starts At</label>
-                  <Popover open={!!saved['startsAt'] && !saving['startsAt'] && !saveErrors['startsAt']}>
-                    <PopoverAnchor asChild>
-                      <Input
-                        type="datetime-local"
-                        value={startsAt ? toLocalInputValue(startsAt) : ''}
-                        onChange={(e) => {
-                          const v = fromLocalInputValue(e.target.value)
-                          setStartsAt(v)
-                          if (v) scheduleDebouncedSave('startsAt', v)
-                        }}
-                        onBlur={() => {
-                          cancelDebouncedSave('startsAt')
-                          if (startsAt) saveField('startsAt', startsAt)
-                        }}
-                      />
-                    </PopoverAnchor>
-                    <PopoverContent side="right" className="flex items-center gap-2 text-green-700">
-                      <CheckCircle2 className="h-4 w-4" />
-                      <span>Saved</span>
-                    </PopoverContent>
-                  </Popover>
-                  {/* Removed inline saving indicator; popover handles saved feedback */}
-                  {saveErrors['startsAt'] && (
-                    <div className="text-xs text-red-600">{saveErrors['startsAt']}</div>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Duration (minutes)</label>
-                  <Popover open={!!saved['durationMinutes'] && !saving['durationMinutes'] && !saveErrors['durationMinutes']}>
-                    <PopoverAnchor asChild>
-                      <Input
-                        type="number"
-                        value={typeof durationMinutes === 'number' ? durationMinutes : ''}
-                        onChange={(e) => {
-                          const v = e.target.value === '' ? undefined : Number(e.target.value)
-                          setDurationMinutes(v)
-                          if (v !== undefined) scheduleDebouncedSave('durationMinutes', v)
-                        }}
-                        onBlur={() => {
-                          cancelDebouncedSave('durationMinutes')
-                          if (durationMinutes !== undefined) saveField('durationMinutes', durationMinutes)
-                        }}
-                      />
-                    </PopoverAnchor>
-                    <PopoverContent side="right" className="flex items-center gap-2 text-green-700">
-                      <CheckCircle2 className="h-4 w-4" />
-                      <span>Saved</span>
-                    </PopoverContent>
-                  </Popover>
-                  {/* Removed inline saving indicator; popover handles saved feedback */}
-                  {saveErrors['durationMinutes'] && (
-                    <div className="text-xs text-red-600">{saveErrors['durationMinutes']}</div>
-                  )}
-                </div>
+            {/* Action Area */}
+            <section className="border-t pt-6">
+              <div className="text-center py-4 text-gray-500">
+                {isOrganizer ? (
+                  <p className="text-sm">Click any field above to edit. Changes save automatically.</p>
+                ) : (
+                  <p className="text-sm">Player registration coming soon!</p>
+                )}
               </div>
-            ) : (
-              <div className="text-gray-800">
-                <span className="font-medium">Start:</span>{' '}
-                {game.startsAt ? new Date(game.startsAt).toLocaleString() : '—'}
-                <span className="ml-4 font-medium">Duration:</span>{' '}
-                {typeof game.durationMinutes === 'number' ? `${game.durationMinutes} min` : '—'}
-              </div>
-            )}
-          </div>
-
-          {/* Placeholder for future organizer controls */}
-          <div className="border-t pt-6 text-sm text-gray-500">
-            {isOrganizer ? 'Organizer actions will appear here.' : 'Join and participation controls will appear here.'}
+            </section>
           </div>
         </div>
       </div>
