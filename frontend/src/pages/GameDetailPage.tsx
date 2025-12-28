@@ -2,7 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { API_BASE_URL, redirectToLogin } from '@/lib/api'
-import { ArrowLeft, Loader2, CheckCircle2, Edit2, Calendar, Clock, MapPin, Users, DollarSign, Crown } from 'lucide-react'
+import { ArrowLeft, Loader2, CheckCircle2, Edit2, Calendar, Clock, MapPin, Users, DollarSign, Crown, AlertCircle } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer'
 import { PriceDisplay } from '@/components/games/PriceDisplay'
@@ -38,6 +38,7 @@ export default function GameDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [user, setUser] = useState<AuthUser | null>(null)
   const [organizerHintOpen, setOrganizerHintOpen] = useState(false)
+  const [draftHintOpen, setDraftHintOpen] = useState(false)
 
   // Editing state
   const [editingField, setEditingField] = useState<string | null>(null)
@@ -289,26 +290,45 @@ export default function GameDetailPage() {
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
           {/* Hero Header */}
           <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-8 py-12 text-white relative">
-            {isOrganizer && (
-              <div
-                className="absolute top-4 right-4"
-                onMouseEnter={() => setOrganizerHintOpen(true)}
-                onMouseLeave={() => setOrganizerHintOpen(false)}
-              >
-                <Popover open={organizerHintOpen}>
+            <div className="absolute top-4 right-4 flex items-center gap-2">
+              {!game?.publishedAt && (
+                <Popover open={draftHintOpen}>
                   <PopoverAnchor asChild>
-                    <span className="inline-flex items-center px-2 py-1 rounded-full bg-white/20 backdrop-blur-sm border border-white/30" aria-label="Organizer">
-                      <Crown className="h-4 w-4 text-amber-300" aria-hidden="true" />
-                    </span>
+                    <div
+                      className="inline-flex items-center px-3 py-1 rounded-full bg-amber-400/20 backdrop-blur-sm border border-amber-300/50 hover:bg-amber-400/30 transition-colors cursor-help"
+                      onMouseEnter={() => setDraftHintOpen(true)}
+                      onMouseLeave={() => setDraftHintOpen(false)}
+                      aria-label="Draft status"
+                    >
+                      <AlertCircle className="h-4 w-4 text-amber-200 mr-1.5" aria-hidden="true" />
+                      <span className="text-xs font-semibold text-amber-100">Draft</span>
+                    </div>
                   </PopoverAnchor>
-                  <PopoverContent side="bottom" className="text-gray-800">
-                    You are the organizer of this game.
-                    <br />
-                    You can edit the fields on this page.
+                  <PopoverContent side="left" sideOffset={12} className="text-gray-800 w-56">
+                    <p className="font-semibold mb-1">Game is a draft</p>
+                    <p className="text-sm">Other users won't be able to view or join this game until it's published.</p>
                   </PopoverContent>
                 </Popover>
-              </div>
-            )}
+              )}
+              {isOrganizer && (
+                <Popover open={organizerHintOpen}>
+                  <PopoverAnchor asChild>
+                    <div
+                      className="inline-flex items-center px-2 py-1 rounded-full bg-white/20 backdrop-blur-sm border border-white/30 cursor-help"
+                      onMouseEnter={() => setOrganizerHintOpen(true)}
+                      onMouseLeave={() => setOrganizerHintOpen(false)}
+                      aria-label="Organizer"
+                    >
+                      <Crown className="h-4 w-4 text-amber-300" aria-hidden="true" />
+                    </div>
+                  </PopoverAnchor>
+                  <PopoverContent side="left" sideOffset={12} className="text-gray-800">
+                    <p className="font-semibold mb-1\">You are the organizer</p>
+                    <p className="text-sm">You can edit the fields on this page.</p>
+                  </PopoverContent>
+                </Popover>
+              )}
+            </div>
             
             {/* Title - Inline Editable */}
             {editingField === 'name' && isOrganizer ? (
