@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetApiAuthByProviderCallbackData, GetApiAuthByProviderCallbackErrors, GetApiAuthByProviderCallbackResponses, GetApiAuthByProviderLoginData, GetApiAuthByProviderLoginErrors, GetApiAuthMeData, GetApiAuthMeErrors, GetApiAuthMeResponses, GetApiGamesByIdData, GetApiGamesByIdErrors, GetApiGamesByIdResponses, PatchApiGamesByIdData, PatchApiGamesByIdErrors, PatchApiGamesByIdResponses, PostApiGamesData, PostApiGamesErrors, PostApiGamesResponses } from './types.gen';
+import type { GetApiAuthByProviderCallbackData, GetApiAuthByProviderCallbackErrors, GetApiAuthByProviderCallbackResponses, GetApiAuthByProviderLoginData, GetApiAuthByProviderLoginErrors, GetApiAuthMeData, GetApiAuthMeErrors, GetApiAuthMeResponses, GetApiGamesByIdData, GetApiGamesByIdErrors, GetApiGamesByIdResponses, GetApiGamesData, GetApiGamesErrors, GetApiGamesResponses, PatchApiGamesByIdData, PatchApiGamesByIdErrors, PatchApiGamesByIdResponses, PostApiGamesData, PostApiGamesErrors, PostApiGamesResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -40,6 +40,17 @@ export const getApiAuthByProviderCallback = <ThrowOnError extends boolean = fals
 export const getApiAuthMe = <ThrowOnError extends boolean = false>(options?: Options<GetApiAuthMeData, ThrowOnError>) => (options?.client ?? client).get<GetApiAuthMeResponses, GetApiAuthMeErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/auth/me',
+    ...options
+});
+
+/**
+ * List user's games
+ *
+ * Returns all games the authenticated user is either organizing or participating in
+ */
+export const getApiGames = <ThrowOnError extends boolean = false>(options?: Options<GetApiGamesData, ThrowOnError>) => (options?.client ?? client).get<GetApiGamesResponses, GetApiGamesErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/games',
     ...options
 });
 

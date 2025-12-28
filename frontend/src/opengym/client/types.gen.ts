@@ -38,10 +38,6 @@ export type User = {
      */
     picture?: string;
     /**
-     * OAuth provider used for authentication
-     */
-    provider: 'google';
-    /**
      * Timestamp when user was created
      */
     createdAt?: string;
@@ -122,6 +118,55 @@ export type Game = GameFields & {
      * Timestamp when game was last updated
      */
     updatedAt: string;
+};
+
+export type GameListItem = {
+    /**
+     * Unique game identifier
+     */
+    id: string;
+    /**
+     * Name of the game
+     */
+    name: string;
+    /**
+     * Whether the authenticated user is the organizer of this game
+     */
+    isOrganizer: boolean;
+    /**
+     * Location where the game will be held
+     */
+    location?: string;
+    /**
+     * When the game is published (visible to others)
+     */
+    publishedAt?: string | null;
+    /**
+     * Timestamp when game was last updated
+     */
+    updatedAt: string;
+};
+
+export type Pagination = {
+    /**
+     * Total number of items
+     */
+    total: number;
+    /**
+     * Current page number (1-based)
+     */
+    page: number;
+    /**
+     * Number of items per page
+     */
+    pageSize: number;
+};
+
+export type GameListResponse = Pagination & {
+    /**
+     * Array of games for the current page
+     */
+    items: Array<GameListItem>;
 };
 
 /**
@@ -225,6 +270,40 @@ export type GetApiAuthMeResponses = {
 };
 
 export type GetApiAuthMeResponse = GetApiAuthMeResponses[keyof GetApiAuthMeResponses];
+
+export type GetApiGamesData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Page number (1-based) for pagination
+         */
+        page?: number;
+        /**
+         * Number of games per page (max 25)
+         */
+        pageSize?: number;
+    };
+    url: '/api/games';
+};
+
+export type GetApiGamesErrors = {
+    /**
+     * Unauthorized - invalid or missing token
+     */
+    401: Error;
+};
+
+export type GetApiGamesError = GetApiGamesErrors[keyof GetApiGamesErrors];
+
+export type GetApiGamesResponses = {
+    /**
+     * List of games retrieved successfully
+     */
+    200: GameListResponse;
+};
+
+export type GetApiGamesResponse = GetApiGamesResponses[keyof GetApiGamesResponses];
 
 export type PostApiGamesData = {
     body: CreateGameRequest;

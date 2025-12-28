@@ -2,11 +2,11 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { API_BASE_URL, redirectToLogin } from '@/lib/api'
-import { ArrowLeft, Loader2, CheckCircle2, Edit2, Calendar, Clock, MapPin, Users, DollarSign } from 'lucide-react'
+import { ArrowLeft, Loader2, CheckCircle2, Edit2, Calendar, Clock, MapPin, Users, DollarSign, Crown } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer'
 import { PriceDisplay } from '@/components/games/PriceDisplay'
-import { Popover, PopoverContent } from '@/components/ui/popover'
+import { Popover, PopoverContent, PopoverAnchor } from '@/components/ui/popover'
 
 interface Game {
   id: string
@@ -37,13 +37,13 @@ export default function GameDetailPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [user, setUser] = useState<AuthUser | null>(null)
+  const [organizerHintOpen, setOrganizerHintOpen] = useState(false)
 
   // Editing state
   const [editingField, setEditingField] = useState<string | null>(null)
   const [editValue, setEditValue] = useState<string>('')
   
   // Autosave status per field
-  const [saving, setSaving] = useState<Record<string, boolean>>({})
   const [saveErrors, setSaveErrors] = useState<Record<string, string | null>>({})
   const saveTimersRef = useRef<Record<string, number | undefined>>({})
   const [saved, setSaved] = useState<Record<string, boolean>>({})
@@ -146,7 +146,6 @@ export default function GameDetailPage() {
     if (typeof value === 'string' && value.trim() === '') return
     if (value === undefined) return
 
-    setSaving((prev) => ({ ...prev, [field]: true }))
     setSaveErrors((prev) => ({ ...prev, [field]: null }))
     try {
       const resp = await fetch(`${API_BASE_URL}/api/games/${id}`, {
@@ -184,28 +183,7 @@ export default function GameDetailPage() {
     } catch (e) {
       setSaveErrors((prev) => ({ ...prev, [field]: e instanceof Error ? e.message : 'Failed to save' }))
     } finally {
-      setSaving((prev) => ({ ...prev, [field]: false }))
     }
-  }
-
-  function scheduleDebouncedSave(field: string, value: unknown, delay = 800) {
-    const timers = saveTimersRef.current
-    const existing = timers[field]
-    if (existing !== undefined) {
-      clearTimeout(existing)
-    }
-    // Hide any previous 'Saved' when new edits begin
-    setSaved((prev) => ({ ...prev, [field]: false }))
-    const timerId = window.setTimeout(() => {
-      saveField(field, value)
-      // Clear the timer reference after running
-      const t = saveTimersRef.current[field]
-      if (t !== undefined) {
-        clearTimeout(t)
-        saveTimersRef.current[field] = undefined
-      }
-    }, delay)
-    saveTimersRef.current[field] = timerId
   }
 
   function handleBlur(field: string) {
@@ -312,11 +290,23 @@ export default function GameDetailPage() {
           {/* Hero Header */}
           <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-8 py-12 text-white relative">
             {isOrganizer && (
-              <div className="absolute top-4 right-4">
-                <span className="text-xs px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm border border-white/30">
-                  <Edit2 className="inline h-3 w-3 mr-1" />
-                  Organizer
-                </span>
+              <div
+                className="absolute top-4 right-4"
+                onMouseEnter={() => setOrganizerHintOpen(true)}
+                onMouseLeave={() => setOrganizerHintOpen(false)}
+              >
+                <Popover open={organizerHintOpen}>
+                  <PopoverAnchor asChild>
+                    <span className="inline-flex items-center px-2 py-1 rounded-full bg-white/20 backdrop-blur-sm border border-white/30" aria-label="Organizer">
+                      <Crown className="h-4 w-4 text-amber-300" aria-hidden="true" />
+                    </span>
+                  </PopoverAnchor>
+                  <PopoverContent side="bottom" className="text-gray-800">
+                    You are the organizer of this game.
+                    <br />
+                    You can edit the fields on this page.
+                  </PopoverContent>
+                </Popover>
               </div>
             )}
             

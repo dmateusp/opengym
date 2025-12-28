@@ -40,14 +40,14 @@ func main() {
 
 	flag.Parse()
 
-	if auth.GetSigningSecret() == "" {
-		logger.ErrorContext(ctx, "Please set a signing secret with the flag -auth.signing-secret, using the output of `openssl rand -hex 32` for example (save it somewhere)")
-		os.Exit(1)
-	}
-
 	err := flagfromenv.Parse("OPENGYM")
 	if err != nil {
 		logger.ErrorContext(ctx, "Failed to parse flags from environment", "error", err)
+		os.Exit(1)
+	}
+
+	if auth.GetSigningSecret() == "" {
+		logger.ErrorContext(ctx, "Please set a signing secret with the flag -auth.signing-secret, using the output of `openssl rand -hex 32` for example (save it somewhere)")
 		os.Exit(1)
 	}
 
