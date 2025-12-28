@@ -3,7 +3,9 @@ package server_test
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -24,7 +26,7 @@ func TestPostApiGames_Success(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 
-	testUserID := dbtesting.CreateTestUser(t, sqlDB)
+	testUserID := dbtesting.UpsertTestUser(t, sqlDB)
 	querier := db.New(sqlDB)
 	srv := server.NewServer(querier, server.NewRandomAlphanumericGenerator())
 
@@ -87,7 +89,7 @@ func TestPostApiGames_MinimalRequest(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 
-	testUserID := dbtesting.CreateTestUser(t, sqlDB)
+	testUserID := dbtesting.UpsertTestUser(t, sqlDB)
 	querier := db.New(sqlDB)
 	srv := server.NewServer(querier, server.NewRandomAlphanumericGenerator())
 
@@ -143,7 +145,7 @@ func TestPostApiGames_InvalidRequestBody(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 
-	testUserID := dbtesting.CreateTestUser(t, sqlDB)
+	testUserID := dbtesting.UpsertTestUser(t, sqlDB)
 	querier := db.New(sqlDB)
 	srv := server.NewServer(querier, server.NewRandomAlphanumericGenerator())
 
@@ -162,7 +164,7 @@ func TestPostApiGames_IDClashRetry(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 
-	testUserID := dbtesting.CreateTestUser(t, sqlDB)
+	testUserID := dbtesting.UpsertTestUser(t, sqlDB)
 	querier := db.New(sqlDB)
 
 	srv := server.NewServer(querier, servertesting.NewTestAlphanumericGenerator("foo", "bar"))
@@ -208,6 +210,129 @@ func TestPostApiGames_IDClashRetry(t *testing.T) {
 	}
 }
 
+func TestGetApiGames_DefaultPagination(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+
+	userID := dbtesting.UpsertTestUser(t, sqlDB)
+	res, err := sqlDB.Exec(`insert into users (email, name) VALUES (?, ?)`, "other@example.com", "Other")
+	if err != nil {
+		t.Fatalf("failed to create second user: %v", err)
+	}
+	otherUserID, err := res.LastInsertId()
+	if err != nil {
+		t.Fatalf("failed to fetch second user id: %v", err)
+	}
+	querier := db.New(sqlDB)
+	srv := server.NewServer(querier, server.NewRandomAlphanumericGenerator())
+
+	baseTime := time.Now()
+
+	for i := 0; i < 12; i++ {
+		_, err := querier.GameCreate(context.Background(), db.GameCreateParams{
+			ID:          fmt.Sprintf("g%02d", i),
+			OrganizerID: int64(userID),
+			Name:        fmt.Sprintf("Game %02d", i),
+			PublishedAt: sql.NullTime{Time: baseTime.Add(time.Duration(i) * time.Minute), Valid: true},
+		})
+		if err != nil {
+			t.Fatalf("failed to create game %d: %v", i, err)
+		}
+	}
+
+	for i := 0; i < 3; i++ {
+		_, err := querier.GameCreate(context.Background(), db.GameCreateParams{
+			ID:          fmt.Sprintf("o%02d", i),
+			OrganizerID: int64(otherUserID),
+			Name:        fmt.Sprintf("Other %02d", i),
+		})
+		if err != nil {
+			t.Fatalf("failed to create other user's game %d: %v", i, err)
+		}
+	}
+
+	r := httptest.NewRequest(http.MethodGet, "/api/games", nil)
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(userID)}))
+	w := httptest.NewRecorder()
+
+	srv.GetApiGames(w, r, api.GetApiGamesParams{})
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d: %s", http.StatusOK, w.Code, w.Body.String())
+	}
+
+	var resp api.GameListResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if resp.Total != 12 {
+		t.Fatalf("expected total 12, got %d", resp.Total)
+	}
+	if resp.Page != 1 || resp.PageSize != 10 {
+		t.Fatalf("unexpected pagination: page %d size %d", resp.Page, resp.PageSize)
+	}
+	if len(resp.Items) != 10 {
+		t.Fatalf("expected 10 items, got %d", len(resp.Items))
+	}
+	if resp.Items[0].Id != "g11" {
+		t.Fatalf("expected first item g11, got %s", resp.Items[0].Id)
+	}
+	for _, item := range resp.Items {
+		if !item.IsOrganizer {
+			t.Fatalf("expected isOrganizer true for item %s", item.Id)
+		}
+	}
+
+	page := 2
+	pageSize := 5
+	params := api.GetApiGamesParams{Page: &page, PageSize: &pageSize}
+	r2 := httptest.NewRequest(http.MethodGet, "/api/games?page=2&pageSize=5", nil)
+	r2 = r2.WithContext(auth.WithAuthInfo(r2.Context(), auth.AuthInfo{UserId: int(userID)}))
+	w2 := httptest.NewRecorder()
+
+	srv.GetApiGames(w2, r2, params)
+
+	if w2.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d: %s", http.StatusOK, w2.Code, w2.Body.String())
+	}
+
+	var resp2 api.GameListResponse
+	if err := json.NewDecoder(w2.Body).Decode(&resp2); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if resp2.Total != 12 {
+		t.Fatalf("expected total 12, got %d", resp2.Total)
+	}
+	if resp2.Page != 2 || resp2.PageSize != 5 {
+		t.Fatalf("unexpected pagination: page %d size %d", resp2.Page, resp2.PageSize)
+	}
+	if len(resp2.Items) != 5 {
+		t.Fatalf("expected 5 items, got %d", len(resp2.Items))
+	}
+	if resp2.Items[0].Id != "g06" {
+		t.Fatalf("expected first item on page 2 to be g06, got %s", resp2.Items[0].Id)
+	}
+}
+
+func TestGetApiGames_Unauthorized(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+
+	querier := db.New(sqlDB)
+	srv := server.NewServer(querier, server.NewRandomAlphanumericGenerator())
+
+	r := httptest.NewRequest(http.MethodGet, "/api/games", nil)
+	w := httptest.NewRecorder()
+
+	srv.GetApiGames(w, r, api.GetApiGamesParams{})
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected status %d, got %d", http.StatusUnauthorized, w.Code)
+	}
+}
+
 // TestPostApiGames_DatabaseError is skipped when using real database
 // Database errors are better tested through integration tests
 
@@ -215,7 +340,7 @@ func TestPatchApiGamesId_Success(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 
-	testUserID := dbtesting.CreateTestUser(t, sqlDB)
+	testUserID := dbtesting.UpsertTestUser(t, sqlDB)
 	querier := db.New(sqlDB)
 	srv := server.NewServer(querier, server.NewRandomAlphanumericGenerator())
 
@@ -276,7 +401,7 @@ func TestPatchApiGamesId_PartialUpdate(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 
-	testUserID := dbtesting.CreateTestUser(t, sqlDB)
+	testUserID := dbtesting.UpsertTestUser(t, sqlDB)
 	querier := db.New(sqlDB)
 	srv := server.NewServer(querier, server.NewRandomAlphanumericGenerator())
 
@@ -347,7 +472,7 @@ func TestPatchApiGamesId_NotFound(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 
-	testUserID := dbtesting.CreateTestUser(t, sqlDB)
+	testUserID := dbtesting.UpsertTestUser(t, sqlDB)
 	querier := db.New(sqlDB)
 	srv := server.NewServer(querier, server.NewRandomAlphanumericGenerator())
 
@@ -371,7 +496,7 @@ func TestPatchApiGamesId_Forbidden(t *testing.T) {
 	defer sqlDB.Close()
 
 	// Create organizer user and their game
-	organizerID := dbtesting.CreateTestUser(t, sqlDB)
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB)
 	querier := db.New(sqlDB)
 	srv := server.NewServer(querier, server.NewRandomAlphanumericGenerator())
 
@@ -415,7 +540,7 @@ func TestPatchApiGamesId_InvalidRequestBody(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 
-	testUserID := dbtesting.CreateTestUser(t, sqlDB)
+	testUserID := dbtesting.UpsertTestUser(t, sqlDB)
 	querier := db.New(sqlDB)
 	srv := server.NewServer(querier, server.NewRandomAlphanumericGenerator())
 
@@ -449,7 +574,7 @@ func TestGetApiGamesId_Success(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 
-	testUserID := dbtesting.CreateTestUser(t, sqlDB)
+	testUserID := dbtesting.UpsertTestUser(t, sqlDB)
 	querier := db.New(sqlDB)
 	srv := server.NewServer(querier, server.NewRandomAlphanumericGenerator())
 

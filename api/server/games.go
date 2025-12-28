@@ -12,6 +12,7 @@ import (
 	"github.com/dmateusp/opengym/api"
 	"github.com/dmateusp/opengym/auth"
 	"github.com/dmateusp/opengym/db"
+	"github.com/oapi-codegen/nullable"
 )
 
 var (
@@ -104,6 +105,82 @@ func (srv *server) PostApiGames(w http.ResponseWriter, r *http.Request) {
 	apiGame.FromDb(game)
 	err = json.NewEncoder(w).Encode(apiGame)
 	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to encode response: %s", err.Error()), http.StatusInternalServerError)
+		return
+	}
+}
+
+func (srv *server) GetApiGames(w http.ResponseWriter, r *http.Request, params api.GetApiGamesParams) {
+	authInfo, ok := auth.FromCtx(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	page := 1
+	if params.Page != nil && *params.Page > 0 {
+		page = *params.Page
+	}
+
+	pageSize := 10
+	if params.PageSize != nil {
+		pageSize = *params.PageSize
+		if pageSize > 25 {
+			pageSize = 25
+		}
+		if pageSize < 1 {
+			pageSize = 1
+		}
+	}
+
+	offset := int64((page - 1) * pageSize)
+	limit := int64(pageSize)
+
+	rows, err := srv.querier.GameListByUser(r.Context(), db.GameListByUserParams{
+		OrganizerID:   int64(authInfo.UserId),
+		OrganizerID_2: int64(authInfo.UserId),
+		Limit:         limit,
+		Offset:        offset,
+	})
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to list games: %s", err.Error()), http.StatusInternalServerError)
+		return
+	}
+
+	total, err := srv.querier.GameCountByUser(r.Context(), int64(authInfo.UserId))
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to count games: %s", err.Error()), http.StatusInternalServerError)
+		return
+	}
+
+	items := make([]api.GameListItem, 0, len(rows))
+	for _, row := range rows {
+		var item api.GameListItem
+		item.Id = row.ID
+		item.Name = row.Name
+		item.IsOrganizer = row.IsOrganizer
+		if row.Location.Valid {
+			loc := row.Location.String
+			item.Location = &loc
+		}
+		if row.PublishedAt.Valid {
+			item.PublishedAt = nullable.Nullable[time.Time]{}
+			item.PublishedAt.Set(row.PublishedAt.Time)
+		}
+		item.UpdatedAt = row.UpdatedAt
+		items = append(items, item)
+	}
+
+	resp := api.GameListResponse{
+		Items:    items,
+		Total:    int(total),
+		Page:     page,
+		PageSize: pageSize,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		http.Error(w, fmt.Sprintf("failed to encode response: %s", err.Error()), http.StatusInternalServerError)
 		return
 	}

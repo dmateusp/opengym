@@ -33,3 +33,21 @@ set
   max_guests_per_player = coalesce(?, max_guests_per_player),
   updated_at = current_timestamp
 where id = ?;
+
+-- name: GameListByUser :many
+select
+  id,
+  name,
+  location,
+  published_at,
+  updated_at,
+  organizer_id = ? as is_organizer
+from games
+where organizer_id = ?
+order by coalesce(published_at, updated_at) desc
+limit ? offset ?;
+
+-- name: GameCountByUser :one
+select count(*)
+from games
+where organizer_id = ?;

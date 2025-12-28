@@ -28,19 +28,19 @@ func SetupTestDB(t *testing.T) *sql.DB {
 	return sqlDB
 }
 
-func CreateTestUser(t *testing.T, sqlDB *sql.DB) int64 {
+func UpsertTestUser(t *testing.T, sqlDB *sql.DB) int64 {
 	t.Helper()
 
-	result, err := sqlDB.Exec(`
-		insert into users (email, name) VALUES (?, ?)
+	// Idempotent insert by email; returns the existing or newly inserted row id.
+	row := sqlDB.QueryRow(`
+		insert into users (email, name) values (?, ?)
+		on conflict(email) do update set name = excluded.name
+		returning id
 	`, "john@example.com", "John")
-	if err != nil {
-		t.Fatalf("Failed to create test user John: %v", err)
-	}
 
-	userID, err := result.LastInsertId()
-	if err != nil {
-		t.Fatalf("Failed to get test user ID: %v", err)
+	var userID int64
+	if err := row.Scan(&userID); err != nil {
+		t.Fatalf("Failed to upsert test user John: %v", err)
 	}
 
 	return userID

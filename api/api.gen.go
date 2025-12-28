@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/oapi-codegen/nullable"
 	"github.com/oapi-codegen/runtime"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
@@ -157,6 +158,54 @@ type GameFields struct {
 	TotalPriceCents *int64 `json:"totalPriceCents,omitempty"`
 }
 
+// GameListItem defines model for GameListItem.
+type GameListItem struct {
+	// Id Unique game identifier
+	Id string `json:"id"`
+
+	// IsOrganizer Whether the authenticated user is the organizer of this game
+	IsOrganizer bool `json:"isOrganizer"`
+
+	// Location Location where the game will be held
+	Location *string `json:"location,omitempty"`
+
+	// Name Name of the game
+	Name string `json:"name"`
+
+	// PublishedAt When the game is published (visible to others)
+	PublishedAt nullable.Nullable[time.Time] `json:"publishedAt,omitempty"`
+
+	// UpdatedAt Timestamp when game was last updated
+	UpdatedAt time.Time `json:"updatedAt"`
+}
+
+// GameListResponse defines model for GameListResponse.
+type GameListResponse struct {
+	// Items Array of games for the current page
+	Items []GameListItem `json:"items"`
+
+	// Page Current page number (1-based)
+	Page int `json:"page"`
+
+	// PageSize Number of items per page
+	PageSize int `json:"pageSize"`
+
+	// Total Total number of items
+	Total int `json:"total"`
+}
+
+// Pagination defines model for Pagination.
+type Pagination struct {
+	// Page Current page number (1-based)
+	Page int `json:"page"`
+
+	// PageSize Number of items per page
+	PageSize int `json:"pageSize"`
+
+	// Total Total number of items
+	Total int `json:"total"`
+}
+
 // UpdateGameRequest defines model for UpdateGameRequest.
 type UpdateGameRequest struct {
 	// Description Description of the game
@@ -232,6 +281,15 @@ type GetApiAuthProviderCallbackParamsProvider string
 // GetApiAuthProviderLoginParamsProvider defines parameters for GetApiAuthProviderLogin.
 type GetApiAuthProviderLoginParamsProvider string
 
+// GetApiGamesParams defines parameters for GetApiGames.
+type GetApiGamesParams struct {
+	// Page Page number (1-based) for pagination
+	Page *int `form:"page,omitempty" json:"page,omitempty"`
+
+	// PageSize Number of games per page (max 25)
+	PageSize *int `form:"pageSize,omitempty" json:"pageSize,omitempty"`
+}
+
 // PostApiGamesJSONRequestBody defines body for PostApiGames for application/json ContentType.
 type PostApiGamesJSONRequestBody = CreateGameRequest
 
@@ -249,6 +307,9 @@ type ServerInterface interface {
 	// Initiate OAuth login with a provider
 	// (GET /api/auth/{provider}/login)
 	GetApiAuthProviderLogin(w http.ResponseWriter, r *http.Request, provider GetApiAuthProviderLoginParamsProvider)
+	// List user's games
+	// (GET /api/games)
+	GetApiGames(w http.ResponseWriter, r *http.Request, params GetApiGamesParams)
 	// Create a new game
 	// (POST /api/games)
 	PostApiGames(w http.ResponseWriter, r *http.Request)
@@ -365,6 +426,47 @@ func (siw *ServerInterfaceWrapper) GetApiAuthProviderLogin(w http.ResponseWriter
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetApiAuthProviderLogin(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetApiGames operation middleware
+func (siw *ServerInterfaceWrapper) GetApiGames(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetApiGamesParams
+
+	// ------------- Optional query parameter "page" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "page", r.URL.Query(), &params.Page)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "page", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "pageSize" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "pageSize", r.URL.Query(), &params.PageSize)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "pageSize", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetApiGames(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -573,6 +675,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("GET "+options.BaseURL+"/api/auth/me", wrapper.GetApiAuthMe)
 	m.HandleFunc("GET "+options.BaseURL+"/api/auth/{provider}/callback", wrapper.GetApiAuthProviderCallback)
 	m.HandleFunc("GET "+options.BaseURL+"/api/auth/{provider}/login", wrapper.GetApiAuthProviderLogin)
+	m.HandleFunc("GET "+options.BaseURL+"/api/games", wrapper.GetApiGames)
 	m.HandleFunc("POST "+options.BaseURL+"/api/games", wrapper.PostApiGames)
 	m.HandleFunc("GET "+options.BaseURL+"/api/games/{id}", wrapper.GetApiGamesId)
 	m.HandleFunc("PATCH "+options.BaseURL+"/api/games/{id}", wrapper.PatchApiGamesId)
@@ -583,41 +686,46 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
-	"HrchAAA=",
+	"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",
+	"m13P/hcAAP//qTcapCEqAAA=",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

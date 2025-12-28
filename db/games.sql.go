@@ -8,7 +8,21 @@ package db
 import (
 	"context"
 	"database/sql"
+	"time"
 )
+
+const gameCountByUser = `-- name: GameCountByUser :one
+select count(*)
+from games
+where organizer_id = ?
+`
+
+func (q *Queries) GameCountByUser(ctx context.Context, organizerID int64) (int64, error) {
+	row := q.db.QueryRowContext(ctx, gameCountByUser, organizerID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
 
 const gameCreate = `-- name: GameCreate :one
 insert into games(
@@ -102,6 +116,71 @@ func (q *Queries) GameGetById(ctx context.Context, id string) (Game, error) {
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const gameListByUser = `-- name: GameListByUser :many
+select
+  id,
+  name,
+  location,
+  published_at,
+  updated_at,
+  organizer_id = ? as is_organizer
+from games
+where organizer_id = ?
+order by coalesce(published_at, updated_at) desc
+limit ? offset ?
+`
+
+type GameListByUserParams struct {
+	OrganizerID   int64
+	OrganizerID_2 int64
+	Limit         int64
+	Offset        int64
+}
+
+type GameListByUserRow struct {
+	ID          string
+	Name        string
+	Location    sql.NullString
+	PublishedAt sql.NullTime
+	UpdatedAt   time.Time
+	IsOrganizer bool
+}
+
+func (q *Queries) GameListByUser(ctx context.Context, arg GameListByUserParams) ([]GameListByUserRow, error) {
+	rows, err := q.db.QueryContext(ctx, gameListByUser,
+		arg.OrganizerID,
+		arg.OrganizerID_2,
+		arg.Limit,
+		arg.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GameListByUserRow
+	for rows.Next() {
+		var i GameListByUserRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Location,
+			&i.PublishedAt,
+			&i.UpdatedAt,
+			&i.IsOrganizer,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const gameUpdate = `-- name: GameUpdate :exec

@@ -126,6 +126,45 @@ paths:
                 $ref: '#/components/schemas/Error'
 
   /api/games:
+    get:
+      summary: List user's games
+      description: Returns all games the authenticated user is either organizing or participating in
+      tags:
+        - Games
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+          description: Page number (1-based) for pagination
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 25
+          description: Number of games per page (max 25)
+      responses:
+        '200':
+          description: List of games retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameListResponse'
+        '401':
+          description: Unauthorized - invalid or missing token
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+
     post:
       summary: Create a new game
       description: Creates a new game. The game is only visible to the organizer initially unless publish is set to true.
@@ -393,6 +432,73 @@ components:
               type: string
               format: date-time
               description: Timestamp when game was last updated
+
+    GameListItem:
+      type: object
+      required:
+        - id
+        - name
+        - isOrganizer
+        - updatedAt
+      properties:
+        id:
+          type: string
+          description: Unique game identifier
+          example: "aBc1"
+        name:
+          type: string
+          description: Name of the game
+          example: "Sunday Morning Volleyball"
+        isOrganizer:
+          type: boolean
+          description: Whether the authenticated user is the organizer of this game
+          example: true
+        location:
+          type: string
+          description: Location where the game will be held
+          example: "123 Main St, Downtown"
+        publishedAt:
+          type: string
+          format: date-time
+          description: When the game is published (visible to others)
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp when game was last updated
+
+    Pagination:
+      type: object
+      required:
+        - total
+        - page
+        - pageSize
+      properties:
+        total:
+          type: integer
+          description: Total number of items
+          example: 42
+        page:
+          type: integer
+          description: Current page number (1-based)
+          example: 1
+        pageSize:
+          type: integer
+          description: Number of items per page
+          example: 10
+
+    GameListResponse:
+      allOf:
+        - $ref: '#/components/schemas/Pagination'
+        - type: object
+          required:
+            - items
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/GameListItem'
+              description: Array of games for the current page
 
     Error:
       type: string
