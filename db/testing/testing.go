@@ -17,6 +17,7 @@ func SetupTestDB(t *testing.T) *sql.DB {
 
 	// Run goose migrations
 	goose.SetBaseFS(nil) // Use filesystem
+	goose.SetLogger(goose.NopLogger())
 	if err := goose.SetDialect("sqlite3"); err != nil {
 		t.Fatalf("Failed to set goose dialect: %v", err)
 	}

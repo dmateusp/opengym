@@ -191,21 +191,25 @@ update games
 set
   name = coalesce(?1, name),
   description = coalesce(?2, description),
-  published_at = coalesce(?3, published_at),
-  total_price_cents = coalesce(?4, total_price_cents),
-  location = coalesce(?5, location),
-  starts_at = coalesce(?6, starts_at),
-  duration_minutes = coalesce(nullif(cast(?7 as integer), 0), duration_minutes),
-  max_players = coalesce(nullif(cast(?8 as integer), 0), max_players),
-  max_waitlist_size = coalesce(?9, max_waitlist_size),
-  max_guests_per_player = coalesce(?10, max_guests_per_player),
+  published_at = case
+    when cast(?3 as boolean) then null
+    else coalesce(?4, published_at)
+  end,
+  total_price_cents = coalesce(?5, total_price_cents),
+  location = coalesce(?6, location),
+  starts_at = coalesce(?7, starts_at),
+  duration_minutes = coalesce(nullif(cast(?8 as integer), 0), duration_minutes),
+  max_players = coalesce(nullif(cast(?9 as integer), 0), max_players),
+  max_waitlist_size = coalesce(?10, max_waitlist_size),
+  max_guests_per_player = coalesce(?11, max_guests_per_player),
   updated_at = current_timestamp
-where id = ?11
+where id = ?12
 `
 
 type GameUpdateParams struct {
 	Name               string
 	Description        sql.NullString
+	ClearPublishedAt   bool
 	PublishedAt        sql.NullTime
 	TotalPriceCents    int64
 	Location           sql.NullString
@@ -221,6 +225,7 @@ func (q *Queries) GameUpdate(ctx context.Context, arg GameUpdateParams) error {
 	_, err := q.db.ExecContext(ctx, gameUpdate,
 		arg.Name,
 		arg.Description,
+		arg.ClearPublishedAt,
 		arg.PublishedAt,
 		arg.TotalPriceCents,
 		arg.Location,

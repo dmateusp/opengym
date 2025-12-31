@@ -167,7 +167,7 @@ paths:
 
     post:
       summary: Create a new game
-      description: Creates a new game. The game is only visible to the organizer initially unless publish is set to true.
+      description: Creates a new game. The game is created as a draft and is only visible to the organizer until it is published via the update endpoint.
       tags:
         - Games
       security:
@@ -227,7 +227,7 @@ paths:
 
     patch:
       summary: Update a game
-      description: Updates an existing game. Only the organizer can update their game.
+      description: Updates an existing game. Only the organizer can update their game. Publishing is irreversible once the publish time has passed. If `publishedAt` is in the future, the organizer may reschedule it or cancel publishing (unset the field) until it becomes effective.
       tags:
         - Games
       security:
@@ -396,11 +396,11 @@ components:
         - $ref: '#/components/schemas/GameFields'
         - type: object
           properties:
-            publish:
-              type: boolean
-              description: Whether to make the game publicly visible
-              example: true
-
+            publishedAt:
+              type: string
+              format: date-time
+              description: When the game should become publicly visible. Past timestamps publish immediately. While in the future, it can be rescheduled or cleared.
+              nullable: true
     Game:
       allOf:
         - $ref: '#/components/schemas/GameFields'

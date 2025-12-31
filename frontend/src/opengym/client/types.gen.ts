@@ -92,9 +92,13 @@ export type CreateGameRequest = GameFields & {
 
 export type UpdateGameRequest = GameFields & {
     /**
-     * Whether to make the game publicly visible
+     * When the game should become publicly visible. Past timestamps publish immediately. While in the future, it can be rescheduled or cleared.
      */
-    publish?: boolean;
+    publishedAt?: string;
+    /**
+     * If true and the game has a future `publishedAt`, cancels scheduled publishing (sets it back to draft).
+     */
+    clearPublishedAt?: boolean;
 };
 
 export type Game = GameFields & {

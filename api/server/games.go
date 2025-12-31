@@ -208,6 +208,17 @@ func (srv *server) GetApiGamesId(w http.ResponseWriter, r *http.Request, id stri
 		return
 	}
 
+	authInfo, hasAuth := auth.FromCtx(r.Context())
+	isOrganizer := hasAuth && int64(authInfo.UserId) == game.OrganizerID
+
+	// Non-organizers cannot see drafts or scheduled games until publishedAt is reached
+	if !isOrganizer {
+		if !game.PublishedAt.Valid || game.PublishedAt.Time.After(time.Now()) {
+			http.Error(w, "game not found", http.StatusNotFound)
+			return
+		}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	var apiGame api.Game
@@ -225,6 +236,8 @@ func (srv *server) PatchApiGamesId(w http.ResponseWriter, r *http.Request, id st
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
+
+	now := time.Now()
 
 	game, err := srv.querier.GameGetById(r.Context(), id)
 	if err != nil {
@@ -261,9 +274,33 @@ func (srv *server) PatchApiGamesId(w http.ResponseWriter, r *http.Request, id st
 		params.Description.Valid = true
 	}
 
-	if req.Publish != nil && *req.Publish {
-		params.PublishedAt.Time = time.Now()
-		params.PublishedAt.Valid = true
+	if req.PublishedAt.IsNull() {
+		if !game.PublishedAt.Time.After(now) {
+			http.Error(w, "game is already published and cannot be unpublished", http.StatusBadRequest)
+			return
+		}
+		params.ClearPublishedAt = true
+	}
+
+	if req.PublishedAt.IsSpecified() {
+		var publishAt sql.NullTime
+		if !req.PublishedAt.IsNull() {
+			publishAt = sql.NullTime{Time: req.PublishedAt.MustGet(), Valid: true}
+			if publishAt.Time.Before(now) {
+				publishAt = sql.NullTime{Time: now, Valid: true}
+			}
+		}
+
+		if game.PublishedAt.Valid {
+			if game.PublishedAt.Time.After(now) {
+				params.PublishedAt = publishAt
+			} else {
+				http.Error(w, "game has already been published", http.StatusBadRequest)
+				return
+			}
+		} else {
+			params.PublishedAt = publishAt
+		}
 	}
 
 	if req.TotalPriceCents != nil {

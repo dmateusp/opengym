@@ -46,7 +46,7 @@ export default function GameDetailPage() {
   // Editing state
   const [editingField, setEditingField] = useState<string | null>(null)
   const [editValue, setEditValue] = useState<string>('')
-  
+
   // Autosave status per field
   const [saveErrors, setSaveErrors] = useState<Record<string, string | null>>({})
   const saveTimersRef = useRef<Record<string, number | undefined>>({})
@@ -188,13 +188,16 @@ export default function GameDetailPage() {
     if (!isOrganizer || !id || !canPublish) return
     setIsPublishing(true)
     setPublishError(null)
-    
+
     try {
-      const resp = await fetch(`${API_BASE_URL}/api/games/${id}/publish`, {
-        method: 'POST',
+      const publishAt = new Date().toISOString()
+      const resp = await fetch(`${API_BASE_URL}/api/games/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
+        body: JSON.stringify({ publishedAt: publishAt }),
       })
-      
+
       if (!resp.ok) {
         if (resp.status === 401) {
           redirectToLogin()
@@ -203,7 +206,7 @@ export default function GameDetailPage() {
         const txt = await resp.text()
         throw new Error(txt || 'Failed to publish game')
       }
-      
+
       const updated = await resp.json()
       setGame(updated)
     } catch (e) {
@@ -723,7 +726,7 @@ export default function GameDetailPage() {
                     <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-100">
                       <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
                         <Rocket className="h-5 w-5 text-indigo-600" />
-                        Requirements to publish the game and let users join
+                        Requirements to publish the game
                       </h3>
                       <div className="space-y-3 mb-6">
                         {publishRequirements.map((req) => (

@@ -20,6 +20,7 @@ import (
 	"github.com/dmateusp/opengym/db"
 	dbtesting "github.com/dmateusp/opengym/db/testing"
 	"github.com/dmateusp/opengym/ptr"
+	"github.com/oapi-codegen/nullable"
 )
 
 func TestPostApiGames_Success(t *testing.T) {
@@ -361,12 +362,12 @@ func TestPatchApiGamesId_Success(t *testing.T) {
 	// Now update it
 	newName := "Updated Name"
 	newDescription := "Updated description"
-	publish := true
+	publishAt := time.Now()
 
 	updateReq := api.UpdateGameRequest{
 		Name:        &newName,
 		Description: &newDescription,
-		Publish:     &publish,
+		PublishedAt: nullable.NewNullableWithValue(publishAt),
 	}
 
 	body, _ = json.Marshal(updateReq)
@@ -595,6 +596,7 @@ func TestGetApiGamesId_Success(t *testing.T) {
 
 	// Now retrieve it
 	r = httptest.NewRequest(http.MethodGet, "/api/games/"+gameID, nil)
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(testUserID)}))
 	w = httptest.NewRecorder()
 
 	srv.GetApiGamesId(w, r, gameID)
@@ -638,5 +640,323 @@ func TestGetApiGamesId_NotFound(t *testing.T) {
 
 	if w.Code != http.StatusNotFound {
 		t.Errorf("Expected status %d, got %d", http.StatusNotFound, w.Code)
+	}
+}
+
+func TestGetApiGamesId_DraftHiddenFromNonOrganizer(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB)
+	querier := db.New(sqlDB)
+	srv := server.NewServer(querier, server.NewRandomAlphanumericGenerator())
+
+	createReq := api.CreateGameRequest{Name: "Secret Draft"}
+	body, _ := json.Marshal(createReq)
+	r := httptest.NewRequest(http.MethodPost, "/api/games", bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w := httptest.NewRecorder()
+	srv.PostApiGames(w, r)
+
+	var created api.Game
+	json.NewDecoder(w.Body).Decode(&created)
+
+	// Unauthenticated user should not see draft
+	r = httptest.NewRequest(http.MethodGet, "/api/games/"+created.Id, nil)
+	w = httptest.NewRecorder()
+	srv.GetApiGamesId(w, r, created.Id)
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 for draft game, got %d", w.Code)
+	}
+
+	// Other authenticated user should not see draft
+	res, err := sqlDB.Exec(`insert into users (email, name) values (?, ?)`, "other@example.com", "Other")
+	if err != nil {
+		t.Fatalf("failed to insert other user: %v", err)
+	}
+	otherID, _ := res.LastInsertId()
+	r = httptest.NewRequest(http.MethodGet, "/api/games/"+created.Id, nil)
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(otherID)}))
+	w = httptest.NewRecorder()
+	srv.GetApiGamesId(w, r, created.Id)
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 for draft game to other user, got %d", w.Code)
+	}
+
+	// Organizer can see draft
+	r = httptest.NewRequest(http.MethodGet, "/api/games/"+created.Id, nil)
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w = httptest.NewRecorder()
+	srv.GetApiGamesId(w, r, created.Id)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 for organizer viewing draft, got %d", w.Code)
+	}
+}
+
+func TestGetApiGamesId_ScheduledHiddenUntilPublished(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB)
+	querier := db.New(sqlDB)
+	srv := server.NewServer(querier, server.NewRandomAlphanumericGenerator())
+
+	createReq := api.CreateGameRequest{Name: "Scheduled Game"}
+	body, _ := json.Marshal(createReq)
+	r := httptest.NewRequest(http.MethodPost, "/api/games", bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w := httptest.NewRecorder()
+	srv.PostApiGames(w, r)
+
+	var created api.Game
+	json.NewDecoder(w.Body).Decode(&created)
+
+	future := time.Now().Add(1 * time.Hour)
+	updateReq := api.UpdateGameRequest{PublishedAt: nullable.NewNullableWithValue(future)}
+	body, _ = json.Marshal(updateReq)
+	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Id, bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w = httptest.NewRecorder()
+	srv.PatchApiGamesId(w, r, created.Id)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 when scheduling publish, got %d", w.Code)
+	}
+
+	// Non-organizer still should not see until publish time
+	res, err := sqlDB.Exec(`insert into users (email, name) values (?, ?)`, "viewer@example.com", "Viewer")
+	if err != nil {
+		t.Fatalf("failed to insert viewer user: %v", err)
+	}
+	viewerID, _ := res.LastInsertId()
+	r = httptest.NewRequest(http.MethodGet, "/api/games/"+created.Id, nil)
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(viewerID)}))
+	w = httptest.NewRecorder()
+	srv.GetApiGamesId(w, r, created.Id)
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 for scheduled game before publish time, got %d", w.Code)
+	}
+
+	// Organizer can still view
+	r = httptest.NewRequest(http.MethodGet, "/api/games/"+created.Id, nil)
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w = httptest.NewRecorder()
+	srv.GetApiGamesId(w, r, created.Id)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 for organizer viewing scheduled game, got %d", w.Code)
+	}
+}
+
+func TestPatchApiGamesId_PublishPastBecomesNow(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB)
+	querier := db.New(sqlDB)
+	srv := server.NewServer(querier, server.NewRandomAlphanumericGenerator())
+
+	createReq := api.CreateGameRequest{Name: "Past Publish"}
+	body, _ := json.Marshal(createReq)
+	r := httptest.NewRequest(http.MethodPost, "/api/games", bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w := httptest.NewRecorder()
+	srv.PostApiGames(w, r)
+
+	var created api.Game
+	json.NewDecoder(w.Body).Decode(&created)
+	start := time.Now()
+	past := start.Add(-1 * time.Hour)
+	updateReq := api.UpdateGameRequest{PublishedAt: nullable.NewNullableWithValue(past)}
+	body, _ = json.Marshal(updateReq)
+	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Id, bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w = httptest.NewRecorder()
+	srv.PatchApiGamesId(w, r, created.Id)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 when publishing with past timestamp, got %d", w.Code)
+	}
+
+	var updated api.Game
+	json.NewDecoder(w.Body).Decode(&updated)
+	if updated.PublishedAt == nil {
+		t.Fatalf("expected publishedAt to be set")
+	}
+	if updated.PublishedAt.Before(start) {
+		t.Fatalf("expected publishedAt to be >= request time, got %v", updated.PublishedAt)
+	}
+}
+
+func TestPatchApiGamesId_CannotPublishTwice(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB)
+	querier := db.New(sqlDB)
+	srv := server.NewServer(querier, server.NewRandomAlphanumericGenerator())
+
+	createReq := api.CreateGameRequest{Name: "Single Publish"}
+	body, _ := json.Marshal(createReq)
+	r := httptest.NewRequest(http.MethodPost, "/api/games", bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w := httptest.NewRecorder()
+	srv.PostApiGames(w, r)
+
+	var created api.Game
+	json.NewDecoder(w.Body).Decode(&created)
+	first := time.Now()
+	updateReq := api.UpdateGameRequest{PublishedAt: nullable.NewNullableWithValue(first)}
+	body, _ = json.Marshal(updateReq)
+	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Id, bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w = httptest.NewRecorder()
+	srv.PatchApiGamesId(w, r, created.Id)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected first publish to succeed, got %d", w.Code)
+	}
+
+	second := time.Now().Add(2 * time.Hour)
+	updateReq = api.UpdateGameRequest{PublishedAt: nullable.NewNullableWithValue(second)}
+	body, _ = json.Marshal(updateReq)
+	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Id, bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w = httptest.NewRecorder()
+	srv.PatchApiGamesId(w, r, created.Id)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected second publish attempt to be rejected with 400, got %d", w.Code)
+	}
+}
+
+func TestPatchApiGamesId_CanRescheduleFuturePublish(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB)
+	querier := db.New(sqlDB)
+	srv := server.NewServer(querier, server.NewRandomAlphanumericGenerator())
+
+	createReq := api.CreateGameRequest{Name: "Reschedulable"}
+	body, _ := json.Marshal(createReq)
+	r := httptest.NewRequest(http.MethodPost, "/api/games", bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w := httptest.NewRecorder()
+	srv.PostApiGames(w, r)
+
+	var created api.Game
+	json.NewDecoder(w.Body).Decode(&created)
+
+	future1 := time.Now().Add(2 * time.Hour)
+	updateReq := api.UpdateGameRequest{PublishedAt: nullable.NewNullableWithValue(future1)}
+	body, _ = json.Marshal(updateReq)
+	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Id, bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w = httptest.NewRecorder()
+	srv.PatchApiGamesId(w, r, created.Id)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected scheduling publish to succeed, got %d", w.Code)
+	}
+
+	future2 := time.Now().Add(4 * time.Hour)
+	updateReq = api.UpdateGameRequest{PublishedAt: nullable.NewNullableWithValue(future2)}
+	body, _ = json.Marshal(updateReq)
+	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Id, bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w = httptest.NewRecorder()
+	srv.PatchApiGamesId(w, r, created.Id)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected rescheduling publish to succeed, got %d", w.Code)
+	}
+
+	var updated api.Game
+	json.NewDecoder(w.Body).Decode(&updated)
+	if updated.PublishedAt == nil {
+		t.Fatalf("expected publishedAt to remain set after reschedule")
+	}
+	if !updated.PublishedAt.After(future1) {
+		t.Fatalf("expected publishedAt to move later than original schedule")
+	}
+}
+
+func TestPatchApiGamesId_CanClearFuturePublish(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB)
+	querier := db.New(sqlDB)
+	srv := server.NewServer(querier, server.NewRandomAlphanumericGenerator())
+
+	createReq := api.CreateGameRequest{Name: "Clearable"}
+	body, _ := json.Marshal(createReq)
+	r := httptest.NewRequest(http.MethodPost, "/api/games", bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w := httptest.NewRecorder()
+	srv.PostApiGames(w, r)
+
+	var created api.Game
+	json.NewDecoder(w.Body).Decode(&created)
+
+	future := time.Now().Add(2 * time.Hour)
+	updateReq := api.UpdateGameRequest{PublishedAt: nullable.NewNullableWithValue(future)}
+	body, _ = json.Marshal(updateReq)
+	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Id, bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w = httptest.NewRecorder()
+	srv.PatchApiGamesId(w, r, created.Id)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected scheduling publish to succeed, got %d", w.Code)
+	}
+
+	updateReq = api.UpdateGameRequest{PublishedAt: nullable.NewNullNullable[time.Time]()}
+	body, _ = json.Marshal(updateReq)
+	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Id, bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w = httptest.NewRecorder()
+	srv.PatchApiGamesId(w, r, created.Id)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected clearing scheduled publish to succeed, got %d", w.Code)
+	}
+
+	var updated api.Game
+	json.NewDecoder(w.Body).Decode(&updated)
+	if updated.PublishedAt != nil {
+		t.Fatalf("expected publishedAt to be cleared")
+	}
+}
+
+func TestPatchApiGamesId_CannotClearAfterPublished(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB)
+	querier := db.New(sqlDB)
+	srv := server.NewServer(querier, server.NewRandomAlphanumericGenerator())
+
+	createReq := api.CreateGameRequest{Name: "Published"}
+	body, _ := json.Marshal(createReq)
+	r := httptest.NewRequest(http.MethodPost, "/api/games", bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w := httptest.NewRecorder()
+	srv.PostApiGames(w, r)
+
+	var created api.Game
+	json.NewDecoder(w.Body).Decode(&created)
+
+	past := time.Now().Add(-1 * time.Hour)
+	updateReq := api.UpdateGameRequest{PublishedAt: nullable.NewNullableWithValue(past)}
+	body, _ = json.Marshal(updateReq)
+	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Id, bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w = httptest.NewRecorder()
+	srv.PatchApiGamesId(w, r, created.Id)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected publishing to succeed, got %d", w.Code)
+	}
+
+	updateReq = api.UpdateGameRequest{PublishedAt: nullable.NewNullNullable[time.Time]()}
+	body, _ = json.Marshal(updateReq)
+	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Id, bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w = httptest.NewRecorder()
+	srv.PatchApiGamesId(w, r, created.Id)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected clearing after publish to be rejected with 400, got %d", w.Code)
 	}
 }

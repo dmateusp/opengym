@@ -57,7 +57,7 @@ export const getApiGames = <ThrowOnError extends boolean = false>(options?: Opti
 /**
  * Create a new game
  *
- * Creates a new game. The game is only visible to the organizer initially unless publish is set to true.
+ * Creates a new game. The game is created as a draft and is only visible to the organizer until published via an update.
  */
 export const postApiGames = <ThrowOnError extends boolean = false>(options: Options<PostApiGamesData, ThrowOnError>) => (options.client ?? client).post<PostApiGamesResponses, PostApiGamesErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -79,7 +79,7 @@ export const getApiGamesById = <ThrowOnError extends boolean = false>(options: O
 /**
  * Update a game
  *
- * Updates an existing game. Only the organizer can update their game.
+ * Updates an existing game. Only the organizer can update their game. Publishing is irreversible and driven by a `publishedAt` timestamp.
  */
 export const patchApiGamesById = <ThrowOnError extends boolean = false>(options: Options<PatchApiGamesByIdData, ThrowOnError>) => (options.client ?? client).patch<PatchApiGamesByIdResponses, PatchApiGamesByIdErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
