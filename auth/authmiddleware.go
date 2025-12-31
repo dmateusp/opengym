@@ -15,7 +15,7 @@ import (
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Unauthenticated path
-		if strings.HasPrefix(r.URL.EscapedPath(), "/api/auth") {
+		if r.URL.EscapedPath() != "/api/auth/me" && strings.HasPrefix(r.URL.EscapedPath(), "/api/auth") {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -28,23 +28,30 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		}
 
 		var (
-			jwtCookieName = JWTCookie
-			issuer        = Issuer
+			jwtCookieName    = JWTCookie
+			issuer           = Issuer
+			jwtSigningSecret = *signingSecret
 		)
 
 		if demo.GetDemoMode() {
 			jwtCookieName = demo.DemoJWTCookie
 			issuer = demo.DemoIssuer
+			jwtSigningSecret = demo.GetDemoSigningSecret()
 		}
 
 		jwtCookie, err := r.Cookie(jwtCookieName)
 		if err != nil {
+			log.FromCtx(r.Context()).InfoContext(
+				r.Context(),
+				"Failed to get JWT",
+				slog.String("error", err.Error()),
+			)
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 
 		jwtToken, err := jwt.ParseWithClaims(jwtCookie.Value, &jwt.RegisteredClaims{}, func(token *jwt.Token) (any, error) {
-			return []byte(*signingSecret), nil
+			return []byte(jwtSigningSecret), nil
 		}, jwt.WithIssuer(issuer), jwt.WithExpirationRequired(), jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Name}))
 		if err != nil {
 			log.FromCtx(r.Context()).InfoContext(

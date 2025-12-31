@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetApiAuthByProviderCallbackData, GetApiAuthByProviderCallbackErrors, GetApiAuthByProviderCallbackResponses, GetApiAuthByProviderLoginData, GetApiAuthByProviderLoginErrors, GetApiAuthMeData, GetApiAuthMeErrors, GetApiAuthMeResponses, GetApiGamesByIdData, GetApiGamesByIdErrors, GetApiGamesByIdResponses, GetApiGamesData, GetApiGamesErrors, GetApiGamesResponses, PatchApiGamesByIdData, PatchApiGamesByIdErrors, PatchApiGamesByIdResponses, PostApiGamesData, PostApiGamesErrors, PostApiGamesResponses } from './types.gen';
+import type { GetApiAuthByProviderCallbackData, GetApiAuthByProviderCallbackErrors, GetApiAuthByProviderCallbackResponses, GetApiAuthByProviderLoginData, GetApiAuthByProviderLoginErrors, GetApiAuthMeData, GetApiAuthMeErrors, GetApiAuthMeResponses, GetApiDemoUsersData, GetApiDemoUsersErrors, GetApiDemoUsersResponses, GetApiGamesByIdData, GetApiGamesByIdErrors, GetApiGamesByIdResponses, GetApiGamesData, GetApiGamesErrors, GetApiGamesResponses, PatchApiGamesByIdData, PatchApiGamesByIdErrors, PatchApiGamesByIdResponses, PostApiDemoUsersByUserIdImpersonateData, PostApiDemoUsersByUserIdImpersonateErrors, PostApiDemoUsersByUserIdImpersonateResponses, PostApiGamesData, PostApiGamesErrors, PostApiGamesResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -42,6 +42,20 @@ export const getApiAuthMe = <ThrowOnError extends boolean = false>(options?: Opt
     url: '/api/auth/me',
     ...options
 });
+
+/**
+ * Impersonate a demo user
+ *
+ * opengym can be started in demo mode, in which case authentication is replaced with impersonation of a demo user
+ */
+export const postApiDemoUsersByUserIdImpersonate = <ThrowOnError extends boolean = false>(options: Options<PostApiDemoUsersByUserIdImpersonateData, ThrowOnError>) => (options.client ?? client).post<PostApiDemoUsersByUserIdImpersonateResponses, PostApiDemoUsersByUserIdImpersonateErrors, ThrowOnError>({ url: '/api/demo/users/{userId}/impersonate', ...options });
+
+/**
+ * List demo users
+ *
+ * Returns all demo users
+ */
+export const getApiDemoUsers = <ThrowOnError extends boolean = false>(options?: Options<GetApiDemoUsersData, ThrowOnError>) => (options?.client ?? client).get<GetApiDemoUsersResponses, GetApiDemoUsersErrors, ThrowOnError>({ url: '/api/demo/users', ...options });
 
 /**
  * List user's games

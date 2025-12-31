@@ -45,6 +45,10 @@ export type User = {
      * Timestamp when user was last updated
      */
     updatedAt?: string;
+    /**
+     * Whether the user is a demo user
+     */
+    isDemo: boolean;
 };
 
 export type GameFields = {
@@ -274,6 +278,61 @@ export type GetApiAuthMeResponses = {
 };
 
 export type GetApiAuthMeResponse = GetApiAuthMeResponses[keyof GetApiAuthMeResponses];
+
+export type PostApiDemoUsersByUserIdImpersonateData = {
+    body?: never;
+    path: {
+        /**
+         * ID of the demo user to impersonate
+         */
+        userId: string;
+    };
+    query?: never;
+    url: '/api/demo/users/{userId}/impersonate';
+};
+
+export type PostApiDemoUsersByUserIdImpersonateErrors = {
+    /**
+     * The back-end was not started in demo mode so this endpoint is disabled.
+     */
+    403: Error;
+};
+
+export type PostApiDemoUsersByUserIdImpersonateError = PostApiDemoUsersByUserIdImpersonateErrors[keyof PostApiDemoUsersByUserIdImpersonateErrors];
+
+export type PostApiDemoUsersByUserIdImpersonateResponses = {
+    /**
+     * Successfully impersonated demo user
+     */
+    200: User;
+};
+
+export type PostApiDemoUsersByUserIdImpersonateResponse = PostApiDemoUsersByUserIdImpersonateResponses[keyof PostApiDemoUsersByUserIdImpersonateResponses];
+
+export type GetApiDemoUsersData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/demo/users';
+};
+
+export type GetApiDemoUsersErrors = {
+    /**
+     * The back-end was not started in demo mode so this endpoint is disabled.
+     */
+    403: Error;
+};
+
+export type GetApiDemoUsersError = GetApiDemoUsersErrors[keyof GetApiDemoUsersErrors];
+
+export type GetApiDemoUsersResponses = {
+    /**
+     * List of demo users retrieved successfully
+     */
+    200: Array<User>;
+};
+
+export type GetApiDemoUsersResponse = GetApiDemoUsersResponses[keyof GetApiDemoUsersResponses];
 
 export type GetApiGamesData = {
     body?: never;

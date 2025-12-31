@@ -34,13 +34,13 @@ func (s *server) PostApiDemoUsersUserIdImpersonate(w http.ResponseWriter, r *htt
 		http.Error(w, fmt.Sprintf("failed to parse user id: %s", err.Error()), http.StatusBadRequest)
 		return
 	}
-	user, err := s.querier.UserGetById(r.Context(), int64(parsedUserId))
+	dbUser, err := s.querier.UserGetById(r.Context(), int64(parsedUserId))
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to get user: %s", err.Error()), http.StatusInternalServerError)
 		return
 	}
 
-	if !user.User.IsDemo {
+	if !dbUser.User.IsDemo {
 		http.Error(w, "user was not found or it was not a demo user", http.StatusNotFound)
 		return
 	}
@@ -75,6 +75,8 @@ func (s *server) PostApiDemoUsersUserIdImpersonate(w http.ResponseWriter, r *htt
 		},
 	)
 
+	var user api.User
+	user.FromDb(dbUser.User)
 	w.WriteHeader(http.StatusOK)
 	err = json.NewEncoder(w).Encode(user)
 	if err != nil {

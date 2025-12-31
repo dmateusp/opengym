@@ -2,12 +2,14 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { API_BASE_URL, redirectToLogin } from '@/lib/api'
+import { fetchWithDemoRecovery } from '@/lib/fetchWithDemoRecovery'
 import { ArrowLeft, Loader2, CheckCircle2, Edit2, Calendar, Clock, MapPin, Users, DollarSign, Crown, AlertCircle, XCircle, Rocket } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer'
 import { PriceDisplay } from '@/components/games/PriceDisplay'
 import { Popover, PopoverContent, PopoverAnchor } from '@/components/ui/popover'
 import { TimeDisplay } from '@/components/ui/TimeDisplay'
+import UserProfileMenu from '@/components/auth/UserProfileMenu'
 
 interface Game {
   id: string
@@ -63,7 +65,7 @@ export default function GameDetailPage() {
         setIsLoading(true)
         setError(null)
 
-        const response = await fetch(`${API_BASE_URL}/api/games/${id}`, {
+        const response = await fetchWithDemoRecovery(`${API_BASE_URL}/api/games/${id}`, {
           credentials: 'include',
         })
 
@@ -83,7 +85,7 @@ export default function GameDetailPage() {
 
         // Fetch authenticated user (optional if unauthenticated)
         try {
-          const meResp = await fetch(`${API_BASE_URL}/api/auth/me`, {
+          const meResp = await fetchWithDemoRecovery(`${API_BASE_URL}/api/auth/me`, {
             credentials: 'include',
           })
           if (meResp.ok) {
@@ -109,6 +111,27 @@ export default function GameDetailPage() {
     const timer = window.setInterval(() => setNowTs(Date.now()), 30000)
     return () => window.clearInterval(timer)
   }, [])
+
+  const refreshGame = async () => {
+    if (!id) return
+    try {
+      const response = await fetchWithDemoRecovery(`${API_BASE_URL}/api/games/${id}`, {
+        credentials: 'include',
+      })
+      if (response.ok) {
+        const gameData = await response.json()
+        setGame(gameData)
+      }
+    } catch (err) {
+      console.error('Error refreshing game:', err)
+    }
+  }
+
+  const handleUserChange = (newUser: any) => {
+    setUser(newUser)
+    // Refetch game when user changes
+    refreshGame()
+  }
 
   const isOrganizer = useMemo(() => {
     if (!game || !user) return false
@@ -413,14 +436,16 @@ export default function GameDetailPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <Button
-          variant="ghost"
-          onClick={() => navigate('/')}
-          className="mb-8"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Games
-        </Button>
+        <div className="flex items-center justify-between mb-8">
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/')}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Games
+          </Button>
+          <UserProfileMenu user={user} onUserChange={handleUserChange} />
+        </div>
 
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
           {/* Hero Header */}

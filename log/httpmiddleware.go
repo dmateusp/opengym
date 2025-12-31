@@ -16,7 +16,10 @@ import (
 func AddLoggerToContextMiddleware(logger *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			next.ServeHTTP(w, r.WithContext(WithLogger(r.Context(), logger.With(slog.String("request_id", uuid.NewString())))))
+			next.ServeHTTP(w, r.WithContext(WithLogger(r.Context(), logger.With(
+				slog.String("request_id", uuid.NewString()),
+				slog.String("url_path", r.URL.String()),
+			))))
 		})
 	}
 }
@@ -97,7 +100,6 @@ func LogRequestsAndResponsesMiddleware(next http.Handler) http.Handler {
 
 		logger.InfoContext(r.Context(), "Request received",
 			slog.String("method", r.Method),
-			slog.String("url", r.URL.String()),
 			slog.String("host", r.Host),
 			slog.String("remote_addr", r.RemoteAddr),
 			slog.String("user_agent", r.UserAgent()),
@@ -105,7 +107,7 @@ func LogRequestsAndResponsesMiddleware(next http.Handler) http.Handler {
 		)
 		start := time.Now()
 		rr := &responseRecorder{ResponseWriter: w}
-		next.ServeHTTP(rr, r)
+		next.ServeHTTP(rr, r.WithContext(WithLogger(r.Context(), logger)))
 
 		respPayload := rr.buf.String()
 		logger.InfoContext(r.Context(), "Response sent",

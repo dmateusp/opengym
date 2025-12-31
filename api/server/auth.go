@@ -398,33 +398,13 @@ func (srv *server) GetApiAuthProviderLogin(w http.ResponseWriter, r *http.Reques
 }
 
 func (srv *server) GetApiAuthMe(w http.ResponseWriter, r *http.Request) {
-	jwtCookie, err := r.Cookie(auth.JWTCookie)
-	if err != nil {
+	authInfo, ok := auth.FromCtx(r.Context())
+	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	jwtToken, err := jwt.ParseWithClaims(jwtCookie.Value, &jwt.RegisteredClaims{}, func(token *jwt.Token) (any, error) {
-		return []byte(auth.GetSigningSecret()), nil
-	}, jwt.WithIssuer(auth.Issuer), jwt.WithExpirationRequired(), jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Name}))
-	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	sub, err := jwtToken.Claims.GetSubject()
-	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	userId, err := strconv.Atoi(sub)
-	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	dbUser, err := srv.querier.UserGetById(r.Context(), int64(userId))
+	dbUser, err := srv.querier.UserGetById(r.Context(), int64(authInfo.UserId))
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
