@@ -47,6 +47,7 @@ func (game *Game) FromDb(dbGame db.Game) {
 func (user *User) FromDb(dbUser db.User) {
 	user.Id = strconv.FormatInt(dbUser.ID, 10)
 	user.Email = openapi_types.Email(dbUser.Email)
+	user.IsDemo = dbUser.IsDemo
 
 	if dbUser.Name.Valid {
 		name := dbUser.Name.String

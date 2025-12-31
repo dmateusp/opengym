@@ -33,4 +33,5 @@ type User struct {
 	Photo     sql.NullString
 	CreatedAt time.Time
 	UpdatedAt time.Time
+	IsDemo    bool
 }

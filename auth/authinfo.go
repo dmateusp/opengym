@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	JTWCookie = "opengym_jwt"
+	JWTCookie = "opengym_jwt"
 	Issuer    = "opengym"
 )
 

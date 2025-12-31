@@ -22,7 +22,7 @@ func SetupTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("Failed to set goose dialect: %v", err)
 	}
 
-	if err := goose.Up(sqlDB, "../../db/migrations"); err != nil {
+	if err := goose.UpContext(t.Context(), sqlDB, "../../db/migrations"); err != nil {
 		t.Fatalf("Failed to run migrations: %v", err)
 	}
 

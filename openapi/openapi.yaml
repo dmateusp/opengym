@@ -125,6 +125,42 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /api/demo/users/{userId}/impersonate:
+    post:
+      summary: Impersonate a demo user
+      description: opengym can be started in demo mode, in which case authentication is replaced with impersonation of a demo user
+      tags:
+        - Demo
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the demo user to impersonate
+      responses:
+        '200':
+          description: Successfully impersonated demo user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+  /api/demo/users:
+    get:
+      summary: List demo users
+      description: Returns all demo users
+      tags:
+        - Demo
+      responses:
+        '200':
+          description: List of demo users retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+
   /api/games:
     get:
       summary: List user's games
@@ -311,6 +347,7 @@ components:
         - id
         - email
         - provider
+        - isDemo
       properties:
         id:
           type: string
@@ -338,6 +375,10 @@ components:
           type: string
           format: date-time
           description: Timestamp when user was last updated
+        isDemo:
+          type: boolean
+          description: Whether the user is a demo user
+          example: false
 
     GameFields:
       type: object

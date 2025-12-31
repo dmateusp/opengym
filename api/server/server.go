@@ -13,11 +13,11 @@ var (
 )
 
 type server struct {
-	querier                     db.Querier
+	querier                     db.QuerierWithTxSupport
 	randomAlphanumericGenerator RandomAlphanumericGenerator
 }
 
-func NewServer(querier db.Querier, randomAlphanumericGenerator RandomAlphanumericGenerator) *server {
+func NewServer(querier db.QuerierWithTxSupport, randomAlphanumericGenerator RandomAlphanumericGenerator) *server {
 	return &server{
 		querier:                     querier,
 		randomAlphanumericGenerator: randomAlphanumericGenerator,

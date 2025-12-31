@@ -6,7 +6,8 @@ create table users (
   email text not null unique,
   photo text,
   created_at datetime default current_timestamp not null,
-  updated_at datetime default current_timestamp not null
+  updated_at datetime default current_timestamp not null,
+  is_demo boolean default false not null
 );
 -- +goose StatementEnd
 

@@ -14,6 +14,7 @@ import (
 	"github.com/dmateusp/opengym/auth"
 	"github.com/dmateusp/opengym/cors"
 	"github.com/dmateusp/opengym/db"
+	"github.com/dmateusp/opengym/demo"
 	"github.com/dmateusp/opengym/flagfromenv"
 	"github.com/dmateusp/opengym/log"
 
@@ -46,22 +47,41 @@ func main() {
 		os.Exit(1)
 	}
 
-	if auth.GetSigningSecret() == "" {
+	if !demo.GetDemoMode() && auth.GetSigningSecret() == "" {
 		logger.ErrorContext(ctx, "Please set a signing secret with the flag -auth.signing-secret, using the output of `openssl rand -hex 32` for example (save it somewhere)")
 		os.Exit(1)
 	}
 
 	logger.InfoContext(ctx, "Starting opengym server", slog.String("server_addr", *serverAddr))
 
-	dbConn, err := sql.Open("sqlite", *dbPath)
+	dbConnPath := *dbPath
+	if demo.GetDemoMode() {
+		logger.InfoContext(ctx, "Demo mode is enabled, some demo users will be populated in the database and user impersonation is turned ON")
+		dbConnPath = demo.GetDemoDbPath()
+		if demo.GetDemoSigningSecret() == "" {
+			logger.ErrorContext(ctx, "Please set a signing secret with the flag -demo.auth.signing-secret, using the output of `openssl rand -hex 32` for example (save it somewhere)")
+			os.Exit(1)
+		}
+	}
+
+	dbConn, err := sql.Open("sqlite", dbConnPath)
 	if err != nil {
 		logger.ErrorContext(ctx, "Failed to open database", "error", err)
 		os.Exit(1)
 	}
 	defer dbConn.Close()
 
+	querier := db.New(dbConn)
+	if demo.GetDemoMode() {
+		err = demo.SetUpDemoDatabase(ctx, dbConn, db.NewQuerierWrapper(querier))
+		if err != nil {
+			logger.ErrorContext(ctx, "Failed to set up demo database", "error", err)
+			os.Exit(1)
+		}
+	}
+
 	// Create the API handler with auth and logging middleware
-	apiHandler := api.HandlerWithOptions(server.NewServer(db.New(dbConn), server.NewRandomAlphanumericGenerator()), api.StdHTTPServerOptions{
+	apiHandler := api.HandlerWithOptions(server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator()), api.StdHTTPServerOptions{
 		Middlewares: []api.MiddlewareFunc{ // Middleware is executed last to first
 			auth.AuthMiddleware,
 			log.LogRequestsAndResponsesMiddleware,

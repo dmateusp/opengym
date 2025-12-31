@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/dmateusp/opengym/demo"
 	"github.com/dmateusp/opengym/log"
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -19,7 +20,17 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		jwtCookie, err := r.Cookie(JTWCookie)
+		var (
+			jwtCookieName = JWTCookie
+			issuer        = Issuer
+		)
+
+		if demo.GetDemoMode() {
+			jwtCookieName = demo.DemoJWTCookie
+			issuer = demo.DemoIssuer
+		}
+
+		jwtCookie, err := r.Cookie(jwtCookieName)
 		if err != nil {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
@@ -27,7 +38,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 
 		jwtToken, err := jwt.ParseWithClaims(jwtCookie.Value, &jwt.RegisteredClaims{}, func(token *jwt.Token) (any, error) {
 			return []byte(*signingSecret), nil
-		}, jwt.WithIssuer(Issuer), jwt.WithExpirationRequired(), jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Name}))
+		}, jwt.WithIssuer(issuer), jwt.WithExpirationRequired(), jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Name}))
 		if err != nil {
 			log.FromCtx(r.Context()).InfoContext(
 				r.Context(),

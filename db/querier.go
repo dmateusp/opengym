@@ -14,7 +14,8 @@ type Querier interface {
 	GameGetById(ctx context.Context, id string) (Game, error)
 	GameListByUser(ctx context.Context, arg GameListByUserParams) ([]GameListByUserRow, error)
 	GameUpdate(ctx context.Context, arg GameUpdateParams) error
-	UserGetById(ctx context.Context, id int64) (User, error)
+	ListDemoUsers(ctx context.Context) ([]ListDemoUsersRow, error)
+	UserGetById(ctx context.Context, id int64) (UserGetByIdRow, error)
 	UserUpsertRetuningId(ctx context.Context, arg UserUpsertRetuningIdParams) (int64, error)
 }
 

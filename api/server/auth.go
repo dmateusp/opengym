@@ -308,7 +308,7 @@ func (srv *server) GetApiAuthProviderCallback(w http.ResponseWriter, r *http.Req
 	http.SetCookie(
 		w,
 		&http.Cookie{
-			Name:     auth.JTWCookie,
+			Name:     auth.JWTCookie,
 			Value:    signedJwt,
 			Path:     "/",
 			HttpOnly: true,
@@ -398,7 +398,7 @@ func (srv *server) GetApiAuthProviderLogin(w http.ResponseWriter, r *http.Reques
 }
 
 func (srv *server) GetApiAuthMe(w http.ResponseWriter, r *http.Request) {
-	jwtCookie, err := r.Cookie(auth.JTWCookie)
+	jwtCookie, err := r.Cookie(auth.JWTCookie)
 	if err != nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -435,7 +435,7 @@ func (srv *server) GetApiAuthMe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var apiUser api.User
-	apiUser.FromDb(dbUser)
+	apiUser.FromDb(dbUser.User)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)

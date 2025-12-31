@@ -10,23 +10,69 @@ import (
 	"database/sql"
 )
 
+const listDemoUsers = `-- name: ListDemoUsers :many
+select users.id, users.name, users.email, users.photo, users.created_at, users.updated_at, users.is_demo
+from users
+where is_demo
+`
+
+type ListDemoUsersRow struct {
+	User User
+}
+
+func (q *Queries) ListDemoUsers(ctx context.Context) ([]ListDemoUsersRow, error) {
+	rows, err := q.db.QueryContext(ctx, listDemoUsers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListDemoUsersRow
+	for rows.Next() {
+		var i ListDemoUsersRow
+		if err := rows.Scan(
+			&i.User.ID,
+			&i.User.Name,
+			&i.User.Email,
+			&i.User.Photo,
+			&i.User.CreatedAt,
+			&i.User.UpdatedAt,
+			&i.User.IsDemo,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const userGetById = `-- name: UserGetById :one
-select id, name, email, photo, created_at, updated_at
+select users.id, users.name, users.email, users.photo, users.created_at, users.updated_at, users.is_demo
 from users
 where id = ?
 limit 1
 `
 
-func (q *Queries) UserGetById(ctx context.Context, id int64) (User, error) {
+type UserGetByIdRow struct {
+	User User
+}
+
+func (q *Queries) UserGetById(ctx context.Context, id int64) (UserGetByIdRow, error) {
 	row := q.db.QueryRowContext(ctx, userGetById, id)
-	var i User
+	var i UserGetByIdRow
 	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.Email,
-		&i.Photo,
-		&i.CreatedAt,
-		&i.UpdatedAt,
+		&i.User.ID,
+		&i.User.Name,
+		&i.User.Email,
+		&i.User.Photo,
+		&i.User.CreatedAt,
+		&i.User.UpdatedAt,
+		&i.User.IsDemo,
 	)
 	return i, err
 }
@@ -36,8 +82,9 @@ insert into users(
     name,
     email,
     photo,
+    is_demo,
     updated_at
-) values (?, ?, ?, current_timestamp)
+) values (?, ?, ?, ?, current_timestamp)
 on conflict(email) do update set
     name = excluded.name,
     photo = coalesce(excluded.photo, users.photo), -- only update the photo if the new value is not null
@@ -46,13 +93,19 @@ returning id
 `
 
 type UserUpsertRetuningIdParams struct {
-	Name  sql.NullString
-	Email string
-	Photo sql.NullString
+	Name   sql.NullString
+	Email  string
+	Photo  sql.NullString
+	IsDemo bool
 }
 
 func (q *Queries) UserUpsertRetuningId(ctx context.Context, arg UserUpsertRetuningIdParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, userUpsertRetuningId, arg.Name, arg.Email, arg.Photo)
+	row := q.db.QueryRowContext(ctx, userUpsertRetuningId,
+		arg.Name,
+		arg.Email,
+		arg.Photo,
+		arg.IsDemo,
+	)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
