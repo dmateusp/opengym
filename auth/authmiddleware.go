@@ -19,6 +19,13 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
+		if strings.HasPrefix(r.URL.EscapedPath(), "/api/demo") {
+			if !demo.GetDemoMode() {
+				http.Error(w, "Demo mode is not enabled", http.StatusForbidden)
+			}
+			next.ServeHTTP(w, r)
+			return
+		}
 
 		var (
 			jwtCookieName = JWTCookie

@@ -145,6 +145,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/User'
+        '403':
+          description: The back-end was not started in demo mode so this endpoint is disabled.
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'                
   /api/demo/users:
     get:
       summary: List demo users
@@ -160,6 +166,12 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/User'
+        '403':
+          description: The back-end was not started in demo mode so this endpoint is disabled.
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /api/games:
     get:
