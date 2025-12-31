@@ -21,7 +21,7 @@ interface Game {
   totalPriceCents?: number
   createdAt: string
   updatedAt: string
-  publishedAt?: string
+  publishedAt?: string | null
 }
 
 interface AuthUser {
@@ -42,6 +42,9 @@ export default function GameDetailPage() {
   const [draftHintOpen, setDraftHintOpen] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
   const [publishError, setPublishError] = useState<string | null>(null)
+  const [publishAtInput, setPublishAtInput] = useState('')
+  const [nowTs, setNowTs] = useState(() => Date.now())
+  const [isEditingSchedule, setIsEditingSchedule] = useState(false)
 
   // Editing state
   const [editingField, setEditingField] = useState<string | null>(null)
@@ -102,6 +105,11 @@ export default function GameDetailPage() {
     }
   }, [id])
 
+  useEffect(() => {
+    const timer = window.setInterval(() => setNowTs(Date.now()), 30000)
+    return () => window.clearInterval(timer)
+  }, [])
+
   const isOrganizer = useMemo(() => {
     if (!game || !user) return false
     const userIdNum = Number.parseInt(user.id, 10)
@@ -145,9 +153,31 @@ export default function GameDetailPage() {
     return publishRequirements.every(req => req.met)
   }, [publishRequirements])
 
+  const publishedAtDate = useMemo(() => {
+    if (!game?.publishedAt) return null
+    const d = new Date(game.publishedAt)
+    if (Number.isNaN(d.getTime())) return null
+    return d
+  }, [game?.publishedAt])
+
+  const isScheduled = useMemo(() => {
+    if (!publishedAtDate) return false
+    return publishedAtDate.getTime() > nowTs
+  }, [publishedAtDate, nowTs])
+
   const isPublished = useMemo(() => {
-    return !!game?.publishedAt
-  }, [game])
+    if (!publishedAtDate) return false
+    return publishedAtDate.getTime() <= nowTs
+  }, [publishedAtDate, nowTs])
+
+  useEffect(() => {
+    if (game?.publishedAt) {
+      setPublishAtInput(toLocalInputValue(game.publishedAt))
+      setIsEditingSchedule(false)
+    } else {
+      setPublishAtInput('')
+    }
+  }, [game?.publishedAt])
 
   // Focus input when editing starts
   useEffect(() => {
@@ -184,36 +214,66 @@ export default function GameDetailPage() {
     })
   }
 
-  async function handlePublish() {
-    if (!isOrganizer || !id || !canPublish) return
+  async function updatePublishTime(publishedAtValue: string | null, requireReady = true) {
+    if (!isOrganizer || !id) return false
+    if (requireReady && !canPublish) {
+      setPublishError('Complete all required fields before publishing.')
+      return false
+    }
+
     setIsPublishing(true)
     setPublishError(null)
 
     try {
-      const publishAt = new Date().toISOString()
       const resp = await fetch(`${API_BASE_URL}/api/games/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ publishedAt: publishAt }),
+        body: JSON.stringify({ publishedAt: publishedAtValue }),
       })
 
       if (!resp.ok) {
         if (resp.status === 401) {
           redirectToLogin()
-          return
+          return false
         }
         const txt = await resp.text()
-        throw new Error(txt || 'Failed to publish game')
+        throw new Error(txt || 'Failed to update publish time')
       }
 
       const updated = await resp.json()
       setGame(updated)
+      return true
     } catch (e) {
-      setPublishError(e instanceof Error ? e.message : 'Failed to publish game')
+      setPublishError(e instanceof Error ? e.message : 'Failed to update publish time')
+      return false
     } finally {
       setIsPublishing(false)
     }
+  }
+
+  async function handlePublishNow() {
+    const ok = await updatePublishTime(new Date().toISOString())
+    if (ok) setIsEditingSchedule(false)
+  }
+
+  async function handleSchedulePublish() {
+    if (!publishAtInput) {
+      setPublishError('Select a date and time to schedule publishing.')
+      return
+    }
+    const iso = fromLocalInputValue(publishAtInput)
+    if (!iso) {
+      setPublishError('Invalid date and time. Please pick a valid value.')
+      return
+    }
+    const ok = await updatePublishTime(iso)
+    if (ok) setIsEditingSchedule(false)
+  }
+
+  async function handleClearSchedule() {
+    const ok = await updatePublishTime(null, false)
+    if (ok) setIsEditingSchedule(false)
   }
 
   async function saveField(field: string, value: unknown) {
@@ -366,22 +426,45 @@ export default function GameDetailPage() {
           {/* Hero Header */}
           <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-8 py-12 text-white relative">
             <div className="absolute top-4 right-4 flex items-center gap-2">
-              {!game?.publishedAt && (
+              {!isPublished && (
                 <Popover open={draftHintOpen}>
                   <PopoverAnchor asChild>
                     <div
-                      className="inline-flex items-center px-3 py-1 rounded-full bg-amber-400/20 backdrop-blur-sm border border-amber-300/50 hover:bg-amber-400/30 transition-colors cursor-help"
+                      className={`inline-flex items-center px-3 py-1 rounded-full backdrop-blur-sm border transition-colors cursor-help ${
+                        isScheduled
+                          ? 'bg-blue-500/15 border-blue-300/50 hover:bg-blue-500/25'
+                          : 'bg-amber-400/20 border-amber-300/50 hover:bg-amber-400/30'
+                      }`}
                       onMouseEnter={() => setDraftHintOpen(true)}
                       onMouseLeave={() => setDraftHintOpen(false)}
-                      aria-label="Draft status"
+                      aria-label="Publish status"
                     >
-                      <AlertCircle className="h-4 w-4 text-amber-200 mr-1.5" aria-hidden="true" />
-                      <span className="text-xs font-semibold text-amber-100">Draft</span>
+                      <AlertCircle className={`h-4 w-4 mr-1.5 ${isScheduled ? 'text-blue-200' : 'text-amber-200'}`} aria-hidden="true" />
+                      <span className={`text-xs font-semibold ${isScheduled ? 'text-blue-100' : 'text-amber-100'}`}>
+                        {isScheduled ? 'Scheduled' : 'Draft'}
+                      </span>
                     </div>
                   </PopoverAnchor>
-                  <PopoverContent side="left" sideOffset={12} className="text-gray-800 w-56">
-                    <p className="font-semibold mb-1">Game is a draft</p>
-                    <p className="text-sm">Other users won't be able to view or join this game until it's published.</p>
+                  <PopoverContent side="left" sideOffset={12} className="text-gray-800 w-64 space-y-1">
+                    {isScheduled ? (
+                      <>
+                        <p className="font-semibold">Publishing scheduled</p>
+                        <p className="text-sm text-gray-700">Other users will see the game once it publishes.</p>
+                        {publishedAtDate && (
+                          <TimeDisplay
+                            timestamp={publishedAtDate.toISOString()}
+                            displayFormat="friendly"
+                            prefix="Publishes"
+                            className="text-gray-700 decoration-gray-400"
+                          />
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <p className="font-semibold mb-1">Game is a draft</p>
+                        <p className="text-sm">Other users won't be able to view or join this game until it's published.</p>
+                      </>
+                    )}
                   </PopoverContent>
                 </Popover>
               )}
@@ -743,38 +826,111 @@ export default function GameDetailPage() {
                         ))}
                       </div>
                       
-                      {canPublish ? (
-                        <div className="space-y-3">
-                          <div className="bg-white rounded-lg p-4 border border-green-200">
+                      {canPublish || isScheduled ? (
+                        <div className="space-y-4">
+                          <div className="bg-white rounded-lg p-4 border border-green-200 space-y-3">
                             <div className="flex items-start gap-3">
-                              <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                              <div>
-                                <p className="font-medium text-gray-900">Ready to publish!</p>
-                                <p className="text-sm text-gray-600 mt-1">
-                                  Your game meets all requirements and can be published. Once published, 
-                                  other users will be able to view and join your game.
+                              {isScheduled ? (
+                                <Clock className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                              ) : (
+                                <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                              )}
+                              <div className="space-y-1">
+                                <p className="font-medium text-gray-900">
+                                  {isScheduled ? 'Publishing scheduled' : 'Ready to publish'}
                                 </p>
+                                <p className="text-sm text-gray-600">
+                                  {isScheduled
+                                    ? (canPublish
+                                      ? 'Change the scheduled time, publish now, or cancel scheduling.'
+                                      : 'Publishing is scheduled. Complete the requirements above before changing the publish time or publishing now.')
+                                    : 'Your game meets all requirements and can be published. Once published, other users will be able to view and join your game.'}
+                                </p>
+                                {isScheduled && publishedAtDate && (
+                                  <div className="text-sm text-gray-700">
+                                    <TimeDisplay 
+                                      timestamp={publishedAtDate.toISOString()}
+                                      displayFormat="friendly"
+                                      prefix="Publishes"
+                                      className="text-gray-700 decoration-gray-400"
+                                    />
+                                  </div>
+                                )}
+                                {!isScheduled && !isPublished && (
+                                  <p className="text-xs text-gray-500">You can publish now or schedule it for later.</p>
+                                )}
                               </div>
                             </div>
-                          </div>
-                          <Button
-                            onClick={handlePublish}
-                            disabled={isPublishing}
-                            className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
-                            size="lg"
-                          >
-                            {isPublishing ? (
-                              <>
-                                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                                Publishing...
-                              </>
-                            ) : (
-                              <>
-                                <Rocket className="mr-2 h-5 w-5" />
-                                Publish Game
-                              </>
+
+                            <div className="flex flex-wrap gap-2">
+                              <Button
+                                onClick={handlePublishNow}
+                                disabled={isPublishing || !canPublish}
+                                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+                              >
+                                {isPublishing ? (
+                                  <>
+                                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                                    Publishing...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Rocket className="mr-2 h-5 w-5" />
+                                    Publish now
+                                  </>
+                                )}
+                              </Button>
+                              <Button
+                                variant="outline"
+                                onClick={() => setIsEditingSchedule(true)}
+                                disabled={isPublishing || !canPublish}
+                              >
+                                {isScheduled ? 'Reschedule' : 'Schedule publish'}
+                              </Button>
+                              {isScheduled && (
+                                <Button
+                                  variant="ghost"
+                                  onClick={handleClearSchedule}
+                                  disabled={isPublishing}
+                                >
+                                  Clear schedule
+                                </Button>
+                              )}
+                            </div>
+
+                            {isEditingSchedule && (
+                              <div className="space-y-2 border-t border-gray-200 pt-3">
+                                <label className="text-sm font-semibold text-gray-900">Publish time</label>
+                                <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                                  <Input
+                                    type="datetime-local"
+                                    value={publishAtInput}
+                                    onChange={(e) => setPublishAtInput(e.target.value)}
+                                    className="md:w-64"
+                                  />
+                                  <div className="flex flex-wrap gap-2">
+                                    <Button
+                                      variant="outline"
+                                      onClick={handleSchedulePublish}
+                                      disabled={isPublishing || !publishAtInput || !canPublish}
+                                    >
+                                      {isPublishing ? 'Saving...' : (isScheduled ? 'Update schedule' : 'Save schedule')}
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      onClick={() => setIsEditingSchedule(false)}
+                                      disabled={isPublishing}
+                                    >
+                                      Cancel
+                                    </Button>
+                                  </div>
+                                </div>
+                                <p className="text-xs text-gray-500">
+                                  Pick a future time to schedule (uses your local timezone). Leave empty and use Publish now for immediate release.
+                                </p>
+                              </div>
                             )}
-                          </Button>
+                          </div>
                         </div>
                       ) : (
                         <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
