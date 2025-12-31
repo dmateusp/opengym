@@ -8,7 +8,8 @@ import (
 )
 
 var (
-	baseUrl = flag.String("base-url", "http://localhost:8080", "base url of the server")
+	baseUrl         = flag.String("base-url", "http://localhost:8080", "base url of the server")
+	frontendBaseUrl = flag.String("frontend.base-url", "http://localhost:5173", "base url of the frontend")
 )
 
 type server struct {

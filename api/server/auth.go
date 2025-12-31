@@ -318,7 +318,13 @@ func (srv *server) GetApiAuthProviderCallback(w http.ResponseWriter, r *http.Req
 		},
 	)
 
-	http.Redirect(w, r, state.RedirectPage, http.StatusFound)
+	frontendRedirectUrl, err := url.JoinPath(*frontendBaseUrl, state.RedirectPage)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("could not construct the redirect url: %s", err.Error()), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, frontendRedirectUrl, http.StatusFound)
 }
 
 func (srv *server) GetApiAuthProviderLogin(w http.ResponseWriter, r *http.Request, provider api.GetApiAuthProviderLoginParamsProvider) {
