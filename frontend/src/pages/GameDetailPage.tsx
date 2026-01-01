@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { API_BASE_URL, redirectToLogin } from '@/lib/api'
 import { fetchWithDemoRecovery } from '@/lib/fetchWithDemoRecovery'
-import { ArrowLeft, Loader2, CheckCircle2, Edit2, Calendar, Clock, MapPin, Users, DollarSign, Crown, AlertCircle, XCircle, Rocket } from 'lucide-react'
+import { ArrowLeft, Loader2, CheckCircle2, Edit2, Calendar, Clock, MapPin, Users, DollarSign, Crown, AlertCircle, XCircle, Rocket, UserCheck, UserX, UserPlus } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer'
 import { PriceDisplay } from '@/components/games/PriceDisplay'
@@ -33,6 +33,13 @@ interface AuthUser {
   picture?: string
 }
 
+interface Participant {
+  status: 'going' | 'not_going' | 'waitlisted'
+  user: AuthUser
+  createdAt: string
+  updatedAt: string
+}
+
 export default function GameDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -47,6 +54,12 @@ export default function GameDetailPage() {
   const [publishAtInput, setPublishAtInput] = useState('')
   const [nowTs, setNowTs] = useState(() => Date.now())
   const [isEditingSchedule, setIsEditingSchedule] = useState(false)
+
+  // Participants state
+  const [participants, setParticipants] = useState<Participant[]>([])
+  const [isLoadingParticipants, setIsLoadingParticipants] = useState(false)
+  const [participantsError, setParticipantsError] = useState<string | null>(null)
+  const [isUpdatingParticipation, setIsUpdatingParticipation] = useState(false)
 
   // Editing state
   const [editingField, setEditingField] = useState<string | null>(null)
@@ -127,10 +140,67 @@ export default function GameDetailPage() {
     }
   }
 
+  const fetchParticipants = async () => {
+    if (!id || !game?.publishedAt) return
+    try {
+      setIsLoadingParticipants(true)
+      setParticipantsError(null)
+      const response = await fetchWithDemoRecovery(`${API_BASE_URL}/api/games/${id}/participants`, {
+        credentials: 'include',
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setParticipants(data)
+      } else if (response.status === 401) {
+        redirectToLogin()
+      } else {
+        throw new Error('Failed to load participants')
+      }
+    } catch (err) {
+      setParticipantsError(err instanceof Error ? err.message : 'Failed to load participants')
+    } finally {
+      setIsLoadingParticipants(false)
+    }
+  }
+
+  useEffect(() => {
+    if (game?.publishedAt) {
+      fetchParticipants()
+    }
+  }, [game?.publishedAt, id])
+
   const handleUserChange = (newUser: any) => {
     setUser(newUser)
     // Refetch game when user changes
     refreshGame()
+    if (game?.publishedAt) {
+      fetchParticipants()
+    }
+  }
+
+  const updateParticipation = async (status: 'going' | 'not_going') => {
+    if (!id || !user) return
+    try {
+      setIsUpdatingParticipation(true)
+      const response = await fetchWithDemoRecovery(`${API_BASE_URL}/api/games/${id}/participants`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ status }),
+      })
+      if (response.ok) {
+        await fetchParticipants()
+      } else if (response.status === 401) {
+        redirectToLogin()
+      } else {
+        const txt = await response.text()
+        throw new Error(txt || 'Failed to update participation')
+      }
+    } catch (err) {
+      setParticipantsError(err instanceof Error ? err.message : 'Failed to update participation')
+    } finally {
+      setIsUpdatingParticipation(false)
+    }
   }
 
   const isOrganizer = useMemo(() => {
@@ -139,6 +209,18 @@ export default function GameDetailPage() {
     if (Number.isNaN(userIdNum)) return false
     return userIdNum === game.organizerId
   }, [game, user])
+
+  const currentUserParticipation = useMemo(() => {
+    if (!user) return null
+    return participants.find(p => p.user.id === user.id)
+  }, [participants, user])
+
+  const participantCounts = useMemo(() => {
+    const going = participants.filter(p => p.status === 'going').length
+    const waitlisted = participants.filter(p => p.status === 'waitlisted').length
+    const notGoing = participants.filter(p => p.status === 'not_going').length
+    return { going, waitlisted, notGoing }
+  }, [participants])
 
   // Check if all publish requirements are met
   const publishRequirements = useMemo(() => {
@@ -824,6 +906,206 @@ export default function GameDetailPage() {
                 </div>
               )}
             </section>
+
+            {/* Participants Section */}
+            {isPublished && (
+              <section className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-6 border border-green-100">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="bg-green-100 rounded-full p-2">
+                    <Users className="h-5 w-5 text-green-600" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900">Participants</h3>
+                </div>
+
+                {/* User Participation Buttons */}
+                {user && (
+                  <div className="mb-6 bg-white rounded-lg p-4 border border-green-200">
+                    <p className="text-sm text-gray-600 mb-3">Your status:</p>
+                    <div className="flex gap-3">
+                      <Button
+                        onClick={() => updateParticipation('going')}
+                        disabled={isUpdatingParticipation}
+                        variant={currentUserParticipation?.status === 'going' || currentUserParticipation?.status === 'waitlisted' ? 'default' : 'outline'}
+                        className="flex-1"
+                      >
+                        {isUpdatingParticipation ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <UserCheck className="h-4 w-4 mr-2" />
+                        )}
+                        {currentUserParticipation?.status === 'going' ? 'Going' : currentUserParticipation?.status === 'waitlisted' ? 'Waitlisted' : 'I\'m going'}
+                      </Button>
+                      <Button
+                        onClick={() => updateParticipation('not_going')}
+                        disabled={isUpdatingParticipation}
+                        variant={currentUserParticipation?.status === 'not_going' ? 'default' : 'outline'}
+                        className="flex-1"
+                      >
+                        {isUpdatingParticipation ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <UserX className="h-4 w-4 mr-2" />
+                        )}
+                        {currentUserParticipation?.status === 'not_going' ? 'Not going' : 'Can\'t make it'}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Participants List */}
+                {isLoadingParticipants ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-green-600" />
+                  </div>
+                ) : participantsError ? (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center text-red-700">
+                    {participantsError}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Stats Summary */}
+                    <div className="bg-white rounded-lg p-4 border border-green-200">
+                      <div className="grid grid-cols-3 gap-4 text-center">
+                        <div>
+                          <div className="text-2xl font-bold text-green-600">{participantCounts.going}</div>
+                          <div className="text-xs text-gray-600">
+                            Going{typeof game?.maxPlayers === 'number' && game.maxPlayers > 0 ? ` / ${game.maxPlayers}` : ''}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-2xl font-bold text-amber-600">{participantCounts.waitlisted}</div>
+                          <div className="text-xs text-gray-600">Waitlisted</div>
+                        </div>
+                        <div>
+                          <div className="text-2xl font-bold text-gray-500">{participantCounts.notGoing}</div>
+                          <div className="text-xs text-gray-600">Not Going</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Going List */}
+                    {participantCounts.going > 0 && (
+                      <div>
+                        <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                          <UserCheck className="h-4 w-4 text-green-600" />
+                          Going ({participantCounts.going})
+                        </h4>
+                        <div className="bg-white rounded-lg border border-green-200 divide-y divide-gray-100">
+                          {participants
+                            .filter(p => p.status === 'going')
+                            .map((participant, idx) => (
+                              <div key={participant.user.id} className="p-3 flex items-center gap-3">
+                                <div className="text-xs text-gray-500 font-mono w-6">{idx + 1}</div>
+                                {participant.user.picture ? (
+                                  <img
+                                    src={participant.user.picture}
+                                    alt={participant.user.name || participant.user.email}
+                                    className="w-8 h-8 rounded-full"
+                                  />
+                                ) : (
+                                  <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                                    <UserPlus className="h-4 w-4 text-green-600" />
+                                  </div>
+                                )}
+                                <div className="flex-1">
+                                  <div className="font-medium text-sm text-gray-900">
+                                    {participant.user.name || participant.user.email}
+                                  </div>
+                                  {participant.user.name && (
+                                    <div className="text-xs text-gray-500">{participant.user.email}</div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Waitlisted List */}
+                    {participantCounts.waitlisted > 0 && (
+                      <div>
+                        <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                          <AlertCircle className="h-4 w-4 text-amber-600" />
+                          Waitlisted ({participantCounts.waitlisted})
+                        </h4>
+                        <div className="bg-white rounded-lg border border-amber-200 divide-y divide-gray-100">
+                          {participants
+                            .filter(p => p.status === 'waitlisted')
+                            .map((participant, idx) => (
+                              <div key={participant.user.id} className="p-3 flex items-center gap-3">
+                                <div className="text-xs text-gray-500 font-mono w-6">W{idx + 1}</div>
+                                {participant.user.picture ? (
+                                  <img
+                                    src={participant.user.picture}
+                                    alt={participant.user.name || participant.user.email}
+                                    className="w-8 h-8 rounded-full"
+                                  />
+                                ) : (
+                                  <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
+                                    <UserPlus className="h-4 w-4 text-amber-600" />
+                                  </div>
+                                )}
+                                <div className="flex-1">
+                                  <div className="font-medium text-sm text-gray-900">
+                                    {participant.user.name || participant.user.email}
+                                  </div>
+                                  {participant.user.name && (
+                                    <div className="text-xs text-gray-500">{participant.user.email}</div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Not Going List */}
+                    {participantCounts.notGoing > 0 && (
+                      <details className="bg-white rounded-lg border border-gray-200">
+                        <summary className="p-3 cursor-pointer text-sm font-semibold text-gray-700 flex items-center gap-2 hover:bg-gray-50">
+                          <UserX className="h-4 w-4 text-gray-500" />
+                          Not Going ({participantCounts.notGoing})
+                        </summary>
+                        <div className="divide-y divide-gray-100 border-t">
+                          {participants
+                            .filter(p => p.status === 'not_going')
+                            .map((participant) => (
+                              <div key={participant.user.id} className="p-3 flex items-center gap-3 opacity-60">
+                                {participant.user.picture ? (
+                                  <img
+                                    src={participant.user.picture}
+                                    alt={participant.user.name || participant.user.email}
+                                    className="w-8 h-8 rounded-full grayscale"
+                                  />
+                                ) : (
+                                  <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                                    <UserX className="h-4 w-4 text-gray-500" />
+                                  </div>
+                                )}
+                                <div className="flex-1">
+                                  <div className="font-medium text-sm text-gray-900">
+                                    {participant.user.name || participant.user.email}
+                                  </div>
+                                  {participant.user.name && (
+                                    <div className="text-xs text-gray-500">{participant.user.email}</div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      </details>
+                    )}
+
+                    {participants.length === 0 && (
+                      <div className="bg-white rounded-lg border border-gray-200 p-8 text-center text-gray-500">
+                        <UserPlus className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                        <p>No participants yet. Be the first to sign up!</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </section>
+            )}
 
             {/* Action Area */}
             <section className="border-t pt-6">
