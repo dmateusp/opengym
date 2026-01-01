@@ -73,9 +73,9 @@ export default function UserProfileMenu({ user, onUserChange }: UserProfileMenuP
 
   const getInitials = (name?: string, email?: string) => {
     if (name) {
-      const parts = name.split(' ')
-      if (parts.length >= 2) {
-        return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
+      const parts = name.split(' ').filter(p => p.length > 0)
+      if (parts.length > 0) {
+        return parts.slice(0, 3).map(p => p[0].toUpperCase()).join('')
       }
       return name.slice(0, 2).toUpperCase()
     }
@@ -95,24 +95,24 @@ export default function UserProfileMenu({ user, onUserChange }: UserProfileMenuP
         <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
           <Avatar className="h-9 w-9">
             <AvatarImage src={user.picture} alt={user.name || user.email} />
-            <AvatarFallback className="bg-indigo-600 text-white text-sm">
+            <AvatarFallback className="bg-primary text-white text-sm font-semibold">
               {getInitials(user.name, user.email)}
             </AvatarFallback>
           </Avatar>
           {user.name && (
-            <span className="text-sm font-medium text-gray-700 hidden sm:inline">
+            <span className="text-sm font-semibold text-gray-700 hidden sm:inline">
               {user.name}
             </span>
           )}
         </div>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="end" className="w-56 rounded-xl">
         <DropdownMenuLabel>
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium">{user.name || 'User'}</p>
+            <p className="text-sm font-semibold">{user.name || 'User'}</p>
             <p className="text-xs text-gray-500">{user.email}</p>
             {user.isDemo && (
-              <p className="text-xs text-orange-600 font-semibold">Demo User</p>
+              <p className="text-xs text-accent font-semibold">Demo User</p>
             )}
           </div>
         </DropdownMenuLabel>
@@ -133,7 +133,7 @@ export default function UserProfileMenu({ user, onUserChange }: UserProfileMenuP
                 <div className="flex items-center gap-2 w-full">
                   <Avatar className="h-6 w-6">
                     <AvatarImage src={demoUser.picture} alt={demoUser.name || demoUser.email} />
-                    <AvatarFallback className="bg-gray-400 text-white text-xs">
+                    <AvatarFallback className="bg-primary text-white text-xs">
                       {getInitials(demoUser.name, demoUser.email)}
                     </AvatarFallback>
                   </Avatar>
@@ -142,7 +142,7 @@ export default function UserProfileMenu({ user, onUserChange }: UserProfileMenuP
                       {demoUser.name || demoUser.email}
                     </span>
                     {demoUser.id === user.id && (
-                      <span className="text-xs text-indigo-600">Current</span>
+                      <span className="text-xs text-primary font-semibold">Current</span>
                     )}
                   </div>
                 </div>

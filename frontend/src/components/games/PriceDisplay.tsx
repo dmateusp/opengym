@@ -1,5 +1,3 @@
-import React from 'react'
-
 interface PriceDisplayProps {
   totalPriceCents?: number
   maxPlayers?: number

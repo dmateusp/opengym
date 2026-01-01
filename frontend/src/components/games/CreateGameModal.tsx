@@ -76,17 +76,17 @@ export default function CreateGameModal({ isOpen, onClose }: CreateGameModalProp
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Create a New Game</DialogTitle>
-          <DialogDescription>
-            Start by naming your game. You can add more details later.
+      <DialogContent className="sm:max-w-[425px] rounded-2xl">
+        <DialogHeader className="space-y-2">
+          <DialogTitle className="text-2xl">Organize a Game</DialogTitle>
+          <DialogDescription className="text-base">
+            What are you playing?
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
-            <label htmlFor="game-name" className="text-sm font-medium text-gray-700">
+            <label htmlFor="game-name" className="text-sm font-semibold text-gray-700">
               Game Name
             </label>
             <Input
@@ -96,31 +96,34 @@ export default function CreateGameModal({ isOpen, onClose }: CreateGameModalProp
               onChange={(e) => setGameName(e.target.value)}
               disabled={isLoading}
               autoFocus
+              className="rounded-xl border-2 focus:border-primary focus:ring-0 text-base"
             />
+            <p className="text-xs text-gray-500">Keep it simple and fun</p>
           </div>
 
           {error && (
-            <div className="text-sm text-red-600 bg-red-50 p-3 rounded">
+            <div className="text-sm text-white bg-red-500 p-4 rounded-xl">
               {error}
             </div>
           )}
 
-          <div className="flex justify-end gap-3 pt-4">
+          <div className="flex justify-end gap-3 pt-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => handleOpenChange(false)}
               disabled={isLoading}
+              className="rounded-full"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={isLoading || !gameName.trim()}
-              className="bg-indigo-600 hover:bg-indigo-700"
+              className="bg-accent rounded-full"
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isLoading ? 'Creating...' : 'Create Game'}
+              {isLoading ? 'Creating...' : 'Create'}
             </Button>
           </div>
         </form>

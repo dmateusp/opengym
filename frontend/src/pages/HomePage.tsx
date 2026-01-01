@@ -43,18 +43,19 @@ export default function HomePage() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="container mx-auto px-4 py-12 max-w-5xl">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Games</h1>
-          <div className="flex items-center gap-4">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-blue-50">
+      <div className="container mx-auto px-4 py-8 max-w-5xl">
+        <div className="flex items-center justify-between mb-12">
+          <div>
             <Button
-              size="sm"
+              size="lg"
               onClick={() => setIsModalOpen(true)}
-              className="bg-indigo-600 hover:bg-indigo-700"
+              className="bg-accent hover:bg-accent/90"
             >
-              Organize a Game
+              organize a game
             </Button>
+          </div>
+          <div className="flex items-center gap-4">
             <UserProfileMenu user={user} onUserChange={handleUserChange} />
           </div>
         </div>
@@ -62,18 +63,19 @@ export default function HomePage() {
         {hasAnyGames ? (
           <GamesList />
         ) : (
-          <div className="flex flex-col items-center justify-center py-20">
-            <div className="text-center">
-              <h2 className="text-2xl font-semibold text-gray-900 mb-3">No games yet 🏐</h2>
-              <p className="text-gray-600 mb-6">
-                You haven't organized any games yet. Ready to get started?
+          <div className="flex flex-col items-center justify-center py-24">
+            <div className="text-center max-w-md">
+              <div className="mb-6 text-6xl">🏐</div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-3">No games yet</h2>
+              <p className="text-gray-600 mb-8">
+                Be the one who starts it. Organize your first game and get people together.
               </p>
               <Button
                 size="lg"
                 onClick={() => setIsModalOpen(true)}
-                className="bg-indigo-600 hover:bg-indigo-700"
+                className="bg-accent hover:bg-accent/90 w-full"
               >
-                Organize a Game
+                organize a game
               </Button>
             </div>
           </div>

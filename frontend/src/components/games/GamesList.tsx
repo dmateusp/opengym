@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { API_BASE_URL, redirectToLogin } from '@/lib/api'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Loader2, CheckCircle2, CircleDashed, Crown, Clock } from 'lucide-react'
+import { Card } from '@/components/ui/card'
+import { Loader2, CheckCircle2, CircleDashed, Crown, Clock, MapPin } from 'lucide-react'
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
-import { formatDistanceToNow, format } from 'date-fns'
 import { TimeDisplay } from '@/components/ui/TimeDisplay'
 
 interface GameListItem {
@@ -115,113 +114,110 @@ export default function GamesList() {
   }
 
   return (
-    <Card className="bg-white shadow-lg">
-      <CardHeader>
-        <CardTitle>Your Games</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {/* Table Header */}
-        <div className="grid grid-cols-12 gap-4 px-3 py-2 text-xs font-semibold text-gray-500 border-b">
-          <div className="col-span-5">Name</div>
-          <div className="col-span-2">Location</div>
-          <div className="col-span-2">When</div>
-          <div className="col-span-2">Status</div>
-          <div className="col-span-1 text-right">Updated</div>
-        </div>
+    <div className="space-y-4">
+      {items.map((it) => {
+        const status = getPublicationState(it)
+        
+        return (
+          <button
+            key={it.id}
+            onClick={() => navigate(`/games/${it.id}`)}
+            className="block w-full text-left transform transition-all hover:scale-102 active:scale-98"
+          >
+            <Card className="p-6 hover:shadow-2xl cursor-pointer border-l-4 border-l-primary">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    {it.isOrganizer && (
+                      <div
+                        onMouseEnter={() => setHoveredCrowId(it.id)}
+                        onMouseLeave={() => setHoveredCrowId(null)}
+                      >
+                        <Popover open={hoveredCrowId === it.id}>
+                          <PopoverAnchor asChild>
+                            <span className="inline-flex items-center bg-secondary/20 rounded-full p-1" aria-label="Organizer">
+                              <Crown className="h-4 w-4 text-primary" aria-hidden="true" />
+                            </span>
+                          </PopoverAnchor>
+                          <PopoverContent side="bottom" className="text-gray-800 text-sm rounded-xl">
+                            You are organizing this game
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    )}
+                    <h3 className="text-xl font-bold text-gray-900">{it.name}</h3>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 mt-3">
+                    {it.location && (
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-gray-400" />
+                        <span>{it.location}</span>
+                      </div>
+                    )}
+                    {it.startsAt && (
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-gray-400" />
+                        <TimeDisplay 
+                          timestamp={it.startsAt} 
+                          displayFormat="friendly"
+                          className="text-gray-600"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
 
-        {/* Rows */}
-        <div>
-          {items.map((it) => {
-            const status = getPublicationState(it)
-            return (
-              <button
-                key={it.id}
-                className="w-full grid grid-cols-12 gap-4 px-3 py-4 border-b hover:bg-gray-50 transition text-left"
-                onClick={() => navigate(`/games/${it.id}`)}
-              >
-                <div className="col-span-5 flex items-center gap-2">
-                  {it.isOrganizer && (
-                    <div
-                      onMouseEnter={() => setHoveredCrowId(it.id)}
-                      onMouseLeave={() => setHoveredCrowId(null)}
-                    >
-                      <Popover open={hoveredCrowId === it.id}>
-                        <PopoverAnchor asChild>
-                          <span className="inline-flex items-center" aria-label="Organizer">
-                            <Crown className="h-4 w-4 text-amber-500" aria-hidden="true" />
-                          </span>
-                        </PopoverAnchor>
-                        <PopoverContent side="bottom" className="text-gray-800">
-                          You are the organizer of this game.
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                  )}
-                  <span className="text-gray-900 font-medium">{it.name}</span>
-                </div>
-                <div className="col-span-2 text-gray-600 truncate">
-                  {it.location || '—'}
-                </div>
-                <div className="col-span-2 text-gray-600 text-xs">
-                  {it.startsAt ? (
-                    <TimeDisplay 
-                      timestamp={it.startsAt} 
-                      displayFormat="friendly"
-                      className="text-gray-600 decoration-gray-400"
-                    />
-                  ) : (
-                    '—'
-                  )}
-                </div>
-                <div className="col-span-2">
+                <div className="flex flex-col items-end gap-3">
                   {status.state === 'published' ? (
-                    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-200">
-                      <CheckCircle2 className="h-3 w-3" />
+                    <span className="inline-flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-full bg-success text-white shadow-md">
+                      <CheckCircle2 className="h-4 w-4" />
                       Published
                     </span>
                   ) : status.state === 'scheduled' ? (
-                    <div className="space-y-1">
-                      <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 border border-blue-200">
-                        <Clock className="h-3 w-3" />
+                    <div className="space-y-2 text-right">
+                      <span className="inline-flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-full bg-secondary text-secondary-foreground shadow-md">
+                        <Clock className="h-4 w-4" />
                         Scheduled
                       </span>
                       {status.timestamp && (
-                        <div className="text-[10px] text-blue-700">
+                        <div className="text-xs text-gray-500">
                           <TimeDisplay 
                             timestamp={status.timestamp}
                             displayFormat="relative"
-                            prefix="Publishes"
-                            className="text-blue-700 decoration-blue-400"
+                            prefix="In"
+                            className="text-gray-500"
                           />
                         </div>
                       )}
                     </div>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 border border-gray-200">
-                      <CircleDashed className="h-3 w-3" />
+                    <span className="inline-flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-full bg-gray-200 text-gray-700 shadow-md">
+                      <CircleDashed className="h-4 w-4" />
                       Draft
                     </span>
                   )}
+                  
+                  <div className="text-xs text-gray-400">
+                    Updated <TimeDisplay 
+                      timestamp={it.updatedAt} 
+                      displayFormat="relative"
+                      className="text-gray-400"
+                    />
+                  </div>
                 </div>
-                <div className="col-span-1 text-right text-gray-500 text-xs">
-                  <TimeDisplay 
-                    timestamp={it.updatedAt} 
-                    displayFormat="relative"
-                    className="text-gray-500 decoration-gray-400"
-                  />
-                </div>
-              </button>
-            )
-          })}
-        </div>
+              </div>
+            </Card>
+          </button>
+        )
+      })}
 
-        {/* Loading More */}
-        <div ref={sentinelRef} className="flex justify-center py-4">
-          {isLoading && (
-            <Loader2 className="h-5 w-5 animate-spin text-indigo-600" />
-          )}
-        </div>
-      </CardContent>
-    </Card>
+      {/* Loading More */}
+      <div ref={sentinelRef} className="flex justify-center py-4">
+        {isLoading && (
+          <Loader2 className="h-5 w-5 animate-spin text-primary" />
+        )}
+      </div>
+    </div>
   )
 }

@@ -1,4 +1,3 @@
-import React from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { cn } from '@/lib/utils'
@@ -35,7 +34,7 @@ export function MarkdownRenderer({ value, className }: MarkdownRendererProps) {
           ol: ({ node, ...props }) => (
             <ol className="list-decimal pl-5 mb-3" {...props} />
           ),
-          code: ({ node, inline, ...props }) => (
+          code: ({ node, inline, ...props }: any) => (
             <code
               className={cn(
                 'rounded bg-gray-100 px-1 py-0.5 text-sm',

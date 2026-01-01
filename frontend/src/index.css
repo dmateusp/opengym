@@ -4,48 +4,62 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* OpenGym Brand Colors - Bold, flat, saturated like sports gear */
+    --background: 50 100% 97.5%;
+    --foreground: 0 0% 13%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 0 0% 13%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 160 84.1% 39.7%;
+    --popover-foreground: 0 0% 13%;
+    
+    /* Primary Blue - Trust, courts, base surfaces */
+    --primary: 216 98% 52%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 160 87.1% 37%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 160 25.8% 80%;
-    --muted-foreground: 160 11.7% 35%;
-    --accent: 160 100% 50%;
-    --accent-foreground: 160 100% 10%;
+    
+    /* Energy Yellow - Momentum, anticipation */
+    --secondary: 48 100% 50%;
+    --secondary-foreground: 0 0% 13%;
+    
+    /* Yellow - Human actions, join/leave */
+    --accent: 42 100% 50%;
+    --accent-foreground: 0 0% 13%;
+    
+    /* Game Green - Success, full games, locked */
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    
+    --muted: 0 0% 85%;
+    --muted-foreground: 0 0% 45%;
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 160 25.8% 94%;
-    --input: 160 25.8% 94%;
-    --ring: 160 84.1% 39.7%;
-    --radius: 0.5rem;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 92%;
+    --input: 0 0% 95%;
+    --ring: 216 98% 52%;
+    --radius: 1.25rem;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 160 84.1% 55.3%;
-    --primary-foreground: 160 50% 10%;
-    --secondary: 160 100% 35%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 160 11% 20%;
-    --muted-foreground: 160 15% 65%;
-    --accent: 160 100% 50%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 160 11% 20%;
-    --input: 160 11% 20%;
-    --ring: 160 84.1% 55.3%;
+    --background: 0 0% 13%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 18%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 18%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 216 98% 60%;
+    --primary-foreground: 0 0% 13%;
+    --secondary: 48 100% 55%;
+    --secondary-foreground: 0 0% 13%;
+    --accent: 42 100% 55%;
+    --accent-foreground: 0 0% 13%;
+    --success: 142 71% 50%;
+    --success-foreground: 0 0% 13%;
+    --muted: 0 0% 30%;
+    --muted-foreground: 0 0% 70%;
+    --destructive: 0 84.2% 65%;
+    --destructive-foreground: 0 0% 13%;
+    --border: 0 0% 25%;
+    --input: 0 0% 20%;
+    --ring: 216 98% 60%;
   }
 }
 
