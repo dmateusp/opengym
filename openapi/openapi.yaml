@@ -326,6 +326,42 @@ paths:
                 $ref: '#/components/schemas/Error'
 
   /api/games/{id}/participants:
+    get:
+      summary: List game participants
+      description: Returns all participants for the specified game with their computed participation status. The status is computed based on the order participants signed up (going) and the max_players limit.
+      tags:
+        - Games
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The game ID
+      responses:
+        '200':
+          description: List of participants retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ParticipantWithUser'
+        '401':
+          description: Unauthorized - invalid or missing token
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Game not found
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
     post:
       summary: Set participation status
       description: Creates or updates the authenticated user's participation status for the specified game.
@@ -371,7 +407,6 @@ paths:
             text/plain:
               schema:
                 $ref: '#/components/schemas/Error'
-
 components:
   securitySchemes:
     bearerAuth:
@@ -562,6 +597,27 @@ components:
         gameId:
           type: string
           description: Identifier of the game
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when the participation record was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the participation record was last updated
+
+    ParticipantWithUser:
+      type: object
+      required:
+        - status
+        - user
+      properties:
+        status:
+          $ref: '#/components/schemas/ParticipationStatus'
+          description: Computed participation status (going, waitlisted, or not_going)
+        user:
+          $ref: '#/components/schemas/User'
+          description: User information for the participant
         createdAt:
           type: string
           format: date-time

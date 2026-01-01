@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetApiAuthByProviderCallbackData, GetApiAuthByProviderCallbackErrors, GetApiAuthByProviderCallbackResponses, GetApiAuthByProviderLoginData, GetApiAuthByProviderLoginErrors, GetApiAuthMeData, GetApiAuthMeErrors, GetApiAuthMeResponses, GetApiDemoUsersData, GetApiDemoUsersErrors, GetApiDemoUsersResponses, GetApiGamesByIdData, GetApiGamesByIdErrors, GetApiGamesByIdResponses, GetApiGamesData, GetApiGamesErrors, GetApiGamesResponses, PatchApiGamesByIdData, PatchApiGamesByIdErrors, PatchApiGamesByIdResponses, PostApiDemoUsersByUserIdImpersonateData, PostApiDemoUsersByUserIdImpersonateErrors, PostApiDemoUsersByUserIdImpersonateResponses, PostApiGamesData, PostApiGamesErrors, PostApiGamesResponses } from './types.gen';
+import type { GetApiAuthByProviderCallbackData, GetApiAuthByProviderCallbackErrors, GetApiAuthByProviderCallbackResponses, GetApiAuthByProviderLoginData, GetApiAuthByProviderLoginErrors, GetApiAuthMeData, GetApiAuthMeErrors, GetApiAuthMeResponses, GetApiDemoUsersData, GetApiDemoUsersErrors, GetApiDemoUsersResponses, GetApiGamesByIdData, GetApiGamesByIdErrors, GetApiGamesByIdParticipantsData, GetApiGamesByIdParticipantsErrors, GetApiGamesByIdParticipantsResponses, GetApiGamesByIdResponses, GetApiGamesData, GetApiGamesErrors, GetApiGamesResponses, PatchApiGamesByIdData, PatchApiGamesByIdErrors, PatchApiGamesByIdResponses, PostApiDemoUsersByUserIdImpersonateData, PostApiDemoUsersByUserIdImpersonateErrors, PostApiDemoUsersByUserIdImpersonateResponses, PostApiGamesByIdParticipantsData, PostApiGamesByIdParticipantsErrors, PostApiGamesByIdParticipantsResponses, PostApiGamesData, PostApiGamesErrors, PostApiGamesResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -98,6 +98,32 @@ export const getApiGamesById = <ThrowOnError extends boolean = false>(options: O
 export const patchApiGamesById = <ThrowOnError extends boolean = false>(options: Options<PatchApiGamesByIdData, ThrowOnError>) => (options.client ?? client).patch<PatchApiGamesByIdResponses, PatchApiGamesByIdErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/games/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List game participants
+ *
+ * Returns all participants for the specified game with their computed participation status. The status is computed based on the order participants signed up (going) and the max_players limit.
+ */
+export const getApiGamesByIdParticipants = <ThrowOnError extends boolean = false>(options: Options<GetApiGamesByIdParticipantsData, ThrowOnError>) => (options.client ?? client).get<GetApiGamesByIdParticipantsResponses, GetApiGamesByIdParticipantsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/games/{id}/participants',
+    ...options
+});
+
+/**
+ * Set participation status
+ *
+ * Creates or updates the authenticated user's participation status for the specified game.
+ */
+export const postApiGamesByIdParticipants = <ThrowOnError extends boolean = false>(options: Options<PostApiGamesByIdParticipantsData, ThrowOnError>) => (options.client ?? client).post<PostApiGamesByIdParticipantsResponses, PostApiGamesByIdParticipantsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/games/{id}/participants',
     ...options,
     headers: {
         'Content-Type': 'application/json',

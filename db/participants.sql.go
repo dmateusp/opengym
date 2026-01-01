@@ -10,6 +10,66 @@ import (
 	"database/sql"
 )
 
+const participantsList = `-- name: ParticipantsList :many
+select
+    game_participants.user_id, game_participants.game_id, game_participants.created_at, game_participants.updated_at, game_participants.going, game_participants.confirmed,
+    users.id, users.name, users.email, users.photo, users.created_at, users.updated_at, users.is_demo,
+    -- we need the following fields to figure out the participation status
+    games.max_players,
+    games.max_waitlist_size
+from game_participants
+join games on game_participants.game_id = games.id
+join users on game_participants.user_id = users.id
+where games.id = ?
+order by game_participants.updated_at asc
+`
+
+type ParticipantsListRow struct {
+	GameParticipant GameParticipant
+	User            User
+	MaxPlayers      int64
+	MaxWaitlistSize int64
+}
+
+func (q *Queries) ParticipantsList(ctx context.Context, id string) ([]ParticipantsListRow, error) {
+	rows, err := q.db.QueryContext(ctx, participantsList, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ParticipantsListRow
+	for rows.Next() {
+		var i ParticipantsListRow
+		if err := rows.Scan(
+			&i.GameParticipant.UserID,
+			&i.GameParticipant.GameID,
+			&i.GameParticipant.CreatedAt,
+			&i.GameParticipant.UpdatedAt,
+			&i.GameParticipant.Going,
+			&i.GameParticipant.Confirmed,
+			&i.User.ID,
+			&i.User.Name,
+			&i.User.Email,
+			&i.User.Photo,
+			&i.User.CreatedAt,
+			&i.User.UpdatedAt,
+			&i.User.IsDemo,
+			&i.MaxPlayers,
+			&i.MaxWaitlistSize,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const participantsUpsert = `-- name: ParticipantsUpsert :exec
 insert into game_participants(
     user_id,

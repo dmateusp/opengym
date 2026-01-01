@@ -124,6 +124,53 @@ export type Game = GameFields & {
     updatedAt: string;
 };
 
+/**
+ * Participation status of the authenticated user
+ */
+export type ParticipationStatus = ParticipationStatusUpdate | 'waitlisted';
+
+/**
+ * Allowed participation statuses that a user can set directly
+ */
+export type ParticipationStatusUpdate = 'going' | 'not_going';
+
+export type GameParticipation = {
+    status: ParticipationStatus;
+    /**
+     * Identifier of the participant
+     */
+    userId: string;
+    /**
+     * Identifier of the game
+     */
+    gameId: string;
+    /**
+     * Timestamp when the participation record was created
+     */
+    createdAt?: string;
+    /**
+     * Timestamp when the participation record was last updated
+     */
+    updatedAt?: string;
+};
+
+export type ParticipantWithUser = {
+    status: ParticipationStatus;
+    user: User;
+    /**
+     * Timestamp when the participation record was created
+     */
+    createdAt?: string;
+    /**
+     * Timestamp when the participation record was last updated
+     */
+    updatedAt?: string;
+};
+
+export type UpdateGameParticipationRequest = {
+    status: ParticipationStatusUpdate;
+};
+
 export type GameListItem = {
     /**
      * Unique game identifier
@@ -468,3 +515,75 @@ export type PatchApiGamesByIdResponses = {
 };
 
 export type PatchApiGamesByIdResponse = PatchApiGamesByIdResponses[keyof PatchApiGamesByIdResponses];
+
+export type GetApiGamesByIdParticipantsData = {
+    body?: never;
+    path: {
+        /**
+         * The game ID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/games/{id}/participants';
+};
+
+export type GetApiGamesByIdParticipantsErrors = {
+    /**
+     * Unauthorized - invalid or missing token
+     */
+    401: Error;
+    /**
+     * Game not found
+     */
+    404: Error;
+};
+
+export type GetApiGamesByIdParticipantsError = GetApiGamesByIdParticipantsErrors[keyof GetApiGamesByIdParticipantsErrors];
+
+export type GetApiGamesByIdParticipantsResponses = {
+    /**
+     * List of participants retrieved successfully
+     */
+    200: Array<ParticipantWithUser>;
+};
+
+export type GetApiGamesByIdParticipantsResponse = GetApiGamesByIdParticipantsResponses[keyof GetApiGamesByIdParticipantsResponses];
+
+export type PostApiGamesByIdParticipantsData = {
+    body: UpdateGameParticipationRequest;
+    path: {
+        /**
+         * The game ID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/games/{id}/participants';
+};
+
+export type PostApiGamesByIdParticipantsErrors = {
+    /**
+     * Invalid request data
+     */
+    400: Error;
+    /**
+     * Unauthorized - invalid or missing token
+     */
+    401: Error;
+    /**
+     * Game not found
+     */
+    404: Error;
+};
+
+export type PostApiGamesByIdParticipantsError = PostApiGamesByIdParticipantsErrors[keyof PostApiGamesByIdParticipantsErrors];
+
+export type PostApiGamesByIdParticipantsResponses = {
+    /**
+     * Participation status updated successfully
+     */
+    200: GameParticipation;
+};
+
+export type PostApiGamesByIdParticipantsResponse = PostApiGamesByIdParticipantsResponses[keyof PostApiGamesByIdParticipantsResponses];
