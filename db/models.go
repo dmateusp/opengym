@@ -26,6 +26,15 @@ type Game struct {
 	UpdatedAt          time.Time
 }
 
+type GameParticipant struct {
+	UserID    int64
+	GameID    string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	Going     sql.NullBool
+	Confirmed sql.NullBool
+}
+
 type User struct {
 	ID        int64
 	Name      sql.NullString

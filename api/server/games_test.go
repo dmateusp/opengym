@@ -27,7 +27,7 @@ func TestPostApiGames_Success(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 
-	testUserID := dbtesting.UpsertTestUser(t, sqlDB)
+	testUserID := dbtesting.UpsertTestUser(t, sqlDB, "john@example.com")
 	querier := db.New(sqlDB)
 	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
 
@@ -90,7 +90,7 @@ func TestPostApiGames_MinimalRequest(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 
-	testUserID := dbtesting.UpsertTestUser(t, sqlDB)
+	testUserID := dbtesting.UpsertTestUser(t, sqlDB, "john@example.com")
 	querier := db.New(sqlDB)
 	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
 
@@ -146,7 +146,7 @@ func TestPostApiGames_InvalidRequestBody(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 
-	testUserID := dbtesting.UpsertTestUser(t, sqlDB)
+	testUserID := dbtesting.UpsertTestUser(t, sqlDB, "john@example.com")
 	querier := db.New(sqlDB)
 	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
 
@@ -165,7 +165,7 @@ func TestPostApiGames_IDClashRetry(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 
-	testUserID := dbtesting.UpsertTestUser(t, sqlDB)
+	testUserID := dbtesting.UpsertTestUser(t, sqlDB, "john@example.com")
 	querier := db.New(sqlDB)
 
 	srv := server.NewServer(db.NewQuerierWrapper(querier), servertesting.NewTestAlphanumericGenerator("foo", "bar"))
@@ -215,7 +215,7 @@ func TestGetApiGames_DefaultPagination(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 
-	userID := dbtesting.UpsertTestUser(t, sqlDB)
+	userID := dbtesting.UpsertTestUser(t, sqlDB, "john@example.com")
 	res, err := sqlDB.Exec(`insert into users (email, name) VALUES (?, ?)`, "other@example.com", "Other")
 	if err != nil {
 		t.Fatalf("failed to create second user: %v", err)
@@ -341,7 +341,7 @@ func TestPatchApiGamesId_Success(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 
-	testUserID := dbtesting.UpsertTestUser(t, sqlDB)
+	testUserID := dbtesting.UpsertTestUser(t, sqlDB, "john@example.com")
 	querier := db.New(sqlDB)
 	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
 
@@ -402,7 +402,7 @@ func TestPatchApiGamesId_PartialUpdate(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 
-	testUserID := dbtesting.UpsertTestUser(t, sqlDB)
+	testUserID := dbtesting.UpsertTestUser(t, sqlDB, "john@example.com")
 	querier := db.New(sqlDB)
 	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
 
@@ -473,7 +473,7 @@ func TestPatchApiGamesId_NotFound(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 
-	testUserID := dbtesting.UpsertTestUser(t, sqlDB)
+	testUserID := dbtesting.UpsertTestUser(t, sqlDB, "john@example.com")
 	querier := db.New(sqlDB)
 	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
 
@@ -497,7 +497,7 @@ func TestPatchApiGamesId_Forbidden(t *testing.T) {
 	defer sqlDB.Close()
 
 	// Create organizer user and their game
-	organizerID := dbtesting.UpsertTestUser(t, sqlDB)
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "john@example.com")
 	querier := db.New(sqlDB)
 	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
 
@@ -541,7 +541,7 @@ func TestPatchApiGamesId_InvalidRequestBody(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 
-	testUserID := dbtesting.UpsertTestUser(t, sqlDB)
+	testUserID := dbtesting.UpsertTestUser(t, sqlDB, "john@example.com")
 	querier := db.New(sqlDB)
 	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
 
@@ -575,7 +575,7 @@ func TestGetApiGamesId_Success(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 
-	testUserID := dbtesting.UpsertTestUser(t, sqlDB)
+	testUserID := dbtesting.UpsertTestUser(t, sqlDB, "john@example.com")
 	querier := db.New(sqlDB)
 	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
 
@@ -647,7 +647,7 @@ func TestGetApiGamesId_DraftHiddenFromNonOrganizer(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 
-	organizerID := dbtesting.UpsertTestUser(t, sqlDB)
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "john@example.com")
 	querier := db.New(sqlDB)
 	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
 
@@ -697,7 +697,7 @@ func TestGetApiGamesId_ScheduledHiddenUntilPublished(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 
-	organizerID := dbtesting.UpsertTestUser(t, sqlDB)
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "john@example.com")
 	querier := db.New(sqlDB)
 	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
 
@@ -750,7 +750,7 @@ func TestPatchApiGamesId_PublishPastBecomesNow(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 
-	organizerID := dbtesting.UpsertTestUser(t, sqlDB)
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "john@example.com")
 	querier := db.New(sqlDB)
 	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
 
@@ -789,7 +789,7 @@ func TestPatchApiGamesId_CannotPublishTwice(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 
-	organizerID := dbtesting.UpsertTestUser(t, sqlDB)
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "john@example.com")
 	querier := db.New(sqlDB)
 	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
 
@@ -829,7 +829,7 @@ func TestPatchApiGamesId_CanRescheduleFuturePublish(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 
-	organizerID := dbtesting.UpsertTestUser(t, sqlDB)
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "john@example.com")
 	querier := db.New(sqlDB)
 	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
 
@@ -879,7 +879,7 @@ func TestPatchApiGamesId_CanClearFuturePublish(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 
-	organizerID := dbtesting.UpsertTestUser(t, sqlDB)
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "john@example.com")
 	querier := db.New(sqlDB)
 	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
 
@@ -925,7 +925,7 @@ func TestPatchApiGamesId_CannotClearAfterPublished(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 
-	organizerID := dbtesting.UpsertTestUser(t, sqlDB)
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "john@example.com")
 	querier := db.New(sqlDB)
 	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
 

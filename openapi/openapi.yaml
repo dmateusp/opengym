@@ -325,6 +325,53 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /api/games/{id}/participants:
+    post:
+      summary: Set participation status
+      description: Creates or updates the authenticated user's participation status for the specified game.
+      tags:
+        - Games
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The game ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateGameParticipationRequest'
+      responses:
+        '200':
+          description: Participation status updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameParticipation'
+        '400':
+          description: Invalid request data
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - invalid or missing token
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Game not found
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -484,6 +531,54 @@ components:
               type: string
               format: date-time
               description: Timestamp when game was last updated
+
+    ParticipationStatus:
+      description: Participation status of the authenticated user
+      oneOf:
+        - $ref: '#/components/schemas/ParticipationStatusUpdate'
+        - type: string
+          enum:
+            - waitlisted
+
+    ParticipationStatusUpdate:
+      description: Allowed participation statuses that a user can set directly
+      type: string
+      enum:
+        - going
+        - not_going
+
+    GameParticipation:
+      type: object
+      required:
+        - status
+        - userId
+        - gameId
+      properties:
+        status:
+          $ref: '#/components/schemas/ParticipationStatus'
+        userId:
+          type: string
+          description: Identifier of the participant
+        gameId:
+          type: string
+          description: Identifier of the game
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when the participation record was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the participation record was last updated
+
+    UpdateGameParticipationRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          $ref: '#/components/schemas/ParticipationStatusUpdate'
+          description: Desired participation status for the authenticated user
 
     GameListItem:
       type: object
