@@ -9,6 +9,7 @@ import { ArrowLeft, Loader2, CheckCircle2, Clock, Users, Crown, XCircle, Rocket,
 import { Input } from '@/components/ui/input'
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer'
 import { PriceDisplay } from '@/components/games/PriceDisplay'
+import { ParticipantCountDisplay } from '@/components/games/ParticipantCountDisplay'
 import { Popover, PopoverContent, PopoverAnchor } from '@/components/ui/popover'
 import { TimeDisplay } from '@/components/ui/TimeDisplay'
 import UserProfileMenu from '@/components/auth/UserProfileMenu'
@@ -646,27 +647,19 @@ export default function GameDetailPage() {
                   </div>
                 )}
                 </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-primary mb-1">
-                    {participantCounts.going}/{game?.maxPlayers || "?"}
-                  </div>
-                  <div className="text-xs text-gray-600 font-medium">Going</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-accent mb-1">
-                    {game?.maxWaitlistSize === 0 ? (
-                      <span className="text-gray-400">—</span>
-                    ) : (
-                      <>
-                        {participantCounts.waitlisted}
-                        {typeof game?.maxWaitlistSize === 'number' && game.maxWaitlistSize > 0 ? `/${game.maxWaitlistSize}` : ''}
-                      </>
-                    )}
-                  </div>
-                  <div className="text-xs text-gray-600 font-medium">
-                    Waitlist{game?.maxWaitlistSize === 0 ? ' (Off)' : game?.maxWaitlistSize === -1 ? ' (∞)' : ''}
-                  </div>
-                </div>
+                <ParticipantCountDisplay
+                  count={participantCounts.going}
+                  maxCount={game?.maxPlayers}
+                  label="Going"
+                  color="primary"
+                />
+                <ParticipantCountDisplay
+                  count={participantCounts.waitlisted}
+                  maxCount={game?.maxWaitlistSize}
+                  label="Waitlist"
+                  color="accent"
+                  showDisabled={true}
+                />
                 <div className="text-center">
                   <div className="text-2xl font-bold text-gray-400 mb-1">
                     {participantCounts.notGoing}
