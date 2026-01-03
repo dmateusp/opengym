@@ -334,6 +334,480 @@ func TestGetApiGames_Unauthorized(t *testing.T) {
 	}
 }
 
+func TestGetApiGames_ReturnsOrganizerGames(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+
+	// Create three users
+	user1ID := dbtesting.UpsertTestUser(t, sqlDB, "user1@example.com")
+	user2ID := dbtesting.UpsertTestUser(t, sqlDB, "user2@example.com")
+	user3ID := dbtesting.UpsertTestUser(t, sqlDB, "user3@example.com")
+
+	querier := db.New(sqlDB)
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
+
+	now := time.Now()
+
+	// User1 organizes 2 games
+	game1, err := querier.GameCreate(context.Background(), db.GameCreateParams{
+		ID:          "game1",
+		OrganizerID: int64(user1ID),
+		Name:        "User1 Game 1",
+		PublishedAt: sql.NullTime{Time: now, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("failed to create game1: %v", err)
+	}
+
+	game2, err := querier.GameCreate(context.Background(), db.GameCreateParams{
+		ID:          "game2",
+		OrganizerID: int64(user1ID),
+		Name:        "User1 Game 2",
+		PublishedAt: sql.NullTime{Time: now.Add(time.Minute), Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("failed to create game2: %v", err)
+	}
+
+	// User2 organizes 1 game
+	_, err = querier.GameCreate(context.Background(), db.GameCreateParams{
+		ID:          "game3",
+		OrganizerID: int64(user2ID),
+		Name:        "User2 Game",
+		PublishedAt: sql.NullTime{Time: now, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("failed to create game3: %v", err)
+	}
+
+	// User3 organizes 1 game
+	_, err = querier.GameCreate(context.Background(), db.GameCreateParams{
+		ID:          "game4",
+		OrganizerID: int64(user3ID),
+		Name:        "User3 Game",
+		PublishedAt: sql.NullTime{Time: now, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("failed to create game4: %v", err)
+	}
+
+	// Request games as user1
+	r := httptest.NewRequest(http.MethodGet, "/api/games", nil)
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(user1ID)}))
+	w := httptest.NewRecorder()
+
+	srv.GetApiGames(w, r, api.GetApiGamesParams{})
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d: %s", http.StatusOK, w.Code, w.Body.String())
+	}
+
+	var resp api.GameListResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	// User1 should see only their 2 organized games
+	if resp.Total != 2 {
+		t.Errorf("expected total 2, got %d", resp.Total)
+	}
+
+	if len(resp.Items) != 2 {
+		t.Fatalf("expected 2 items, got %d", len(resp.Items))
+	}
+
+	// Verify both games belong to user1 and isOrganizer is true
+	gameIDs := map[string]bool{}
+	for _, item := range resp.Items {
+		gameIDs[item.Id] = true
+		if !item.IsOrganizer {
+			t.Errorf("expected isOrganizer true for game %s", item.Id)
+		}
+	}
+
+	if !gameIDs[game1.ID] || !gameIDs[game2.ID] {
+		t.Errorf("expected games game1 and game2, got %v", gameIDs)
+	}
+}
+
+func TestGetApiGames_ReturnsParticipantGames(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+
+	// Create three users
+	user1ID := dbtesting.UpsertTestUser(t, sqlDB, "user1@example.com")
+	user2ID := dbtesting.UpsertTestUser(t, sqlDB, "user2@example.com")
+	user3ID := dbtesting.UpsertTestUser(t, sqlDB, "user3@example.com")
+
+	querier := db.New(sqlDB)
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
+
+	now := time.Now()
+
+	// User2 organizes 2 games
+	game1, err := querier.GameCreate(context.Background(), db.GameCreateParams{
+		ID:          "game1",
+		OrganizerID: int64(user2ID),
+		Name:        "User2 Game 1",
+		PublishedAt: sql.NullTime{Time: now, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("failed to create game1: %v", err)
+	}
+
+	game2, err := querier.GameCreate(context.Background(), db.GameCreateParams{
+		ID:          "game2",
+		OrganizerID: int64(user2ID),
+		Name:        "User2 Game 2",
+		PublishedAt: sql.NullTime{Time: now.Add(time.Minute), Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("failed to create game2: %v", err)
+	}
+
+	// User3 organizes 1 game
+	_, err = querier.GameCreate(context.Background(), db.GameCreateParams{
+		ID:          "game3",
+		OrganizerID: int64(user3ID),
+		Name:        "User3 Game",
+		PublishedAt: sql.NullTime{Time: now, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("failed to create game3: %v", err)
+	}
+
+	// User1 participates in game1 and game2 (but not game3)
+	err = querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
+		UserID:    int64(user1ID),
+		GameID:    game1.ID,
+		Going:     sql.NullBool{Bool: true, Valid: true},
+		Confirmed: sql.NullBool{Bool: true, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("failed to add user1 to game1: %v", err)
+	}
+
+	err = querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
+		UserID:    int64(user1ID),
+		GameID:    game2.ID,
+		Going:     sql.NullBool{Bool: true, Valid: true},
+		Confirmed: sql.NullBool{Bool: false, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("failed to add user1 to game2: %v", err)
+	}
+
+	// Request games as user1
+	r := httptest.NewRequest(http.MethodGet, "/api/games", nil)
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(user1ID)}))
+	w := httptest.NewRecorder()
+
+	srv.GetApiGames(w, r, api.GetApiGamesParams{})
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d: %s", http.StatusOK, w.Code, w.Body.String())
+	}
+
+	var resp api.GameListResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	// User1 should see only the 2 games they participate in
+	if resp.Total != 2 {
+		t.Errorf("expected total 2, got %d", resp.Total)
+	}
+
+	if len(resp.Items) != 2 {
+		t.Fatalf("expected 2 items, got %d", len(resp.Items))
+	}
+
+	// Verify both games are the ones user1 participates in and isOrganizer is false
+	gameIDs := map[string]bool{}
+	for _, item := range resp.Items {
+		gameIDs[item.Id] = true
+		if item.IsOrganizer {
+			t.Errorf("expected isOrganizer false for game %s (user1 is participant, not organizer)", item.Id)
+		}
+	}
+
+	if !gameIDs[game1.ID] || !gameIDs[game2.ID] {
+		t.Errorf("expected games game1 and game2, got %v", gameIDs)
+	}
+}
+
+func TestGetApiGames_ReturnsBothOrganizerAndParticipantGames(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+
+	// Create three users
+	user1ID := dbtesting.UpsertTestUser(t, sqlDB, "user1@example.com")
+	user2ID := dbtesting.UpsertTestUser(t, sqlDB, "user2@example.com")
+	user3ID := dbtesting.UpsertTestUser(t, sqlDB, "user3@example.com")
+
+	querier := db.New(sqlDB)
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
+
+	now := time.Now()
+
+	// User1 organizes 2 games
+	game1, err := querier.GameCreate(context.Background(), db.GameCreateParams{
+		ID:          "game1",
+		OrganizerID: int64(user1ID),
+		Name:        "User1 Organized Game 1",
+		PublishedAt: sql.NullTime{Time: now, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("failed to create game1: %v", err)
+	}
+
+	game2, err := querier.GameCreate(context.Background(), db.GameCreateParams{
+		ID:          "game2",
+		OrganizerID: int64(user1ID),
+		Name:        "User1 Organized Game 2",
+		PublishedAt: sql.NullTime{Time: now.Add(time.Minute), Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("failed to create game2: %v", err)
+	}
+
+	// User2 organizes 2 games
+	game3, err := querier.GameCreate(context.Background(), db.GameCreateParams{
+		ID:          "game3",
+		OrganizerID: int64(user2ID),
+		Name:        "User2 Game 1",
+		PublishedAt: sql.NullTime{Time: now.Add(2 * time.Minute), Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("failed to create game3: %v", err)
+	}
+
+	game4, err := querier.GameCreate(context.Background(), db.GameCreateParams{
+		ID:          "game4",
+		OrganizerID: int64(user2ID),
+		Name:        "User2 Game 2",
+		PublishedAt: sql.NullTime{Time: now.Add(3 * time.Minute), Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("failed to create game4: %v", err)
+	}
+
+	// User3 organizes 1 game
+	_, err = querier.GameCreate(context.Background(), db.GameCreateParams{
+		ID:          "game5",
+		OrganizerID: int64(user3ID),
+		Name:        "User3 Game",
+		PublishedAt: sql.NullTime{Time: now, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("failed to create game5: %v", err)
+	}
+
+	// User1 also participates in game3 and game4 (organized by user2)
+	err = querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
+		UserID:    int64(user1ID),
+		GameID:    game3.ID,
+		Going:     sql.NullBool{Bool: true, Valid: true},
+		Confirmed: sql.NullBool{Bool: true, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("failed to add user1 to game3: %v", err)
+	}
+
+	err = querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
+		UserID:    int64(user1ID),
+		GameID:    game4.ID,
+		Going:     sql.NullBool{Bool: true, Valid: true},
+		Confirmed: sql.NullBool{Bool: true, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("failed to add user1 to game4: %v", err)
+	}
+
+	// Request games as user1
+	r := httptest.NewRequest(http.MethodGet, "/api/games", nil)
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(user1ID)}))
+	w := httptest.NewRecorder()
+
+	srv.GetApiGames(w, r, api.GetApiGamesParams{})
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d: %s", http.StatusOK, w.Code, w.Body.String())
+	}
+
+	var resp api.GameListResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	// User1 should see 4 games total: 2 they organize + 2 they participate in
+	if resp.Total != 4 {
+		t.Errorf("expected total 4, got %d", resp.Total)
+	}
+
+	if len(resp.Items) != 4 {
+		t.Fatalf("expected 4 items, got %d", len(resp.Items))
+	}
+
+	// Count organizer vs participant games
+	organizerGames := map[string]bool{}
+	participantGames := map[string]bool{}
+	for _, item := range resp.Items {
+		if item.IsOrganizer {
+			organizerGames[item.Id] = true
+		} else {
+			participantGames[item.Id] = true
+		}
+	}
+
+	// Verify user1 sees their 2 organized games with isOrganizer=true
+	if len(organizerGames) != 2 {
+		t.Errorf("expected 2 organizer games, got %d", len(organizerGames))
+	}
+	if !organizerGames[game1.ID] || !organizerGames[game2.ID] {
+		t.Errorf("expected organizer games game1 and game2, got %v", organizerGames)
+	}
+
+	// Verify user1 sees their 2 participant games with isOrganizer=false
+	if len(participantGames) != 2 {
+		t.Errorf("expected 2 participant games, got %d", len(participantGames))
+	}
+	if !participantGames[game3.ID] || !participantGames[game4.ID] {
+		t.Errorf("expected participant games game3 and game4, got %v", participantGames)
+	}
+}
+
+func TestGetApiGames_OnlyReturnsUserGames(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+
+	// Create three users
+	user1ID := dbtesting.UpsertTestUser(t, sqlDB, "user1@example.com")
+	user2ID := dbtesting.UpsertTestUser(t, sqlDB, "user2@example.com")
+	user3ID := dbtesting.UpsertTestUser(t, sqlDB, "user3@example.com")
+
+	querier := db.New(sqlDB)
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
+
+	now := time.Now()
+
+	// User1 organizes 1 game
+	game1, err := querier.GameCreate(context.Background(), db.GameCreateParams{
+		ID:          "game1",
+		OrganizerID: int64(user1ID),
+		Name:        "User1 Game",
+		PublishedAt: sql.NullTime{Time: now, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("failed to create game1: %v", err)
+	}
+
+	// User2 organizes 3 games
+	_, err = querier.GameCreate(context.Background(), db.GameCreateParams{
+		ID:          "game2",
+		OrganizerID: int64(user2ID),
+		Name:        "User2 Game 1",
+		PublishedAt: sql.NullTime{Time: now, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("failed to create game2: %v", err)
+	}
+
+	game3, err := querier.GameCreate(context.Background(), db.GameCreateParams{
+		ID:          "game3",
+		OrganizerID: int64(user2ID),
+		Name:        "User2 Game 2",
+		PublishedAt: sql.NullTime{Time: now.Add(time.Minute), Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("failed to create game3: %v", err)
+	}
+
+	_, err = querier.GameCreate(context.Background(), db.GameCreateParams{
+		ID:          "game4",
+		OrganizerID: int64(user2ID),
+		Name:        "User2 Game 3",
+		PublishedAt: sql.NullTime{Time: now, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("failed to create game4: %v", err)
+	}
+
+	// User3 organizes 2 games
+	_, err = querier.GameCreate(context.Background(), db.GameCreateParams{
+		ID:          "game5",
+		OrganizerID: int64(user3ID),
+		Name:        "User3 Game 1",
+		PublishedAt: sql.NullTime{Time: now, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("failed to create game5: %v", err)
+	}
+
+	_, err = querier.GameCreate(context.Background(), db.GameCreateParams{
+		ID:          "game6",
+		OrganizerID: int64(user3ID),
+		Name:        "User3 Game 2",
+		PublishedAt: sql.NullTime{Time: now, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("failed to create game6: %v", err)
+	}
+
+	// User1 participates in only one of User2's games (game3)
+	err = querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
+		UserID:    int64(user1ID),
+		GameID:    game3.ID,
+		Going:     sql.NullBool{Bool: true, Valid: true},
+		Confirmed: sql.NullBool{Bool: true, Valid: true},
+	})
+	if err != nil {
+		t.Fatalf("failed to add user1 to game3: %v", err)
+	}
+
+	// Request games as user1
+	r := httptest.NewRequest(http.MethodGet, "/api/games", nil)
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(user1ID)}))
+	w := httptest.NewRecorder()
+
+	srv.GetApiGames(w, r, api.GetApiGamesParams{})
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d: %s", http.StatusOK, w.Code, w.Body.String())
+	}
+
+	var resp api.GameListResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	// User1 should see only 2 games: 1 they organize + 1 they participate in
+	// They should NOT see user2's other games (game2, game4) or any of user3's games
+	if resp.Total != 2 {
+		t.Errorf("expected total 2, got %d", resp.Total)
+	}
+
+	if len(resp.Items) != 2 {
+		t.Fatalf("expected 2 items, got %d", len(resp.Items))
+	}
+
+	// Verify correct games are returned
+	gameIDs := map[string]bool{}
+	for _, item := range resp.Items {
+		gameIDs[item.Id] = true
+	}
+
+	if !gameIDs[game1.ID] {
+		t.Errorf("expected to see game1 (organized by user1)")
+	}
+	if !gameIDs[game3.ID] {
+		t.Errorf("expected to see game3 (user1 participates)")
+	}
+	if gameIDs["game2"] || gameIDs["game4"] || gameIDs["game5"] || gameIDs["game6"] {
+		t.Errorf("user1 should not see games they don't organize or participate in, got %v", gameIDs)
+	}
+}
+
 // TestPostApiGames_DatabaseError is skipped when using real database
 // Database errors are better tested through integration tests
 

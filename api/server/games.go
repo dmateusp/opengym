@@ -137,10 +137,9 @@ func (srv *server) GetApiGames(w http.ResponseWriter, r *http.Request, params ap
 	limit := int64(pageSize)
 
 	rows, err := srv.querier.GameListByUser(r.Context(), db.GameListByUserParams{
-		OrganizerID:   int64(authInfo.UserId),
-		OrganizerID_2: int64(authInfo.UserId),
-		Limit:         limit,
-		Offset:        offset,
+		UserID: int64(authInfo.UserId),
+		Limit:  limit,
+		Offset: offset,
 	})
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to list games: %s", err.Error()), http.StatusInternalServerError)

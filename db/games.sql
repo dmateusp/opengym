@@ -39,19 +39,23 @@ where id = sqlc.arg(id);
 
 -- name: GameListByUser :many
 select
-  id,
-  name,
-  location,
-  starts_at,
-  published_at,
-  updated_at,
-  organizer_id = ? as is_organizer
+  games.id,
+  games.name,
+  games.location,
+  games.starts_at,
+  games.published_at,
+  games.updated_at,
+  games.organizer_id = sqlc.arg(user_id) as is_organizer
 from games
-where organizer_id = ?
-order by coalesce(published_at, updated_at) desc
-limit ? offset ?;
+left join game_participants
+  on games.id = game_participants.game_id and game_participants.user_id = sqlc.arg(user_id)
+where games.organizer_id = sqlc.arg(user_id) or game_participants.user_id is not null
+order by coalesce(games.published_at, games.updated_at) desc
+limit sqlc.arg(limit) offset sqlc.arg(offset);
 
 -- name: GameCountByUser :one
 select count(*)
 from games
-where organizer_id = ?;
+left join game_participants
+  on games.id = game_participants.game_id and game_participants.user_id = sqlc.arg(user_id)
+where games.organizer_id =sqlc.arg(user_id) or game_participants.user_id is not null;

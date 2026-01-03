@@ -14,11 +14,13 @@ import (
 const gameCountByUser = `-- name: GameCountByUser :one
 select count(*)
 from games
-where organizer_id = ?
+left join game_participants
+  on games.id = game_participants.game_id and game_participants.user_id = ?1
+where games.organizer_id =?1 or game_participants.user_id is not null
 `
 
-func (q *Queries) GameCountByUser(ctx context.Context, organizerID int64) (int64, error) {
-	row := q.db.QueryRowContext(ctx, gameCountByUser, organizerID)
+func (q *Queries) GameCountByUser(ctx context.Context, userID int64) (int64, error) {
+	row := q.db.QueryRowContext(ctx, gameCountByUser, userID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -120,24 +122,25 @@ func (q *Queries) GameGetById(ctx context.Context, id string) (Game, error) {
 
 const gameListByUser = `-- name: GameListByUser :many
 select
-  id,
-  name,
-  location,
-  starts_at,
-  published_at,
-  updated_at,
-  organizer_id = ? as is_organizer
+  games.id,
+  games.name,
+  games.location,
+  games.starts_at,
+  games.published_at,
+  games.updated_at,
+  games.organizer_id = ?1 as is_organizer
 from games
-where organizer_id = ?
-order by coalesce(published_at, updated_at) desc
-limit ? offset ?
+left join game_participants
+  on games.id = game_participants.game_id and game_participants.user_id = ?1
+where games.organizer_id = ?1 or game_participants.user_id is not null
+order by coalesce(games.published_at, games.updated_at) desc
+limit ?3 offset ?2
 `
 
 type GameListByUserParams struct {
-	OrganizerID   int64
-	OrganizerID_2 int64
-	Limit         int64
-	Offset        int64
+	UserID int64
+	Offset int64
+	Limit  int64
 }
 
 type GameListByUserRow struct {
@@ -151,12 +154,7 @@ type GameListByUserRow struct {
 }
 
 func (q *Queries) GameListByUser(ctx context.Context, arg GameListByUserParams) ([]GameListByUserRow, error) {
-	rows, err := q.db.QueryContext(ctx, gameListByUser,
-		arg.OrganizerID,
-		arg.OrganizerID_2,
-		arg.Limit,
-		arg.Offset,
-	)
+	rows, err := q.db.QueryContext(ctx, gameListByUser, arg.UserID, arg.Offset, arg.Limit)
 	if err != nil {
 		return nil, err
 	}

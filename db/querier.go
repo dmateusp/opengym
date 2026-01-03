@@ -9,7 +9,7 @@ import (
 )
 
 type Querier interface {
-	GameCountByUser(ctx context.Context, organizerID int64) (int64, error)
+	GameCountByUser(ctx context.Context, userID int64) (int64, error)
 	GameCreate(ctx context.Context, arg GameCreateParams) (Game, error)
 	GameGetById(ctx context.Context, id string) (Game, error)
 	GameListByUser(ctx context.Context, arg GameListByUserParams) ([]GameListByUserRow, error)
