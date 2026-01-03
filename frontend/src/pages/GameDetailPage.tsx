@@ -520,7 +520,7 @@ export default function GameDetailPage() {
         <div className="flex items-center justify-between mb-8">
           <Button
             variant="ghost"
-            onClick={() => navigate('/')}
+            onClick={() => navigate("/")}
             className="text-gray-600 hover:text-gray-900"
           >
             <ArrowLeft className="mr-2 h-5 w-5" />
@@ -547,30 +547,37 @@ export default function GameDetailPage() {
                             <Crown className="h-5 w-5 text-primary" />
                           </span>
                         </PopoverAnchor>
-                        <PopoverContent side="right" className="text-sm rounded-xl">
-                          <p className="font-semibold mb-1">You&apos;re organizing</p>
-                          <p className="text-gray-600">You can edit everything on this page</p>
+                        <PopoverContent
+                          side="right"
+                          className="text-sm rounded-xl"
+                        >
+                          <p className="font-semibold mb-1">
+                            You're organizing
+                          </p>
+                          <p className="text-gray-600">
+                            You can edit everything on this page
+                          </p>
                         </PopoverContent>
                       </Popover>
                     </div>
                   )}
-                  {editingField === 'name' && isOrganizer ? (
+                  {editingField === "name" && isOrganizer ? (
                     <Input
                       value={editValue}
                       onChange={(e) => setEditValue(e.target.value)}
-                      onBlur={() => handleBlur('name')}
+                      onBlur={() => handleBlur("name")}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleBlur('name')
-                        if (e.key === 'Escape') setEditingField(null)
+                        if (e.key === "Enter") handleBlur("name");
+                        if (e.key === "Escape") setEditingField(null);
                       }}
                       className="text-3xl font-bold"
                     />
                   ) : (
-                    <h1 
+                    <h1
                       className="text-4xl font-bold text-gray-900 cursor-text transition"
-                      onClick={() => startEditing('name', game?.name || '')}
+                      onClick={() => startEditing("name", game?.name || "")}
                     >
-                      {game?.name || 'Game'}
+                      {game?.name || "Game"}
                     </h1>
                   )}
                 </div>
@@ -596,14 +603,20 @@ export default function GameDetailPage() {
                     </span>
                   )}
                 </div>
+              </div>
+            </div>
 
+            {/* Quick Stats */}
+            {isPublished && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6">
+                <div className="text-center">
                 {/* Organizer Info */}
                 {organizer && (
-                  <div className="flex items-center gap-3 mt-4 pt-4 border-t border-gray-200">
+                  <div className="flex items-center gap-3 mt-2">
                     <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
                       {organizer.picture ? (
-                        <img 
-                          src={organizer.picture} 
+                        <img
+                          src={organizer.picture}
                           alt={organizer.name || organizer.email}
                           className="w-full h-full object-cover"
                         />
@@ -614,28 +627,37 @@ export default function GameDetailPage() {
                       )}
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 font-medium">Organizer</p>
-                      <p className="text-sm font-semibold text-gray-900">{organizer.name || organizer.email}</p>
+                      <p className="text-xs text-gray-500 font-medium">
+                        Organizer
+                      </p>
+                      <p className="text-sm font-semibold text-gray-900">
+                        {organizer.name || organizer.email}
+                      </p>
                     </div>
                   </div>
                 )}
-              </div>
-            </div>
-
-            {/* Quick Stats */}
-            {isPublished && (
-              <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-gray-200">
+                </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-primary mb-1">{participantCounts.going}/{game?.maxPlayers || '?'}</div>
+                  <div className="text-2xl font-bold text-primary mb-1">
+                    {participantCounts.going}/{game?.maxPlayers || "?"}
+                  </div>
                   <div className="text-xs text-gray-600 font-medium">Going</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-accent mb-1">{participantCounts.waitlisted}</div>
-                  <div className="text-xs text-gray-600 font-medium">Waitlist</div>
+                  <div className="text-2xl font-bold text-accent mb-1">
+                    {participantCounts.waitlisted}
+                  </div>
+                  <div className="text-xs text-gray-600 font-medium">
+                    Waitlist
+                  </div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-gray-400 mb-1">{participantCounts.notGoing}</div>
-                  <div className="text-xs text-gray-600 font-medium">Not Going</div>
+                  <div className="text-2xl font-bold text-gray-400 mb-1">
+                    {participantCounts.notGoing}
+                  </div>
+                  <div className="text-xs text-gray-600 font-medium">
+                    Not Going
+                  </div>
                 </div>
               </div>
             )}
@@ -647,56 +669,71 @@ export default function GameDetailPage() {
             <div className="space-y-6">
               {/* Location */}
               <div>
-                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">Location</label>
-                {editingField === 'location' && isOrganizer ? (
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
+                  Location
+                </label>
+                {editingField === "location" && isOrganizer ? (
                   <Input
                     type="text"
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
-                    onBlur={() => handleBlur('location')}
+                    onBlur={() => handleBlur("location")}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleBlur('location')
-                      if (e.key === 'Escape') setEditingField(null)
+                      if (e.key === "Enter") handleBlur("location");
+                      if (e.key === "Escape") setEditingField(null);
                     }}
                     placeholder="Where are you playing?"
                   />
                 ) : (
                   <div
-                    onClick={() => startEditing('location', game?.location || '')}
-                    className={`text-lg font-semibold cursor-text transition ${game?.location ? 'text-gray-900' : 'text-gray-400'}`}
+                    onClick={() =>
+                      startEditing("location", game?.location || "")
+                    }
+                    className={`text-lg font-semibold cursor-text transition ${
+                      game?.location ? "text-gray-900" : "text-gray-400"
+                    }`}
                   >
-                    {game?.location || (isOrganizer ? 'Click to add location' : '—')}
+                    {game?.location ||
+                      (isOrganizer ? "Click to add location" : "—")}
                   </div>
                 )}
               </div>
 
               {/* Date & Time */}
               <div>
-                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">When</label>
-                {editingField === 'startsAt' && isOrganizer ? (
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
+                  When
+                </label>
+                {editingField === "startsAt" && isOrganizer ? (
                   <Input
                     type="datetime-local"
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
-                    onBlur={() => handleBlur('startsAt')}
+                    onBlur={() => handleBlur("startsAt")}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleBlur('startsAt')
-                      if (e.key === 'Escape') setEditingField(null)
+                      if (e.key === "Enter") handleBlur("startsAt");
+                      if (e.key === "Escape") setEditingField(null);
                     }}
                   />
                 ) : (
                   <div
-                    onClick={() => startEditing('startsAt', game?.startsAt || '')}
-                    className={`text-lg font-semibold cursor-text transition ${game?.startsAt ? 'text-gray-900' : 'text-gray-400'}`}
+                    onClick={() =>
+                      startEditing("startsAt", game?.startsAt || "")
+                    }
+                    className={`text-lg font-semibold cursor-text transition ${
+                      game?.startsAt ? "text-gray-900" : "text-gray-400"
+                    }`}
                   >
                     {game?.startsAt ? (
-                      <TimeDisplay 
-                        timestamp={game.startsAt} 
+                      <TimeDisplay
+                        timestamp={game.startsAt}
                         displayFormat="friendly"
                         className="text-gray-900"
                       />
+                    ) : isOrganizer ? (
+                      "Click to set time"
                     ) : (
-                      (isOrganizer ? 'Click to set time' : '—')
+                      "—"
                     )}
                   </div>
                 )}
@@ -704,25 +741,38 @@ export default function GameDetailPage() {
 
               {/* Duration */}
               <div>
-                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">Duration</label>
-                {editingField === 'durationMinutes' && isOrganizer ? (
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
+                  Duration
+                </label>
+                {editingField === "durationMinutes" && isOrganizer ? (
                   <Input
                     type="number"
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
-                    onBlur={() => handleBlur('durationMinutes')}
+                    onBlur={() => handleBlur("durationMinutes")}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleBlur('durationMinutes')
-                      if (e.key === 'Escape') setEditingField(null)
+                      if (e.key === "Enter") handleBlur("durationMinutes");
+                      if (e.key === "Escape") setEditingField(null);
                     }}
                     placeholder="Minutes"
                   />
                 ) : (
                   <div
-                    onClick={() => startEditing('durationMinutes', game?.durationMinutes || '')}
-                    className={`text-lg font-semibold cursor-text transition ${game?.durationMinutes ? 'text-gray-900' : 'text-gray-400'}`}
+                    onClick={() =>
+                      startEditing(
+                        "durationMinutes",
+                        game?.durationMinutes || ""
+                      )
+                    }
+                    className={`text-lg font-semibold cursor-text transition ${
+                      game?.durationMinutes ? "text-gray-900" : "text-gray-400"
+                    }`}
                   >
-                    {game?.durationMinutes ? `${game.durationMinutes} min` : (isOrganizer ? 'Click to set' : '—')}
+                    {game?.durationMinutes
+                      ? `${game.durationMinutes} min`
+                      : isOrganizer
+                      ? "Click to set"
+                      : "—"}
                   </div>
                 )}
               </div>
@@ -732,57 +782,82 @@ export default function GameDetailPage() {
             <div className="space-y-6">
               {/* Max Players */}
               <div>
-                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">Players</label>
-                {editingField === 'maxPlayers' && isOrganizer ? (
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
+                  Players
+                </label>
+                {editingField === "maxPlayers" && isOrganizer ? (
                   <Input
                     type="number"
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
-                    onBlur={() => handleBlur('maxPlayers')}
+                    onBlur={() => handleBlur("maxPlayers")}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleBlur('maxPlayers')
-                      if (e.key === 'Escape') setEditingField(null)
+                      if (e.key === "Enter") handleBlur("maxPlayers");
+                      if (e.key === "Escape") setEditingField(null);
                     }}
                     placeholder="How many players?"
                   />
                 ) : (
                   <div
-                    onClick={() => startEditing('maxPlayers', game?.maxPlayers || '')}
-                    className={`text-lg font-semibold cursor-text transition ${game?.maxPlayers ? 'text-gray-900' : 'text-gray-400'}`}
+                    onClick={() =>
+                      startEditing("maxPlayers", game?.maxPlayers || "")
+                    }
+                    className={`text-lg font-semibold cursor-text transition ${
+                      game?.maxPlayers ? "text-gray-900" : "text-gray-400"
+                    }`}
                   >
-                    {game?.maxPlayers ? `Up to ${game.maxPlayers}` : (isOrganizer ? 'Click to set' : '—')}
+                    {game?.maxPlayers
+                      ? `Up to ${game.maxPlayers}`
+                      : isOrganizer
+                      ? "Click to set"
+                      : "—"}
                   </div>
                 )}
               </div>
 
               {/* Price */}
               <div>
-                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">Price</label>
-                {editingField === 'totalPriceCents' && isOrganizer ? (
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
+                  Price
+                </label>
+                {editingField === "totalPriceCents" && isOrganizer ? (
                   <Input
                     type="number"
                     step="0.01"
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
-                    onBlur={() => handleBlur('totalPriceCents')}
+                    onBlur={() => handleBlur("totalPriceCents")}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleBlur('totalPriceCents')
-                      if (e.key === 'Escape') setEditingField(null)
+                      if (e.key === "Enter") handleBlur("totalPriceCents");
+                      if (e.key === "Escape") setEditingField(null);
                     }}
                     placeholder="e.g., 15.50"
                   />
                 ) : (
                   <div
-                    onClick={() => startEditing('totalPriceCents', game?.totalPriceCents || '')}
-                    className={`text-lg font-semibold cursor-text transition ${game?.totalPriceCents !== undefined && game.totalPriceCents >= 0 ? 'text-gray-900' : 'text-gray-400'}`}
+                    onClick={() =>
+                      startEditing(
+                        "totalPriceCents",
+                        game?.totalPriceCents || ""
+                      )
+                    }
+                    className={`text-lg font-semibold cursor-text transition ${
+                      game?.totalPriceCents !== undefined &&
+                      game.totalPriceCents >= 0
+                        ? "text-gray-900"
+                        : "text-gray-400"
+                    }`}
                   >
-                    {game?.totalPriceCents !== undefined && game.totalPriceCents >= 0 ? (
+                    {game?.totalPriceCents !== undefined &&
+                    game.totalPriceCents >= 0 ? (
                       <PriceDisplay
                         totalPriceCents={game.totalPriceCents}
                         maxPlayers={game.maxPlayers}
                       />
+                    ) : isOrganizer ? (
+                      "Click to set price"
                     ) : (
-                      (isOrganizer ? 'Click to set price' : '—')
+                      "—"
                     )}
                   </div>
                 )}
@@ -794,28 +869,40 @@ export default function GameDetailPage() {
           {(game?.description || isOrganizer) && (
             <div className="px-8 py-6 border-t border-gray-100">
               <div className="flex items-center justify-between mb-3">
-                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block">About this game</label>
-                <span className="text-xs text-gray-400">Markdown supported</span>
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block">
+                  About this game
+                </label>
+                <span className="text-xs text-gray-400">
+                  Markdown supported
+                </span>
               </div>
-              {editingField === 'description' && isOrganizer ? (
+              {editingField === "description" && isOrganizer ? (
                 <textarea
-                  ref={inputRef as unknown as React.RefObject<HTMLTextAreaElement>}
+                  ref={
+                    inputRef as unknown as React.RefObject<HTMLTextAreaElement>
+                  }
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
-                  onBlur={() => handleBlur('description')}
+                  onBlur={() => handleBlur("description")}
                   className="w-full p-3 border-2 border-primary rounded-xl resize-none focus:outline-none"
                   rows={3}
                   placeholder="Tell people about your game..."
                 />
               ) : (
                 <div
-                  onClick={() => startEditing('description', game?.description || '')}
-                  className={`cursor-text transition text-sm leading-relaxed ${game?.description ? 'text-gray-700' : 'text-gray-400'}`}
+                  onClick={() =>
+                    startEditing("description", game?.description || "")
+                  }
+                  className={`cursor-text transition text-sm leading-relaxed ${
+                    game?.description ? "text-gray-700" : "text-gray-400"
+                  }`}
                 >
                   {game?.description ? (
                     <MarkdownRenderer value={game.description} />
+                  ) : isOrganizer ? (
+                    "Click to add description"
                   ) : (
-                    (isOrganizer ? 'Click to add description' : 'No description')
+                    "No description"
                   )}
                 </div>
               )}
@@ -827,7 +914,8 @@ export default function GameDetailPage() {
             <div className="px-8 py-6 border-t border-gray-100">
               <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <Users className="h-5 w-5 text-primary" />
-                Who&apos;s coming ({participantCounts.going}/{game?.maxPlayers || '?'})
+                Who&apos;s coming ({participantCounts.going}/
+                {game?.maxPlayers || "?"})
               </h2>
 
               {isLoadingParticipants ? (
@@ -842,70 +930,96 @@ export default function GameDetailPage() {
                 <div>
                   {/* People Grid */}
                   <div className="flex flex-wrap gap-4 mb-6">
-                    {participants.filter(p => p.status === 'going').map((p) => {
-                      const isOrganizerParticipating = organizer && p.user.id === organizer.id
-                      return (
-                        <div key={p.user.id} className="flex flex-col items-center gap-2">
-                          <div className="relative w-16 h-16">
-                            <div className="w-16 h-16 rounded-full overflow-hidden ring-4 ring-success/30 shadow-md">
-                              {p.user.picture ? (
-                                <img 
-                                  src={p.user.picture} 
-                                  alt={p.user.name || p.user.email}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <div className="w-full h-full bg-primary text-white flex items-center justify-center font-bold">
-                                  {getInitials(p.user.name, p.user.email)}
+                    {participants
+                      .filter((p) => p.status === "going")
+                      .map((p) => {
+                        const isOrganizerParticipating =
+                          organizer && p.user.id === organizer.id;
+                        return (
+                          <div
+                            key={p.user.id}
+                            className="flex flex-col items-center gap-2"
+                          >
+                            <div className="relative w-16 h-16">
+                              <div className="w-16 h-16 rounded-full overflow-hidden ring-4 ring-success/30 shadow-md">
+                                {p.user.picture ? (
+                                  <img
+                                    src={p.user.picture}
+                                    alt={p.user.name || p.user.email}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full bg-primary text-white flex items-center justify-center font-bold">
+                                    {getInitials(p.user.name, p.user.email)}
+                                  </div>
+                                )}
+                              </div>
+                              {isOrganizerParticipating && (
+                                <div className="absolute -bottom-1 -right-1 bg-primary rounded-full p-1.5 shadow-lg border-2 border-white">
+                                  <Crown className="h-3 w-3 text-white" />
                                 </div>
                               )}
                             </div>
-                            {isOrganizerParticipating && (
-                              <div className="absolute -bottom-1 -right-1 bg-primary rounded-full p-1.5 shadow-lg border-2 border-white">
-                                <Crown className="h-3 w-3 text-white" />
-                              </div>
-                            )}
+                            <span className="text-xs text-center text-gray-700 font-medium max-w-16 truncate">
+                              {p.user.name || p.user.email}
+                            </span>
                           </div>
-                          <span className="text-xs text-center text-gray-700 font-medium max-w-16 truncate">
-                            {p.user.name || p.user.email}
+                        );
+                      })}
+                    {/* Empty slots */}
+                    {game?.maxPlayers &&
+                      Array.from({
+                        length: Math.max(
+                          0,
+                          game.maxPlayers - participantCounts.going
+                        ),
+                      }).map((_, i) => (
+                        <div
+                          key={`empty-${i}`}
+                          className="flex flex-col items-center gap-2"
+                        >
+                          <div className="w-16 h-16 rounded-full border-4 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center">
+                            <span className="text-gray-400 text-sm">?</span>
+                          </div>
+                          <span className="text-xs text-gray-400 font-medium max-w-16 truncate">
+                            Open
                           </span>
                         </div>
-                      )
-                    })}
-                    {/* Empty slots */}
-                    {game?.maxPlayers && Array.from({ length: Math.max(0, game.maxPlayers - participantCounts.going) }).map((_, i) => (
-                      <div key={`empty-${i}`} className="flex flex-col items-center gap-2">
-                        <div className="w-16 h-16 rounded-full border-4 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center">
-                          <span className="text-gray-400 text-sm">?</span>
-                        </div>
-                        <span className="text-xs text-gray-400 font-medium max-w-16 truncate">Open</span>
-                      </div>
-                    ))}
+                      ))}
                   </div>
 
                   {/* Waitlist */}
                   {participantCounts.waitlisted > 0 && (
                     <div className="mt-6 pt-6 border-t border-gray-200">
-                      <p className="text-sm font-semibold text-gray-700 mb-3">Waitlist ({participantCounts.waitlisted})</p>
+                      <p className="text-sm font-semibold text-gray-700 mb-3">
+                        Waitlist ({participantCounts.waitlisted})
+                      </p>
                       <div className="space-y-2">
-                        {participants.filter(p => p.status === 'waitlisted').map((p) => (
-                          <div key={p.user.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50">
-                            <div className="w-8 h-8 rounded-full overflow-hidden">
-                              {p.user.picture ? (
-                                <img 
-                                  src={p.user.picture} 
-                                  alt={p.user.name || p.user.email}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <div className="w-full h-full bg-primary/50 text-white text-xs flex items-center justify-center font-bold">
-                                  {getInitials(p.user.name, p.user.email)}
-                                </div>
-                              )}
+                        {participants
+                          .filter((p) => p.status === "waitlisted")
+                          .map((p) => (
+                            <div
+                              key={p.user.id}
+                              className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50"
+                            >
+                              <div className="w-8 h-8 rounded-full overflow-hidden">
+                                {p.user.picture ? (
+                                  <img
+                                    src={p.user.picture}
+                                    alt={p.user.name || p.user.email}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full bg-primary/50 text-white text-xs flex items-center justify-center font-bold">
+                                    {getInitials(p.user.name, p.user.email)}
+                                  </div>
+                                )}
+                              </div>
+                              <span className="text-sm text-gray-700">
+                                {p.user.name || p.user.email}
+                              </span>
                             </div>
-                            <span className="text-sm text-gray-700">{p.user.name || p.user.email}</span>
-                          </div>
-                        ))}
+                          ))}
                       </div>
                     </div>
                   )}
@@ -914,7 +1028,9 @@ export default function GameDetailPage() {
                 <div className="bg-yellow-50 border-2 border-dashed border-secondary rounded-xl p-8 text-center">
                   <Users className="h-12 w-12 mx-auto mb-3 text-secondary/40" />
                   <p className="text-gray-600 font-medium mb-2">Almost there</p>
-                  <p className="text-sm text-gray-500">Be the first to sign up and get people excited!</p>
+                  <p className="text-sm text-gray-500">
+                    Be the first to sign up and get people excited!
+                  </p>
                 </div>
               )}
             </div>
@@ -932,13 +1048,20 @@ export default function GameDetailPage() {
                   </h3>
                   <div className="space-y-2 mb-4">
                     {publishRequirements.map((req) => (
-                      <div key={req.field} className="flex items-center gap-2 text-sm">
+                      <div
+                        key={req.field}
+                        className="flex items-center gap-2 text-sm"
+                      >
                         {req.met ? (
                           <CheckCircle2 className="h-4 w-4 text-success flex-shrink-0" />
                         ) : (
                           <XCircle className="h-4 w-4 text-gray-300 flex-shrink-0" />
                         )}
-                        <span className={req.met ? 'text-gray-700' : 'text-gray-400'}>
+                        <span
+                          className={
+                            req.met ? "text-gray-700" : "text-gray-400"
+                          }
+                        >
                           {req.label}
                         </span>
                       </div>
@@ -949,7 +1072,7 @@ export default function GameDetailPage() {
                     <Button
                       onClick={handlePublishNow}
                       disabled={isPublishing || !canPublish}
-                      className={canPublish ? 'bg-success' : 'bg-gray-400'}
+                      className={canPublish ? "bg-success" : "bg-gray-400"}
                     >
                       {isPublishing ? (
                         <>
@@ -987,34 +1110,41 @@ export default function GameDetailPage() {
                         size="sm"
                         className="w-full"
                       >
-                        {isScheduled ? 'Update schedule' : 'Schedule publish'}
+                        {isScheduled ? "Update schedule" : "Schedule publish"}
                       </Button>
                     </div>
                   )}
 
                   {publishError && (
-                    <div className="mt-3 text-red-600 text-sm">{publishError}</div>
+                    <div className="mt-3 text-red-600 text-sm">
+                      {publishError}
+                    </div>
                   )}
                 </div>
               </div>
             ) : user && !isOrganizer && isPublished ? (
               <div>
-                {currentUserParticipation?.status === 'going' ? (
+                {currentUserParticipation?.status === "going" ? (
                   <Button
                     variant="outline"
-                    onClick={() => updateParticipation('not_going')}
+                    onClick={() => updateParticipation("not_going")}
                     disabled={isUpdatingParticipation}
                     className="w-full bg-accent/10 border-accent text-accent hover:bg-accent/20"
                   >
-                    {isUpdatingParticipation ? 'Updating...' : '✓ You&apos;re going'}
+                    {isUpdatingParticipation
+                      ? "Updating..."
+                      : "✓ You&apos;re going"}
                   </Button>
                 ) : (
                   <Button
-                    onClick={() => updateParticipation('going')}
-                    disabled={isUpdatingParticipation || participantCounts.going >= (game?.maxPlayers || Infinity)}
+                    onClick={() => updateParticipation("going")}
+                    disabled={
+                      isUpdatingParticipation ||
+                      participantCounts.going >= (game?.maxPlayers || Infinity)
+                    }
                     className="w-full bg-accent"
                   >
-                    {isUpdatingParticipation ? 'Signing up...' : 'Count me in!'}
+                    {isUpdatingParticipation ? "Signing up..." : "Count me in!"}
                   </Button>
                 )}
               </div>
@@ -1023,7 +1153,7 @@ export default function GameDetailPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }
 
 function toLocalInputValue(iso: string) {
