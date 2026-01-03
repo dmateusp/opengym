@@ -758,7 +758,10 @@ export default function GameDetailPage() {
           {/* Description */}
           {(game?.description || isOrganizer) && (
             <div className="px-8 py-6 border-t border-gray-100">
-              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 block">About this game</label>
+              <div className="flex items-center justify-between mb-3">
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block">About this game</label>
+                <span className="text-xs text-gray-400">Markdown supported</span>
+              </div>
               {editingField === 'description' && isOrganizer ? (
                 <textarea
                   ref={inputRef as unknown as React.RefObject<HTMLTextAreaElement>}

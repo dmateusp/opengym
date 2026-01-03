@@ -45,7 +45,7 @@ export function MarkdownRenderer({ value, className }: MarkdownRendererProps) {
           ),
         }}
       >
-        {value}
+        {value || ''}
       </ReactMarkdown>
     </div>
   )
