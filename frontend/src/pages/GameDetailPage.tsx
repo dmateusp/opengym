@@ -2,6 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { API_BASE_URL, redirectToLogin } from '@/lib/api'
 import { fetchWithDemoRecovery } from '@/lib/fetchWithDemoRecovery'
 import { ArrowLeft, Loader2, CheckCircle2, Clock, Users, Crown, XCircle, Rocket, Circle as CircleDashed } from 'lucide-react'
@@ -78,6 +79,7 @@ export default function GameDetailPage() {
   const [isLoadingParticipants, setIsLoadingParticipants] = useState(false)
   const [participantsError, setParticipantsError] = useState<string | null>(null)
   const [isUpdatingParticipation, setIsUpdatingParticipation] = useState(false)
+  const [showUngoingConfirmation, setShowUngoingConfirmation] = useState(false)
 
   // Editing state
   const [editingField, setEditingField] = useState<string | null>(null)
@@ -1122,19 +1124,49 @@ export default function GameDetailPage() {
                   )}
                 </div>
               </div>
-            ) : user && !isOrganizer && isPublished ? (
+            ) : user && isPublished ? (
               <div>
                 {currentUserParticipation?.status === "going" ? (
-                  <Button
-                    variant="outline"
-                    onClick={() => updateParticipation("not_going")}
-                    disabled={isUpdatingParticipation}
-                    className="w-full bg-accent/10 border-accent text-accent hover:bg-accent/20"
-                  >
-                    {isUpdatingParticipation
-                      ? "Updating..."
-                      : "✓ You&apos;re going"}
-                  </Button>
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowUngoingConfirmation(true)}
+                      disabled={isUpdatingParticipation}
+                      className="w-full bg-accent/10 border-accent text-accent hover:bg-accent/20"
+                    >
+                      {isUpdatingParticipation
+                        ? "Updating..."
+                        : "You're going"}
+                    </Button>
+                    <Dialog open={showUngoingConfirmation} onOpenChange={setShowUngoingConfirmation}>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Change your vote?</DialogTitle>
+                          <DialogDescription>
+                            If you change to "not going", you'll be removed from the participant list and move to the bottom of the waitlist if there's space. Are you sure?
+                          </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                          <Button
+                            variant="outline"
+                            onClick={() => setShowUngoingConfirmation(false)}
+                          >
+                            Keep me down as going
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            onClick={async () => {
+                              setShowUngoingConfirmation(false)
+                              await updateParticipation("not_going")
+                            }}
+                            disabled={isUpdatingParticipation}
+                          >
+                            {isUpdatingParticipation ? "Updating..." : "Yes, change my vote"}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </>
                 ) : (
                   <Button
                     onClick={() => updateParticipation("going")}
