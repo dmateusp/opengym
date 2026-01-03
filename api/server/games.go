@@ -171,6 +171,10 @@ func (srv *server) GetApiGames(w http.ResponseWriter, r *http.Request, params ap
 			item.PublishedAt.Set(row.PublishedAt.Time)
 		}
 		item.UpdatedAt = row.UpdatedAt
+
+		// Map organizer information
+		item.Organizer.FromDb(row.User)
+
 		items = append(items, item)
 	}
 

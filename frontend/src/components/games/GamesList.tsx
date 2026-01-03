@@ -5,11 +5,23 @@ import { Card } from '@/components/ui/card'
 import { Loader2, CheckCircle2, CircleDashed, Crown, Clock, MapPin } from 'lucide-react'
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
 import { TimeDisplay } from '@/components/ui/TimeDisplay'
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+
+interface User {
+  id: string
+  email: string
+  name?: string
+  picture?: string
+  createdAt?: string
+  updatedAt?: string
+  isDemo: boolean
+}
 
 interface GameListItem {
   id: string
   name: string
   isOrganizer: boolean
+  organizer: User
   location?: string
   startsAt?: string | null
   publishedAt?: string | null
@@ -148,7 +160,18 @@ export default function GamesList() {
                     <h3 className="text-xl font-bold text-gray-900">{it.name}</h3>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 mt-3">
+                  <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
+                    <span className="text-gray-400 text-xs">organized by</span> 
+                    <Avatar className="h-6 w-6">
+                      <AvatarImage src={it.organizer.picture} alt={it.organizer.name || 'Organizer'} />
+                      <AvatarFallback className="text-xs">
+                        {(it.organizer.name?.charAt(0) || it.organizer.email?.charAt(0) || 'O').toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span>{it.organizer.name || it.organizer.email}</span>
+                  </div>
+                  
+                  <div className="flex flex-col gap-3 text-sm text-gray-600">
                     {it.location && (
                       <div className="flex items-center gap-2">
                         <MapPin className="h-4 w-4 text-gray-400" />

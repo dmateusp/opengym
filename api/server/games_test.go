@@ -21,6 +21,7 @@ import (
 	dbtesting "github.com/dmateusp/opengym/db/testing"
 	"github.com/dmateusp/opengym/ptr"
 	"github.com/oapi-codegen/nullable"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 func TestPostApiGames_Success(t *testing.T) {
@@ -282,6 +283,10 @@ func TestGetApiGames_DefaultPagination(t *testing.T) {
 	for _, item := range resp.Items {
 		if !item.IsOrganizer {
 			t.Fatalf("expected isOrganizer true for item %s", item.Id)
+		}
+		// Verify organizer information is present
+		if item.Organizer.Email != openapi_types.Email("john@example.com") {
+			t.Fatalf("expected organizer email john@example.com for item %s, got %s", item.Id, item.Organizer.Email)
 		}
 	}
 

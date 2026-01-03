@@ -189,6 +189,7 @@ export type GameListItem = {
      * Whether the authenticated user is the organizer of this game
      */
     isOrganizer: boolean;
+    organizer: User;
     /**
      * Location where the game will be held
      */

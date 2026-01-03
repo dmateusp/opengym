@@ -655,6 +655,7 @@ components:
         - id
         - name
         - isOrganizer
+        - organizer
         - updatedAt
       properties:
         id:
@@ -669,6 +670,9 @@ components:
           type: boolean
           description: Whether the authenticated user is the organizer of this game
           example: true
+        organizer:
+          $ref: '#/components/schemas/User'
+          description: User information for the game organizer
         location:
           type: string
           description: Location where the game will be held

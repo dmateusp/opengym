@@ -56,10 +56,13 @@ select
   games.starts_at,
   games.published_at,
   games.updated_at,
-  games.organizer_id = sqlc.arg(user_id) as is_organizer
+  games.organizer_id = sqlc.arg(user_id) as is_organizer,
+  sqlc.embed(users)
 from games
 left join game_participants
   on games.id = game_participants.game_id and game_participants.user_id = sqlc.arg(user_id)
+join users
+  on users.id = games.organizer_id
 where games.organizer_id = sqlc.arg(user_id) or game_participants.user_id is not null
 order by coalesce(games.published_at, games.updated_at) desc
 limit sqlc.arg(limit) offset sqlc.arg(offset);

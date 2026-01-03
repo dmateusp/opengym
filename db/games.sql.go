@@ -174,10 +174,13 @@ select
   games.starts_at,
   games.published_at,
   games.updated_at,
-  games.organizer_id = ?1 as is_organizer
+  games.organizer_id = ?1 as is_organizer,
+  users.id, users.name, users.email, users.photo, users.created_at, users.updated_at, users.is_demo
 from games
 left join game_participants
   on games.id = game_participants.game_id and game_participants.user_id = ?1
+join users
+  on users.id = games.organizer_id
 where games.organizer_id = ?1 or game_participants.user_id is not null
 order by coalesce(games.published_at, games.updated_at) desc
 limit ?3 offset ?2
@@ -197,6 +200,7 @@ type GameListByUserRow struct {
 	PublishedAt sql.NullTime
 	UpdatedAt   time.Time
 	IsOrganizer bool
+	User        User
 }
 
 func (q *Queries) GameListByUser(ctx context.Context, arg GameListByUserParams) ([]GameListByUserRow, error) {
@@ -216,6 +220,13 @@ func (q *Queries) GameListByUser(ctx context.Context, arg GameListByUserParams) 
 			&i.PublishedAt,
 			&i.UpdatedAt,
 			&i.IsOrganizer,
+			&i.User.ID,
+			&i.User.Name,
+			&i.User.Email,
+			&i.User.Photo,
+			&i.User.CreatedAt,
+			&i.User.UpdatedAt,
+			&i.User.IsDemo,
 		); err != nil {
 			return nil, err
 		}
