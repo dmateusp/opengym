@@ -624,7 +624,7 @@ export default function GameDetailPage() {
 
             {/* Quick Stats */}
             {isPublished && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-gray-200">
+              <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-gray-200">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-primary mb-1">{participantCounts.going}/{game?.maxPlayers || '?'}</div>
                   <div className="text-xs text-gray-600 font-medium">Going</div>
@@ -636,10 +636,6 @@ export default function GameDetailPage() {
                 <div className="text-center">
                   <div className="text-2xl font-bold text-gray-400 mb-1">{participantCounts.notGoing}</div>
                   <div className="text-xs text-gray-600 font-medium">Not Going</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-success mb-1">{game?.maxPlayers === participantCounts.going ? '✓' : '—'}</div>
-                  <div className="text-xs text-gray-600 font-medium">Full</div>
                 </div>
               </div>
             )}
