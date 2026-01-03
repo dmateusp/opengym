@@ -134,98 +134,104 @@ export default function GamesList() {
           <button
             key={it.id}
             onClick={() => navigate(`/games/${it.id}`)}
-            className="block w-full text-left transform transition-all hover:scale-102 active:scale-98"
+            className="block w-full text-left transform transition-all active:scale-95"
           >
-            <Card className="p-6 hover:shadow-2xl cursor-pointer border-l-4 border-l-primary">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    {it.isOrganizer && (
-                      <div
-                        onMouseEnter={() => setHoveredCrowId(it.id)}
-                        onMouseLeave={() => setHoveredCrowId(null)}
-                      >
-                        <Popover open={hoveredCrowId === it.id}>
-                          <PopoverAnchor asChild>
-                            <span className="inline-flex items-center bg-secondary/20 rounded-full p-1" aria-label="Organizer">
-                              <Crown className="h-4 w-4 text-primary" aria-hidden="true" />
-                            </span>
-                          </PopoverAnchor>
-                          <PopoverContent side="bottom" className="text-gray-800 text-sm rounded-xl">
-                            You are organizing this game
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                    )}
-                    <h3 className="text-xl font-bold text-gray-900">{it.name}</h3>
+            <Card className="p-6 cursor-pointer border-l-4 border-l-primary shadow-sm rounded-lg overflow-hidden">
+              <div className="flex flex-col gap-4">
+                {/* Header: Title and Status */}
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      {it.isOrganizer && (
+                        <div
+                          onMouseEnter={() => setHoveredCrowId(it.id)}
+                          onMouseLeave={() => setHoveredCrowId(null)}
+                        >
+                          <Popover open={hoveredCrowId === it.id}>
+                            <PopoverAnchor asChild>
+                              <span className="inline-flex items-center" aria-label="You are the organizer">
+                                <Crown className="h-5 w-5 text-primary" aria-hidden="true" />
+                              </span>
+                            </PopoverAnchor>
+                            <PopoverContent side="bottom" className="text-gray-800 text-sm rounded-xl">
+                              You are organizing this game
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                      )}
+                      <h3 className="text-2xl font-bold text-gray-900">{it.name}</h3>
+                    </div>
+                    
+                    {/* Organizer */}
+                    <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+                      <span className="text-gray-400">by</span>
+                      <Avatar className="h-5 w-5">
+                        <AvatarImage src={it.organizer.picture} alt={it.organizer.name || 'Organizer'} />
+                        <AvatarFallback className="text-xs">
+                          {(it.organizer.name?.charAt(0) || it.organizer.email?.charAt(0) || 'O').toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="font-medium">{it.organizer.name || it.organizer.email}</span>
+                    </div>
                   </div>
-                  
-                  <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
-                    <span className="text-gray-400 text-xs">organized by</span> 
-                    <Avatar className="h-6 w-6">
-                      <AvatarImage src={it.organizer.picture} alt={it.organizer.name || 'Organizer'} />
-                      <AvatarFallback className="text-xs">
-                        {(it.organizer.name?.charAt(0) || it.organizer.email?.charAt(0) || 'O').toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span>{it.organizer.name || it.organizer.email}</span>
-                  </div>
-                  
-                  <div className="flex flex-col gap-3 text-sm text-gray-600">
-                    {it.location && (
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-gray-400" />
-                        <span>{it.location}</span>
-                      </div>
-                    )}
-                    {it.startsAt && (
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-gray-400" />
-                        <TimeDisplay 
-                          timestamp={it.startsAt} 
-                          displayFormat="friendly"
-                          className="text-gray-600"
-                        />
-                      </div>
+
+                  {/* Status Badge */}
+                  <div className="flex-shrink-0">
+                    {status.state === 'published' ? (
+                      <span className="inline-flex items-center gap-2 text-sm font-semibold px-3 py-1.5 rounded-full bg-success/10 text-success">
+                        <CheckCircle2 className="h-4 w-4" />
+                        Published
+                      </span>
+                    ) : status.state === 'scheduled' ? (
+                      <span className="inline-flex items-center gap-2 text-sm font-semibold px-3 py-1.5 rounded-full bg-amber-50 text-amber-700">
+                        <Clock className="h-4 w-4" />
+                        Scheduled
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-2 text-sm font-semibold px-3 py-1.5 rounded-full bg-gray-100 text-gray-600">
+                        <CircleDashed className="h-4 w-4" />
+                        Draft
+                      </span>
                     )}
                   </div>
                 </div>
 
-                <div className="flex flex-col items-end gap-3">
-                  {status.state === 'published' ? (
-                    <span className="inline-flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-full bg-success text-white shadow-md">
-                      <CheckCircle2 className="h-4 w-4" />
-                      Published
-                    </span>
-                  ) : status.state === 'scheduled' ? (
-                    <div className="space-y-2 text-right">
-                      <span className="inline-flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-full bg-secondary text-secondary-foreground shadow-md">
-                        <Clock className="h-4 w-4" />
-                        Scheduled
-                      </span>
-                      {status.timestamp && (
-                        <div className="text-xs text-gray-500">
-                          <TimeDisplay 
-                            timestamp={status.timestamp}
-                            displayFormat="relative"
-                            prefix="In"
-                            className="text-gray-500"
-                          />
-                        </div>
-                      )}
+                {/* Details: Location and Time */}
+                <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                  {it.location && (
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                      <span>{it.location}</span>
                     </div>
-                  ) : (
-                    <span className="inline-flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-full bg-gray-200 text-gray-700 shadow-md">
-                      <CircleDashed className="h-4 w-4" />
-                      Draft
-                    </span>
                   )}
-                  
-                  <div className="text-xs text-gray-400">
+                  {it.startsAt && (
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                      <TimeDisplay 
+                        timestamp={it.startsAt} 
+                        displayFormat="friendly"
+                        className="text-gray-600"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer: Schedule info and last updated */}
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                  {status.state === 'scheduled' && status.timestamp && (
+                    <div>
+                      Scheduled for <TimeDisplay 
+                        timestamp={status.timestamp}
+                        displayFormat="relative"
+                        className="text-gray-500"
+                      />
+                    </div>
+                  )}
+                  <div className="ml-auto">
                     Updated <TimeDisplay 
                       timestamp={it.updatedAt} 
                       displayFormat="relative"
-                      className="text-gray-400"
+                      className="text-gray-500"
                     />
                   </div>
                 </div>
