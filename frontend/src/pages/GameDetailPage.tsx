@@ -308,7 +308,9 @@ export default function GameDetailPage() {
   function startEditing(field: string, currentValue: unknown) {
     if (!isOrganizer) return
     setEditingField(field)
-    if (typeof currentValue === 'number') {
+    if (field === 'totalPriceCents' && typeof currentValue === 'number') {
+      setEditValue(formatCentsAsDollars(currentValue))
+    } else if (typeof currentValue === 'number') {
       setEditValue(String(currentValue))
     } else if (typeof currentValue === 'string') {
       setEditValue(currentValue)
@@ -424,7 +426,16 @@ export default function GameDetailPage() {
     cancelDebouncedSave(field)
     
     let valueToSave: unknown = editValue
-    if (field === 'totalPriceCents' || field === 'maxPlayers' || field === 'durationMinutes') {
+    if (field === 'totalPriceCents') {
+      // Convert dollars.cents format to cents
+      const dollars = parseFloat(editValue)
+      if (isNaN(dollars)) {
+        valueToSave = undefined
+      } else {
+        // Round to ensure we have whole cents
+        valueToSave = Math.round(dollars * 100)
+      }
+    } else if (field === 'maxPlayers' || field === 'durationMinutes') {
       const num = Number(editValue)
       valueToSave = isNaN(num) ? undefined : num
     } else if (field === 'startsAt') {
@@ -727,6 +738,7 @@ export default function GameDetailPage() {
                 {editingField === 'totalPriceCents' && isOrganizer ? (
                   <Input
                     type="number"
+                    step="0.01"
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
                     onBlur={() => handleBlur('totalPriceCents')}
@@ -734,7 +746,7 @@ export default function GameDetailPage() {
                       if (e.key === 'Enter') handleBlur('totalPriceCents')
                       if (e.key === 'Escape') setEditingField(null)
                     }}
-                    placeholder="Cents"
+                    placeholder="e.g., 15.50"
                   />
                 ) : (
                   <div
@@ -742,7 +754,7 @@ export default function GameDetailPage() {
                     className={`text-lg font-semibold cursor-text transition ${game?.totalPriceCents !== undefined && game.totalPriceCents >= 0 ? 'text-gray-900' : 'text-gray-400'}`}
                   >
                     {game?.totalPriceCents !== undefined && game.totalPriceCents >= 0 ? (
-                      <PriceDisplay 
+                      <PriceDisplay
                         totalPriceCents={game.totalPriceCents}
                         maxPlayers={game.maxPlayers}
                       />
@@ -1004,4 +1016,11 @@ function fromLocalInputValue(val: string) {
   } catch {
     return ''
   }
+}
+
+function formatCentsAsDollars(cents?: number) {
+  if (typeof cents !== 'number' || Number.isNaN(cents)) return ''
+  if (cents === 0) return '0'
+  const dollars = cents / 100
+  return dollars.toFixed(2)
 }
