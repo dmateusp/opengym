@@ -244,7 +244,20 @@ export default function GameDetailPage() {
     return { going, waitlisted, notGoing }
   }, [participants])
 
-  // Check if all publish requirements are met
+  const isGameFull = useMemo(() => {
+    if (!game?.maxPlayers || game.maxPlayers === -1) return false
+    if (participantCounts.going >= game.maxPlayers) {
+      // Game is full, check if waitlist is available
+      if (game.maxWaitlistSize === 0) return true // Waitlist disabled
+      if (game.maxWaitlistSize === -1) return false // Unlimited waitlist
+      if (participantCounts.waitlisted >= game.maxWaitlistSize) return true // Waitlist full
+    }
+    return false
+  }, [game, participantCounts])
+
+  const joinButtonDisabled = useMemo(() => {
+    return isUpdatingParticipation || isGameFull
+  }, [isUpdatingParticipation, isGameFull])
   const publishRequirements = useMemo(() => {
     if (!game) return []
     return [
@@ -1228,16 +1241,20 @@ export default function GameDetailPage() {
                     </Dialog>
                   </>
                 ) : (
-                  <Button
-                    onClick={() => updateParticipation("going")}
-                    disabled={
-                      isUpdatingParticipation ||
-                      participantCounts.going >= (game?.maxPlayers || Infinity)
-                    }
-                    className="w-full bg-accent"
-                  >
-                    {isUpdatingParticipation ? "Signing up..." : "Count me in!"}
-                  </Button>
+                  <>
+                    <Button
+                      onClick={() => updateParticipation("going")}
+                      disabled={joinButtonDisabled}
+                      className="w-full bg-accent"
+                    >
+                      {isUpdatingParticipation ? "Signing up..." : "Count me in!"}
+                    </Button>
+                    {isGameFull && (
+                      <p className="text-xs text-gray-500 text-center mt-2">
+                        Game is full
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
             ) : null}
