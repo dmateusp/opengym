@@ -12,6 +12,7 @@ import { PriceDisplay } from '@/components/games/PriceDisplay'
 import { Popover, PopoverContent, PopoverAnchor } from '@/components/ui/popover'
 import { TimeDisplay } from '@/components/ui/TimeDisplay'
 import UserProfileMenu from '@/components/auth/UserProfileMenu'
+import { NumberLimitEditor } from '@/components/ui/NumberLimitEditor'
 
 interface Game {
   id: string
@@ -22,6 +23,7 @@ interface Game {
   startsAt?: string
   durationMinutes?: number
   maxPlayers?: number
+  maxWaitlistSize?: number
   totalPriceCents?: number
   createdAt: string
   updatedAt: string
@@ -264,6 +266,11 @@ export default function GameDetailPage() {
         label: 'Max players set',
         met: typeof game.maxPlayers === 'number' && game.maxPlayers > 0,
         field: 'maxPlayers'
+      },
+      {
+        label: 'Waitlist size set',
+        met: typeof game.maxWaitlistSize === 'number',
+        field: 'maxWaitlistSize'
       },
       {
         label: 'Pricing set',
@@ -647,10 +654,17 @@ export default function GameDetailPage() {
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-accent mb-1">
-                    {participantCounts.waitlisted}
+                    {game?.maxWaitlistSize === 0 ? (
+                      <span className="text-gray-400">—</span>
+                    ) : (
+                      <>
+                        {participantCounts.waitlisted}
+                        {typeof game?.maxWaitlistSize === 'number' && game.maxWaitlistSize > 0 ? `/${game.maxWaitlistSize}` : ''}
+                      </>
+                    )}
                   </div>
                   <div className="text-xs text-gray-600 font-medium">
-                    Waitlist
+                    Waitlist{game?.maxWaitlistSize === 0 ? ' (Off)' : game?.maxWaitlistSize === -1 ? ' (∞)' : ''}
                   </div>
                 </div>
                 <div className="text-center">
@@ -788,16 +802,22 @@ export default function GameDetailPage() {
                   Players
                 </label>
                 {editingField === "maxPlayers" && isOrganizer ? (
-                  <Input
-                    type="number"
-                    value={editValue}
-                    onChange={(e) => setEditValue(e.target.value)}
-                    onBlur={() => handleBlur("maxPlayers")}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleBlur("maxPlayers");
-                      if (e.key === "Escape") setEditingField(null);
+                  <NumberLimitEditor
+                    value={game?.maxPlayers}
+                    onSave={(value) => {
+                      if (value !== undefined) {
+                        saveField("maxPlayers", value)
+                      } else {
+                        cancelEditing()
+                      }
                     }}
-                    placeholder="How many players?"
+                    onCancel={cancelEditing}
+                    showDisabledOption={false}
+                    placeholder="Enter max players"
+                    label={{
+                      limited: "Set maximum",
+                      unlimited: "No limit"
+                    }}
                   />
                 ) : (
                   <div
@@ -809,7 +829,54 @@ export default function GameDetailPage() {
                     }`}
                   >
                     {game?.maxPlayers
-                      ? `Up to ${game.maxPlayers}`
+                      ? game.maxPlayers === -1
+                        ? "No limit"
+                        : `Up to ${game.maxPlayers}`
+                      : isOrganizer
+                      ? "Click to set"
+                      : "—"}
+                  </div>
+                )}
+              </div>
+
+              {/* Waitlist Size */}
+              <div>
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
+                  Waitlist
+                </label>
+                {editingField === "maxWaitlistSize" && isOrganizer ? (
+                  <NumberLimitEditor
+                    value={game?.maxWaitlistSize}
+                    onSave={(value) => {
+                      if (value !== undefined) {
+                        saveField("maxWaitlistSize", value)
+                      } else {
+                        cancelEditing()
+                      }
+                    }}
+                    onCancel={cancelEditing}
+                    placeholder="Enter max waitlist size"
+                  />
+                ) : (
+                  <div
+                    onClick={() =>
+                      startEditing(
+                        "maxWaitlistSize",
+                        game?.maxWaitlistSize ?? ""
+                      )
+                    }
+                    className={`text-lg font-semibold cursor-text transition ${
+                      typeof game?.maxWaitlistSize === "number"
+                        ? "text-gray-900"
+                        : "text-gray-400"
+                    }`}
+                  >
+                    {typeof game?.maxWaitlistSize === "number"
+                      ? game.maxWaitlistSize === -1
+                        ? "Unlimited"
+                        : game.maxWaitlistSize === 0
+                        ? "Disabled"
+                        : `Up to ${game.maxWaitlistSize}`
                       : isOrganizer
                       ? "Click to set"
                       : "—"}
@@ -994,7 +1061,7 @@ export default function GameDetailPage() {
                   {participantCounts.waitlisted > 0 && (
                     <div className="mt-6 pt-6 border-t border-gray-200">
                       <p className="text-sm font-semibold text-gray-700 mb-3">
-                        Waitlist ({participantCounts.waitlisted})
+                        Waitlist ({participantCounts.waitlisted}{typeof game?.maxWaitlistSize === 'number' && game.maxWaitlistSize > 0 ? `/${game.maxWaitlistSize}` : game?.maxWaitlistSize === -1 ? ', unlimited' : ''})
                       </p>
                       <div className="space-y-2">
                         {participants
