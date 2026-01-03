@@ -124,6 +124,11 @@ export type Game = GameFields & {
     updatedAt: string;
 };
 
+export type GameDetail = {
+    game: Game;
+    organizer: User;
+};
+
 /**
  * Participation status of the authenticated user
  */
@@ -469,7 +474,7 @@ export type GetApiGamesByIdResponses = {
     /**
      * Game retrieved successfully
      */
-    200: Game;
+    200: GameDetail;
 };
 
 export type GetApiGamesByIdResponse = GetApiGamesByIdResponses[keyof GetApiGamesByIdResponses];

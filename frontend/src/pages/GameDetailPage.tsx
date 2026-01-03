@@ -62,6 +62,7 @@ export default function GameDetailPage() {
   }
 
   const [game, setGame] = useState<Game | null>(null)
+  const [organizer, setOrganizer] = useState<AuthUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [user, setUser] = useState<AuthUser | null>(null)
@@ -108,7 +109,8 @@ export default function GameDetailPage() {
         }
 
         const gameData = await response.json()
-        setGame(gameData)
+        setGame(gameData.game)
+        setOrganizer(gameData.organizer)
 
         // Fetch authenticated user (optional if unauthenticated)
         try {
@@ -147,7 +149,8 @@ export default function GameDetailPage() {
       })
       if (response.ok) {
         const gameData = await response.json()
-        setGame(gameData)
+        setGame(gameData.game)
+        setOrganizer(gameData.organizer)
       }
     } catch (err) {
       console.error('Error refreshing game:', err)
@@ -363,7 +366,8 @@ export default function GameDetailPage() {
       }
 
       const updated = await resp.json()
-      setGame(updated)
+      setGame(updated.game)
+      setOrganizer(updated.organizer)
       return true
     } catch (e) {
       setPublishError(e instanceof Error ? e.message : 'Failed to update publish time')
@@ -592,6 +596,29 @@ export default function GameDetailPage() {
                     </span>
                   )}
                 </div>
+
+                {/* Organizer Info */}
+                {organizer && (
+                  <div className="flex items-center gap-3 mt-4 pt-4 border-t border-gray-200">
+                    <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+                      {organizer.picture ? (
+                        <img 
+                          src={organizer.picture} 
+                          alt={organizer.name || organizer.email}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-primary text-white text-xs flex items-center justify-center font-bold">
+                          {getInitials(organizer.name, organizer.email)}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 font-medium">Organizer</p>
+                      <p className="text-sm font-semibold text-gray-900">{organizer.name || organizer.email}</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -819,26 +846,36 @@ export default function GameDetailPage() {
                 <div>
                   {/* People Grid */}
                   <div className="flex flex-wrap gap-4 mb-6">
-                    {participants.filter(p => p.status === 'going').map((p) => (
-                      <div key={p.user.id} className="flex flex-col items-center gap-2">
-                        <div className="w-16 h-16 rounded-full overflow-hidden ring-4 ring-success/30 shadow-md">
-                          {p.user.picture ? (
-                            <img 
-                              src={p.user.picture} 
-                              alt={p.user.name || p.user.email}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-primary text-white flex items-center justify-center font-bold">
-                              {getInitials(p.user.name, p.user.email)}
+                    {participants.filter(p => p.status === 'going').map((p) => {
+                      const isOrganizerParticipating = organizer && p.user.id === organizer.id
+                      return (
+                        <div key={p.user.id} className="flex flex-col items-center gap-2">
+                          <div className="relative w-16 h-16">
+                            <div className="w-16 h-16 rounded-full overflow-hidden ring-4 ring-success/30 shadow-md">
+                              {p.user.picture ? (
+                                <img 
+                                  src={p.user.picture} 
+                                  alt={p.user.name || p.user.email}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-primary text-white flex items-center justify-center font-bold">
+                                  {getInitials(p.user.name, p.user.email)}
+                                </div>
+                              )}
                             </div>
-                          )}
+                            {isOrganizerParticipating && (
+                              <div className="absolute -bottom-1 -right-1 bg-primary rounded-full p-1.5 shadow-lg border-2 border-white">
+                                <Crown className="h-3 w-3 text-white" />
+                              </div>
+                            )}
+                          </div>
+                          <span className="text-xs text-center text-gray-700 font-medium max-w-16 truncate">
+                            {p.user.name || p.user.email}
+                          </span>
                         </div>
-                        <span className="text-xs text-center text-gray-700 font-medium max-w-16 truncate">
-                          {p.user.name || p.user.email}
-                        </span>
-                      </div>
-                    ))}
+                      )
+                    })}
                     {/* Empty slots */}
                     {game?.maxPlayers && Array.from({ length: Math.max(0, game.maxPlayers - participantCounts.going) }).map((_, i) => (
                       <div key={`empty-${i}`} className="flex flex-col items-center gap-2">
