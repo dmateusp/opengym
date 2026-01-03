@@ -15,8 +15,19 @@ insert into games(
 ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 returning *;
 
+-- name: GameGetByIdWithOrganizer :one
+select
+  sqlc.embed(games),
+  sqlc.embed(users)
+from games
+join users
+  on users.id = games.organizer_id
+where games.id = ?;
+
 -- name: GameGetById :one
-select * from games where id = ?;
+select *
+from games
+where games.id = ?;
 
 -- name: GameUpdate :exec
 update games

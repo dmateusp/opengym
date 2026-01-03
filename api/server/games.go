@@ -197,7 +197,7 @@ func isConstraintError(err error) bool {
 }
 
 func (srv *server) GetApiGamesId(w http.ResponseWriter, r *http.Request, id string) {
-	game, err := srv.querier.GameGetById(r.Context(), id)
+	game, err := srv.querier.GameGetByIdWithOrganizer(r.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.Error(w, "game not found", http.StatusNotFound)
@@ -208,11 +208,11 @@ func (srv *server) GetApiGamesId(w http.ResponseWriter, r *http.Request, id stri
 	}
 
 	authInfo, hasAuth := auth.FromCtx(r.Context())
-	isOrganizer := hasAuth && int64(authInfo.UserId) == game.OrganizerID
+	isOrganizer := hasAuth && int64(authInfo.UserId) == game.Game.OrganizerID
 
 	// Non-organizers cannot see drafts or scheduled games until publishedAt is reached
 	if !isOrganizer {
-		if !game.PublishedAt.Valid || game.PublishedAt.Time.After(time.Now()) {
+		if !game.Game.PublishedAt.Valid || game.Game.PublishedAt.Time.After(time.Now()) {
 			http.Error(w, "game not found", http.StatusNotFound)
 			return
 		}
@@ -220,7 +220,7 @@ func (srv *server) GetApiGamesId(w http.ResponseWriter, r *http.Request, id stri
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	var apiGame api.Game
+	var apiGame api.GameDetail
 	apiGame.FromDb(game)
 	err = json.NewEncoder(w).Encode(apiGame)
 	if err != nil {

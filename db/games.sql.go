@@ -95,7 +95,9 @@ func (q *Queries) GameCreate(ctx context.Context, arg GameCreateParams) (Game, e
 }
 
 const gameGetById = `-- name: GameGetById :one
-select id, organizer_id, name, description, published_at, total_price_cents, location, starts_at, duration_minutes, max_players, max_waitlist_size, max_guests_per_player, created_at, updated_at from games where id = ?
+select id, organizer_id, name, description, published_at, total_price_cents, location, starts_at, duration_minutes, max_players, max_waitlist_size, max_guests_per_player, created_at, updated_at
+from games
+where games.id = ?
 `
 
 func (q *Queries) GameGetById(ctx context.Context, id string) (Game, error) {
@@ -116,6 +118,50 @@ func (q *Queries) GameGetById(ctx context.Context, id string) (Game, error) {
 		&i.MaxGuestsPerPlayer,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const gameGetByIdWithOrganizer = `-- name: GameGetByIdWithOrganizer :one
+select
+  games.id, games.organizer_id, games.name, games.description, games.published_at, games.total_price_cents, games.location, games.starts_at, games.duration_minutes, games.max_players, games.max_waitlist_size, games.max_guests_per_player, games.created_at, games.updated_at,
+  users.id, users.name, users.email, users.photo, users.created_at, users.updated_at, users.is_demo
+from games
+join users
+  on users.id = games.organizer_id
+where games.id = ?
+`
+
+type GameGetByIdWithOrganizerRow struct {
+	Game Game
+	User User
+}
+
+func (q *Queries) GameGetByIdWithOrganizer(ctx context.Context, id string) (GameGetByIdWithOrganizerRow, error) {
+	row := q.db.QueryRowContext(ctx, gameGetByIdWithOrganizer, id)
+	var i GameGetByIdWithOrganizerRow
+	err := row.Scan(
+		&i.Game.ID,
+		&i.Game.OrganizerID,
+		&i.Game.Name,
+		&i.Game.Description,
+		&i.Game.PublishedAt,
+		&i.Game.TotalPriceCents,
+		&i.Game.Location,
+		&i.Game.StartsAt,
+		&i.Game.DurationMinutes,
+		&i.Game.MaxPlayers,
+		&i.Game.MaxWaitlistSize,
+		&i.Game.MaxGuestsPerPlayer,
+		&i.Game.CreatedAt,
+		&i.Game.UpdatedAt,
+		&i.User.ID,
+		&i.User.Name,
+		&i.User.Email,
+		&i.User.Photo,
+		&i.User.CreatedAt,
+		&i.User.UpdatedAt,
+		&i.User.IsDemo,
 	)
 	return i, err
 }

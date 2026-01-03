@@ -1079,23 +1079,37 @@ func TestGetApiGamesId_Success(t *testing.T) {
 		t.Errorf("Expected status %d, got %d. Body: %s", http.StatusOK, w.Code, w.Body.String())
 	}
 
-	var retrievedGame api.Game
-	if err := json.NewDecoder(w.Body).Decode(&retrievedGame); err != nil {
+	var gameDetail api.GameDetail
+	if err := json.NewDecoder(w.Body).Decode(&gameDetail); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
 	// Verify retrieved game matches created game
-	if retrievedGame.Id != createdGame.Id {
-		t.Errorf("Expected id %s, got %s", createdGame.Id, retrievedGame.Id)
+	if gameDetail.Game.Id != createdGame.Id {
+		t.Errorf("Expected id %s, got %s", createdGame.Id, gameDetail.Game.Id)
 	}
-	if retrievedGame.Name != createdGame.Name {
-		t.Errorf("Expected name %s, got %s", createdGame.Name, retrievedGame.Name)
+	if gameDetail.Game.Name != createdGame.Name {
+		t.Errorf("Expected name %s, got %s", createdGame.Name, gameDetail.Game.Name)
 	}
-	if retrievedGame.OrganizerId != createdGame.OrganizerId {
-		t.Errorf("Expected organizer ID %d, got %d", createdGame.OrganizerId, retrievedGame.OrganizerId)
+	if gameDetail.Game.OrganizerId != createdGame.OrganizerId {
+		t.Errorf("Expected organizer ID %d, got %d", createdGame.OrganizerId, gameDetail.Game.OrganizerId)
 	}
-	if retrievedGame.Description == nil || *retrievedGame.Description != *createdGame.Description {
-		t.Errorf("Expected description %v, got %v", createdGame.Description, retrievedGame.Description)
+	if gameDetail.Game.Description == nil || *gameDetail.Game.Description != *createdGame.Description {
+		t.Errorf("Expected description %v, got %v", createdGame.Description, gameDetail.Game.Description)
+	}
+
+	// Verify organizer information is returned
+	if gameDetail.Organizer.Id == "" {
+		t.Error("Expected organizer ID to be set")
+	}
+	if gameDetail.Organizer.Email == "" {
+		t.Error("Expected organizer email to be set")
+	}
+	if gameDetail.Organizer.Email != "john@example.com" {
+		t.Errorf("Expected organizer email john@example.com, got %s", gameDetail.Organizer.Email)
+	}
+	if gameDetail.Organizer.IsDemo {
+		t.Error("Expected organizer to not be a demo user (default is false)")
 	}
 }
 

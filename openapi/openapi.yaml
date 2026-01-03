@@ -265,7 +265,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Game'
+                $ref: '#/components/schemas/GameDetail'
         '404':
           description: Game not found
           content:
@@ -566,6 +566,19 @@ components:
               type: string
               format: date-time
               description: Timestamp when game was last updated
+
+    GameDetail:
+      type: object
+      required:
+        - game
+        - organizer
+      properties:
+        game:
+          $ref: '#/components/schemas/Game'
+          description: The game object
+        organizer:
+          $ref: '#/components/schemas/User'
+          description: User information for the game organizer
 
     ParticipationStatus:
       description: Participation status of the authenticated user
