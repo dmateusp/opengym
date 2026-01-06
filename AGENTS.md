@@ -20,3 +20,4 @@
 * We generate the client code from the OpenAPI spec using `cd frontend; nvm use .; pnpm run openapi-ts`. The generated code is located in [frontend/src/opengym/client](./frontend/src/opengym/client).
 * We import ui components from Shadcn using the CLI e.g. `pnpm dlx shadcn@latest add button card --overwrite --yes`.
 * We use Ladle for component development (`pnpm ladle serve`).
+* We use react-i18next for internationalization, the locales are located in [frontend/src/i18n/locales](./frontend/src/i18n/locales).

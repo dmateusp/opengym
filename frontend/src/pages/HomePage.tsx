@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import CreateGameModal from '@/components/games/CreateGameModal'
 import GamesList from '@/components/games/GamesList'
 import UserProfileMenu from '@/components/auth/UserProfileMenu'
+import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { API_BASE_URL } from '@/lib/api'
 import { fetchWithDemoRecovery } from '@/lib/fetchWithDemoRecovery'
 
 export default function HomePage() {
+  const { t } = useTranslation()
   const { user, setUser } = useCurrentUser()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [hasAnyGames, setHasAnyGames] = useState<boolean>(false)
@@ -52,10 +55,11 @@ export default function HomePage() {
               onClick={() => setIsModalOpen(true)}
               className="bg-accent hover:bg-accent/90"
             >
-              organize a game
+              {t('home.organizeGame')}
             </Button>
           </div>
           <div className="flex items-center gap-4">
+            <LanguageSwitcher />
             <UserProfileMenu user={user} onUserChange={handleUserChange} />
           </div>
         </div>
@@ -66,16 +70,16 @@ export default function HomePage() {
           <div className="flex flex-col items-center justify-center py-24">
             <div className="text-center max-w-md">
               <div className="mb-6 text-6xl">🏐</div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-3">No games yet</h2>
+              <h2 className="text-3xl font-bold text-gray-900 mb-3">{t('home.noGamesYet')}</h2>
               <p className="text-gray-600 mb-8">
-                Be the one who starts it. Organize your first game and get people together.
+                {t('home.noGamesDescription')}
               </p>
               <Button
                 size="lg"
                 onClick={() => setIsModalOpen(true)}
                 className="bg-accent hover:bg-accent/90 w-full"
               >
-                organize a game
+                {t('home.organizeGame')}
               </Button>
             </div>
           </div>

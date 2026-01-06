@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -12,6 +13,7 @@ interface CreateGameModalProps {
 }
 
 export default function CreateGameModal({ isOpen, onClose }: CreateGameModalProps) {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [gameName, setGameName] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -21,7 +23,7 @@ export default function CreateGameModal({ isOpen, onClose }: CreateGameModalProp
     e.preventDefault()
     
     if (!gameName.trim()) {
-      setError('Game name is required')
+      setError(t('game.gameNameRequired'))
       return
     }
 
@@ -59,7 +61,7 @@ export default function CreateGameModal({ isOpen, onClose }: CreateGameModalProp
       // Navigate to game detail page
       navigate(`/games/${game.id}`)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong')
+      setError(err instanceof Error ? err.message : t('errors.somethingWentWrong'))
     } finally {
       setIsLoading(false)
     }
@@ -78,20 +80,20 @@ export default function CreateGameModal({ isOpen, onClose }: CreateGameModalProp
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[425px] rounded-2xl">
         <DialogHeader className="space-y-2">
-          <DialogTitle className="text-2xl">Organize a Game</DialogTitle>
+          <DialogTitle className="text-2xl">{t('game.organizingGame')}</DialogTitle>
           <DialogDescription className="text-base">
-            What are you playing?
+            {t('game.whatAreYouPlaying')}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
             <label htmlFor="game-name" className="text-sm font-semibold text-gray-700">
-              Game Name
+              {t('game.name')}
             </label>
             <Input
               id="game-name"
-              placeholder="e.g., Sunday Morning Volleyball"
+              placeholder={t('game.gameNamePlaceholder')}
               value={gameName}
               onChange={(e) => setGameName(e.target.value)}
               disabled={isLoading}
@@ -115,7 +117,7 @@ export default function CreateGameModal({ isOpen, onClose }: CreateGameModalProp
               disabled={isLoading}
               className="rounded-full"
             >
-              Cancel
+              {t('game.cancel')}
             </Button>
             <Button
               type="submit"
@@ -123,7 +125,7 @@ export default function CreateGameModal({ isOpen, onClose }: CreateGameModalProp
               className="bg-accent rounded-full"
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isLoading ? 'Creating...' : 'Create'}
+              {isLoading ? t('game.creating') : t('game.createGame')}
             </Button>
           </div>
         </form>

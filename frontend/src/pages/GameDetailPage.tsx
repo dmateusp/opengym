@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -35,6 +36,7 @@ import {
 } from "@/components/ui/popover";
 import { TimeDisplay } from "@/components/ui/TimeDisplay";
 import UserProfileMenu from "@/components/auth/UserProfileMenu";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { NumberLimitEditor } from "@/components/ui/NumberLimitEditor";
 import { ParticipantGrid } from "@/components/games/ParticipantGrid";
 import { GameStatusBadge } from "@/components/games/GameStatusBadge";
@@ -71,6 +73,7 @@ interface Participant {
 }
 
 export default function GameDetailPage() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
@@ -143,9 +146,9 @@ export default function GameDetailPage() {
             return;
           }
           if (response.status === 404) {
-            throw new Error("Game not found");
+            throw new Error(t('game.gameNotFound'));
           }
-          throw new Error("Failed to load game");
+          throw new Error(t('game.errorLoadingGame'));
         }
 
         const gameData = await response.json();
@@ -168,7 +171,7 @@ export default function GameDetailPage() {
           // ignore user fetch errors, treat as not logged in
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Something went wrong");
+        setError(err instanceof Error ? err.message : t('errors.somethingWentWrong'));
       } finally {
         setIsLoading(false);
       }
@@ -220,11 +223,11 @@ export default function GameDetailPage() {
       } else if (response.status === 401) {
         redirectToLogin();
       } else {
-        throw new Error("Failed to load participants");
+        throw new Error(t('game.failedToLoadParticipants'));
       }
     } catch (err) {
       setParticipantsError(
-        err instanceof Error ? err.message : "Failed to load participants"
+        err instanceof Error ? err.message : t('game.failedToLoadParticipants')
       );
     } finally {
       setIsLoadingParticipants(false);
@@ -265,11 +268,11 @@ export default function GameDetailPage() {
         redirectToLogin();
       } else {
         const txt = await response.text();
-        throw new Error(txt || "Failed to update participation");
+        throw new Error(txt || t('game.failedToUpdateParticipation'));
       }
     } catch (err) {
       setParticipantsError(
-        err instanceof Error ? err.message : "Failed to update participation"
+        err instanceof Error ? err.message : t('game.failedToUpdateParticipation')
       );
     } finally {
       setIsUpdatingParticipation(false);
@@ -318,33 +321,33 @@ export default function GameDetailPage() {
     if (!game) return [];
     return [
       {
-        label: "Location set",
+        label: t('game.locationSet'),
         met: !!game.location,
         field: "location",
       },
       {
-        label: "Start time set",
+        label: t('game.startTimeSet'),
         met: !!game.startsAt,
         field: "startsAt",
       },
       {
-        label: "Duration set",
+        label: t('game.durationSet'),
         met:
           typeof game.durationMinutes === "number" && game.durationMinutes > 0,
         field: "durationMinutes",
       },
       {
-        label: "Max players set",
+        label: t('game.maxPlayersSet'),
         met: typeof game.maxPlayers === "number" && game.maxPlayers > 0,
         field: "maxPlayers",
       },
       {
-        label: "Waitlist size set",
+        label: t('game.waitlistSizeSet'),
         met: typeof game.maxWaitlistSize === "number",
         field: "maxWaitlistSize",
       },
       {
-        label: "Pricing set",
+        label: t('game.pricingSet'),
         met:
           typeof game.totalPriceCents === "number" && game.totalPriceCents >= 0,
         field: "totalPriceCents",
@@ -425,7 +428,7 @@ export default function GameDetailPage() {
   ) {
     if (!isOrganizer || !id) return false;
     if (requireReady && !canPublish) {
-      setPublishError("Complete all required fields before publishing.");
+      setPublishError(t('game.completeFieldsBeforePublishing'));
       return false;
     }
 
@@ -446,7 +449,7 @@ export default function GameDetailPage() {
           return false;
         }
         const txt = await resp.text();
-        throw new Error(txt || "Failed to update publish time");
+        throw new Error(txt || t('game.failedToUpdatePublishTime'));
       }
 
       const updated = await resp.json();
@@ -455,7 +458,7 @@ export default function GameDetailPage() {
       return true;
     } catch (e) {
       setPublishError(
-        e instanceof Error ? e.message : "Failed to update publish time"
+        e instanceof Error ? e.message : t('game.failedToUpdatePublishTime')
       );
       return false;
     } finally {
@@ -470,12 +473,12 @@ export default function GameDetailPage() {
 
   async function handleSchedulePublish() {
     if (!publishAtInput) {
-      setPublishError("Select a date and time to schedule publishing.");
+      setPublishError(t('game.selectDateTimeToSchedule'));
       return;
     }
     const iso = fromLocalInputValue(publishAtInput);
     if (!iso) {
-      setPublishError("Invalid date and time. Please pick a valid value.");
+      setPublishError(t('game.invalidDateTime'));
       return;
     }
     const ok = await updatePublishTime(iso);
@@ -501,7 +504,7 @@ export default function GameDetailPage() {
           return;
         }
         const txt = await resp.text();
-        throw new Error(txt || "Failed to save");
+        throw new Error(txt || t('game.failedToSave'));
       }
       const updated = await resp.json();
       setGame(updated);
@@ -574,11 +577,11 @@ export default function GameDetailPage() {
             className="mb-8"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Games
+            {t('game.backToGames')}
           </Button>
 
           <div className="bg-red-50 border border-red-200 rounded-xl p-8 text-center">
-            <h1 className="text-2xl font-bold text-red-900 mb-2">Error</h1>
+            <h1 className="text-2xl font-bold text-red-900 mb-2">{t('common.error')}</h1>
             <p className="text-red-700">{error}</p>
           </div>
         </div>
@@ -596,11 +599,11 @@ export default function GameDetailPage() {
             className="mb-8"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Games
+            {t('game.backToGames')}
           </Button>
 
           <div className="text-center py-20">
-            <p className="text-gray-600">Game not found</p>
+            <p className="text-gray-600">{t('game.gameNotFound')}</p>
           </div>
         </div>
       </div>
@@ -618,9 +621,12 @@ export default function GameDetailPage() {
             className="text-gray-600 hover:text-gray-900"
           >
             <ArrowLeft className="mr-2 h-5 w-5" />
-            Back
+            {t('common.back')}
           </Button>
-          <UserProfileMenu user={user} onUserChange={handleUserChange} />
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher />
+            <UserProfileMenu user={user} onUserChange={handleUserChange} />
+          </div>
         </div>
 
         {/* Main Game Card */}
@@ -646,10 +652,10 @@ export default function GameDetailPage() {
                           className="text-sm rounded-xl"
                         >
                           <p className="font-semibold mb-1">
-                            You're organizing
+                            {t('game.youAreOrganizing')}
                           </p>
                           <p className="text-gray-600">
-                            You can edit everything on this page
+                            {t('game.youCanEditEverything')}
                           </p>
                         </PopoverContent>
                       </Popover>
@@ -671,7 +677,7 @@ export default function GameDetailPage() {
                       className="text-4xl font-bold text-gray-900 cursor-text transition"
                       onClick={() => startEditing("name", game?.name || "")}
                     >
-                      {game?.name || "Game"}
+                      {game?.name || t('common.game')}
                     </h1>
                   )}
                 </div>
@@ -692,17 +698,17 @@ export default function GameDetailPage() {
                     <button
                       onClick={handleCopyShareLink}
                       className="inline-flex items-center gap-2 text-sm font-semibold px-3 py-1.5 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition"
-                      title="Copy game link"
+                      title={t('common.copyGameLink')}
                     >
                       {shareUrlCopied ? (
                         <>
                           <Check className="h-4 w-4" />
-                          Copied!
+                          {t('common.copied')}
                         </>
                       ) : (
                         <>
                           <Copy className="h-4 w-4" />
-                          Share
+                          {t('common.share')}
                         </>
                       )}
                     </button>
@@ -711,9 +717,9 @@ export default function GameDetailPage() {
                 {isOrganizer && isPublished && (
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-900 mt-2">
                     <span className="font-semibold">
-                      This game is published.
+                      {t('game.thisGameIsPublished')}
                     </span>{" "}
-                    Anyone with the link can see the game and join it.
+                    {t('game.anyoneWithLink')}
                   </div>
                 )}
               </div>
@@ -741,7 +747,7 @@ export default function GameDetailPage() {
                       </div>
                       <div>
                         <p className="text-xs text-gray-500 font-medium">
-                          Organizer
+                          {t('game.organizer')}
                         </p>
                         <p className="text-sm font-semibold text-gray-900">
                           {organizer.name || organizer.email}
@@ -753,13 +759,13 @@ export default function GameDetailPage() {
                 <ParticipantCountDisplay
                   count={participantCounts.going}
                   maxCount={game?.maxPlayers}
-                  label="Going"
+                  label={t('common.going')}
                   color="primary"
                 />
                 <ParticipantCountDisplay
                   count={participantCounts.waitlisted}
                   maxCount={game?.maxWaitlistSize}
-                  label="Waitlist"
+                  label={t('common.waitlist')}
                   color="accent"
                   showDisabled={true}
                 />
@@ -768,7 +774,7 @@ export default function GameDetailPage() {
                     {participantCounts.notGoing}
                   </div>
                   <div className="text-xs text-gray-600 font-medium">
-                    Not Going
+                    {t('common.notGoing')}
                   </div>
                 </div>
               </div>
@@ -782,7 +788,7 @@ export default function GameDetailPage() {
               {/* Location */}
               <div>
                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
-                  Location
+                  {t('game.location')}
                 </label>
                 {editingField === "location" && isOrganizer ? (
                   <Input
@@ -806,7 +812,7 @@ export default function GameDetailPage() {
                     }`}
                   >
                     {game?.location ||
-                      (isOrganizer ? "Click to add location" : "—")}
+                      (isOrganizer ? t('game.clickToAddLocation') : "—")}
                   </div>
                 )}
               </div>
@@ -814,7 +820,7 @@ export default function GameDetailPage() {
               {/* Date & Time */}
               <div>
                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
-                  When
+                  {t('game.when')}
                 </label>
                 {editingField === "startsAt" && isOrganizer ? (
                   <Input
@@ -843,7 +849,7 @@ export default function GameDetailPage() {
                         className="text-gray-900"
                       />
                     ) : isOrganizer ? (
-                      "Click to set time"
+                      t('game.clickToSetTime')
                     ) : (
                       "—"
                     )}
@@ -854,7 +860,7 @@ export default function GameDetailPage() {
               {/* Duration */}
               <div>
                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
-                  Duration
+                  {t('game.duration')}
                 </label>
                 {editingField === "durationMinutes" && isOrganizer ? (
                   <Input
@@ -895,7 +901,7 @@ export default function GameDetailPage() {
               {/* Max Players */}
               <div>
                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
-                  Players
+                  {t('common.players')}
                 </label>
                 {editingField === "maxPlayers" && isOrganizer ? (
                   <NumberLimitEditor
@@ -909,10 +915,10 @@ export default function GameDetailPage() {
                     }}
                     onCancel={cancelEditing}
                     showDisabledOption={false}
-                    placeholder="Enter max players"
+                    placeholder={t('common.enterMaxPlayers')}
                     label={{
-                      limited: "Set maximum",
-                      unlimited: "No limit",
+                      limited: t('common.setMaximum'),
+                      unlimited: t('common.noLimit'),
                     }}
                   />
                 ) : (
@@ -926,10 +932,10 @@ export default function GameDetailPage() {
                   >
                     {game?.maxPlayers
                       ? game.maxPlayers === -1
-                        ? "No limit"
-                        : `Up to ${game.maxPlayers}`
+                        ? t('common.noLimit')
+                        : `${t('common.upTo')} ${game.maxPlayers}`
                       : isOrganizer
-                      ? "Click to set"
+                      ? t('common.clickToSet')
                       : "—"}
                   </div>
                 )}
@@ -938,7 +944,7 @@ export default function GameDetailPage() {
               {/* Waitlist Size */}
               <div>
                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
-                  Waitlist
+                  {t('common.waitlist')}
                 </label>
                 {editingField === "maxWaitlistSize" && isOrganizer ? (
                   <NumberLimitEditor
@@ -951,7 +957,7 @@ export default function GameDetailPage() {
                       }
                     }}
                     onCancel={cancelEditing}
-                    placeholder="Enter max waitlist size"
+                    placeholder={t('common.enterMaxWaitlistSize')}
                   />
                 ) : (
                   <div
@@ -969,12 +975,12 @@ export default function GameDetailPage() {
                   >
                     {typeof game?.maxWaitlistSize === "number"
                       ? game.maxWaitlistSize === -1
-                        ? "Unlimited"
+                        ? t('common.unlimited')
                         : game.maxWaitlistSize === 0
-                        ? "Disabled"
-                        : `Up to ${game.maxWaitlistSize}`
+                        ? t('common.disabled')
+                        : `${t('common.upTo')} ${game.maxWaitlistSize}`
                       : isOrganizer
-                      ? "Click to set"
+                      ? t('common.clickToSet')
                       : "—"}
                   </div>
                 )}
@@ -983,7 +989,7 @@ export default function GameDetailPage() {
               {/* Price */}
               <div>
                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
-                  Price
+                  {t('game.price')}
                 </label>
                 {editingField === "totalPriceCents" && isOrganizer ? (
                   <Input
@@ -996,7 +1002,7 @@ export default function GameDetailPage() {
                       if (e.key === "Enter") handleBlur("totalPriceCents");
                       if (e.key === "Escape") setEditingField(null);
                     }}
-                    placeholder="e.g., 15.50"
+                    placeholder={t('common.pricePlaceholder')}
                   />
                 ) : (
                   <div
@@ -1020,7 +1026,7 @@ export default function GameDetailPage() {
                         maxPlayers={game.maxPlayers}
                       />
                     ) : isOrganizer ? (
-                      "Click to set price"
+                      t('game.clickToAddPrice')
                     ) : (
                       "—"
                     )}
@@ -1035,10 +1041,10 @@ export default function GameDetailPage() {
             <div className="px-8 py-6 border-t border-gray-100">
               <div className="flex items-center justify-between mb-3">
                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block">
-                  About this game
+                  {t('game.description')}
                 </label>
                 <span className="text-xs text-gray-400">
-                  Markdown supported
+                  {t('common.markdownSupported')}
                 </span>
               </div>
               {editingField === "description" && isOrganizer ? (
@@ -1051,7 +1057,7 @@ export default function GameDetailPage() {
                   onBlur={() => handleBlur("description")}
                   className="w-full p-3 border-2 border-primary rounded-xl resize-none focus:outline-none"
                   rows={3}
-                  placeholder="Tell people about your game..."
+                  placeholder={t('common.tellPeopleAboutGame')}
                 />
               ) : (
                 <div
@@ -1065,9 +1071,9 @@ export default function GameDetailPage() {
                   {game?.description ? (
                     <MarkdownRenderer value={game.description} />
                   ) : isOrganizer ? (
-                    "Click to add description"
+                    t('game.clickToAddDescription')
                   ) : (
-                    "No description"
+                    t('common.noDescription')
                   )}
                 </div>
               )}
@@ -1079,7 +1085,7 @@ export default function GameDetailPage() {
             <div className="px-8 py-6 border-t border-gray-100">
               <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <Users className="h-5 w-5 text-primary" />
-                Who&apos;s coming ({participantCounts.going}/
+                {t('participants.whosComing')} ({participantCounts.going}/
                 {game?.maxPlayers || "?"})
               </h2>
 
@@ -1111,12 +1117,12 @@ export default function GameDetailPage() {
                       <p className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
                         <Clock className="h-4 w-4 text-gray-600" />
                         <span>
-                          Waitlist ({participantCounts.waitlisted}
+                          {t('participants.waitlistCount')} ({participantCounts.waitlisted}
                           {typeof game?.maxWaitlistSize === "number" &&
                           game.maxWaitlistSize > 0
                             ? `/${game.maxWaitlistSize}`
                             : game?.maxWaitlistSize === -1
-                            ? ", unlimited"
+                            ? `, ${t('common.unlimited').toLowerCase()}`
                             : ""}
                           )
                         </span>
@@ -1130,7 +1136,7 @@ export default function GameDetailPage() {
                         icon={Clock}
                         size="sm"
                         opacity={0.7}
-                        emptySlotLabel="Available"
+                        emptySlotLabel={t('common.available')}
                       />
                     </div>
                   )}
@@ -1138,7 +1144,7 @@ export default function GameDetailPage() {
                     <div className="mt-6 pt-6 border-t border-gray-200">
                       <p className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
                         <XCircle className="h-4 w-4 text-gray-600" />
-                        <span>Not going ({participantCounts.notGoing})</span>
+                        <span>{t('participants.notGoingCount')} ({participantCounts.notGoing})</span>
                       </p>
                       <ParticipantGrid
                         participants={participants
@@ -1155,9 +1161,9 @@ export default function GameDetailPage() {
               ) : (
                 <div className="bg-yellow-50 border-2 border-dashed border-secondary rounded-xl p-8 text-center">
                   <Users className="h-12 w-12 mx-auto mb-3 text-secondary/40" />
-                  <p className="text-gray-600 font-medium mb-2">Almost there</p>
+                  <p className="text-gray-600 font-medium mb-2">{t('participants.almostThere')}</p>
                   <p className="text-sm text-gray-500">
-                    Be the first to sign up and get people excited!
+                    {t('participants.beFirstToSignUp')}
                   </p>
                 </div>
               )}
@@ -1172,16 +1178,15 @@ export default function GameDetailPage() {
                 <div className="bg-white p-4 rounded-xl border-2 border-primary/20">
                   <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
                     <Rocket className="h-5 w-5 text-primary" />
-                    Ready to share this game?
+                    {t('publish.readyToShare')}
                   </h3>
 
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-blue-900">
-                    <p className="font-semibold mb-1">📍 Visibility</p>
+                    <p className="font-semibold mb-1">📍 {t('publish.visibility')}</p>
                     <p>
-                      This game is currently{" "}
-                      <span className="font-semibold">only visible to you</span>
-                      . Once published, anyone with the link will be able to see
-                      and join it.
+                      {t('publish.gameCurrentlyPrivate')}{" "}
+                      <span className="font-semibold">{t('publish.onlyVisibleToYou')}</span>
+                      {t('publish.oncePublishedAnyone')}
                     </p>
                   </div>
 
@@ -1216,12 +1221,12 @@ export default function GameDetailPage() {
                       {isPublishing ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Publishing...
+                          {t('publish.publishing')}
                         </>
                       ) : (
                         <>
                           <Rocket className="mr-2 h-4 w-4" />
-                          Publish now
+                          {t('publish.publishNow')}
                         </>
                       )}
                     </Button>
@@ -1230,7 +1235,7 @@ export default function GameDetailPage() {
                         variant="outline"
                         onClick={() => setIsEditingSchedule(!isEditingSchedule)}
                       >
-                        {isScheduled ? "Re-schedule" : "Schedule"}
+                        {isScheduled ? t('publish.reschedule') : t('publish.schedule')}
                       </Button>
                     )}
                   </div>
@@ -1241,7 +1246,7 @@ export default function GameDetailPage() {
                         type="datetime-local"
                         value={publishAtInput}
                         onChange={(e) => setPublishAtInput(e.target.value)}
-                        placeholder="Pick a time to publish"
+                        placeholder={t('common.pickTimeToPublish')}
                       />
                       <Button
                         onClick={handleSchedulePublish}
@@ -1249,7 +1254,7 @@ export default function GameDetailPage() {
                         size="sm"
                         className="w-full"
                       >
-                        {isScheduled ? "Update schedule" : "Schedule publish"}
+                        {isScheduled ? t('publish.updateSchedule') : t('publish.schedulePublish')}
                       </Button>
                     </div>
                   )}
@@ -1271,7 +1276,7 @@ export default function GameDetailPage() {
                       disabled={isUpdatingParticipation}
                       className="w-full bg-accent/10 border-accent text-accent hover:bg-accent/20"
                     >
-                      {isUpdatingParticipation ? "Updating..." : "You're going"}
+                      {isUpdatingParticipation ? t('participants.updating') : t('participants.youreGoing')}
                     </Button>
                     <Dialog
                       open={showUngoingConfirmation}
@@ -1279,11 +1284,9 @@ export default function GameDetailPage() {
                     >
                       <DialogContent>
                         <DialogHeader>
-                          <DialogTitle>Change your vote?</DialogTitle>
+                          <DialogTitle>{t('participants.changeYourVote')}</DialogTitle>
                           <DialogDescription>
-                            If you change to "not going", you'll be removed from
-                            the participant list and move to the bottom of the
-                            waitlist if there's space. Are you sure?
+                            {t('participants.changeToNotGoing')}
                           </DialogDescription>
                         </DialogHeader>
                         <DialogFooter>
@@ -1291,7 +1294,7 @@ export default function GameDetailPage() {
                             variant="outline"
                             onClick={() => setShowUngoingConfirmation(false)}
                           >
-                            Keep me down as going
+                            {t('participants.keepMeGoing')}
                           </Button>
                           <Button
                             variant="destructive"
@@ -1302,8 +1305,8 @@ export default function GameDetailPage() {
                             disabled={isUpdatingParticipation}
                           >
                             {isUpdatingParticipation
-                              ? "Updating..."
-                              : "Yes, change my vote"}
+                              ? t('participants.updating')
+                              : t('participants.yesChangeVote')}
                           </Button>
                         </DialogFooter>
                       </DialogContent>
@@ -1317,12 +1320,12 @@ export default function GameDetailPage() {
                       className="w-full bg-accent"
                     >
                       {isUpdatingParticipation
-                        ? "Signing up..."
-                        : "Count me in!"}
+                        ? t('participants.signingUp')
+                        : t('participants.countMeIn')}
                     </Button>
                     {isGameFull && (
                       <p className="text-xs text-gray-500 text-center mt-2">
-                        Game is full
+                        {t('participants.gameIsFull')}
                       </p>
                     )}
                   </>

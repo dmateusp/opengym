@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { formatDistanceToNow, format } from 'date-fns'
+import { enUS, pt } from 'date-fns/locale'
+import { useTranslation } from 'react-i18next'
 import { Popover, PopoverContent, PopoverAnchor } from '@/components/ui/popover'
 
 interface TimeDisplayProps {
@@ -19,15 +21,22 @@ export function TimeDisplay({
   prefix,
   className = ''
 }: TimeDisplayProps) {
+  const { i18n, t } = useTranslation()
   const [isHovered, setIsHovered] = useState(false)
   const date = new Date(timestamp)
-  const fullTimestamp = date.toLocaleString()
+  
+  // Map i18next language codes to date-fns locales
+  const dateFnsLocale = i18n.language === 'pt-PT' ? pt : enUS
+  const localeCode = i18n.language === 'pt-PT' ? 'pt-PT' : 'en-US'
+  
+  const fullTimestamp = date.toLocaleString(localeCode)
   
   let displayText = ''
   if (displayFormat === 'relative') {
-    displayText = formatDistanceToNow(date, { addSuffix: true })
+    displayText = formatDistanceToNow(date, { addSuffix: true, locale: dateFnsLocale })
   } else if (displayFormat === 'friendly') {
-    displayText = format(date, "EEEE, do 'of' MMMM 'at' h:mma")
+    const formatString = t('common.dateFormatFriendly')
+    displayText = format(date, formatString, { locale: dateFnsLocale })
   }
 
   return (

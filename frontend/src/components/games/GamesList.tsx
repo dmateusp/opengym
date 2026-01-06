@@ -7,6 +7,8 @@ import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
 import { TimeDisplay } from '@/components/ui/TimeDisplay'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { GameStatusBadge } from '@/components/games/GameStatusBadge'
+import { useTranslation } from 'react-i18next'
+
 
 interface User {
   id: string
@@ -48,6 +50,7 @@ export default function GamesList() {
   const hasMore = useMemo(() => items.length < total, [items.length, total])
   const [hoveredCrowId, setHoveredCrowId] = useState<string | null>(null)
   const [nowTs, setNowTs] = useState<number>(() => Date.now())
+  const { t } = useTranslation()
 
   async function fetchPage(p: number) {
     try {
@@ -165,7 +168,7 @@ export default function GamesList() {
 
                     {/* Organizer */}
                     <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
-                      <span className="text-gray-400">by</span>
+                      <span className="text-gray-400">{t("common.by")}</span>
                       <Avatar className="h-5 w-5">
                         <AvatarImage src={it.organizer.picture} alt={it.organizer.name || 'Organizer'} />
                         <AvatarFallback className="text-xs">
@@ -211,7 +214,7 @@ export default function GamesList() {
                 <div className="flex items-center justify-between text-xs text-gray-500">
                   {status.state === 'scheduled' && status.timestamp && (
                     <div>
-                      Scheduled for <TimeDisplay 
+                     {t("game.scheduledFor")} <TimeDisplay
                         timestamp={status.timestamp}
                         displayFormat="relative"
                         className="text-gray-500"
@@ -219,7 +222,7 @@ export default function GamesList() {
                     </div>
                   )}
                   <div className="ml-auto">
-                    Updated <TimeDisplay 
+                    {t("game.updatedAt")} <TimeDisplay
                       timestamp={it.updatedAt} 
                       displayFormat="relative"
                       className="text-gray-500"
