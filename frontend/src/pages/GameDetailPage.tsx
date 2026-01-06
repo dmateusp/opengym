@@ -711,9 +711,9 @@ export default function GameDetailPage() {
                 {isOrganizer && isPublished && (
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-900 mt-2">
                     <span className="font-semibold">
-                      This game is published
+                      This game is published.
                     </span>{" "}
-                    — Anyone with the link can see and join it.
+                    Anyone with the link can see the game and join it.
                   </div>
                 )}
               </div>

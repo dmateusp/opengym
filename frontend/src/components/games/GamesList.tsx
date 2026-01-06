@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { API_BASE_URL, redirectToLogin } from '@/lib/api'
 import { Card } from '@/components/ui/card'
-import { Loader2, CheckCircle2, CircleDashed, Crown, Clock, MapPin } from 'lucide-react'
+import { Loader2, Crown, Clock, MapPin } from 'lucide-react'
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
 import { TimeDisplay } from '@/components/ui/TimeDisplay'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
@@ -182,6 +182,7 @@ export default function GamesList() {
                     state={
                       status.state
                     }
+                    publishedAt={it.publishedAt ? new Date(it.publishedAt) : undefined}
                   />
                   </div>
                 </div>
