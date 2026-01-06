@@ -6,6 +6,7 @@ import { Loader2, CheckCircle2, CircleDashed, Crown, Clock, MapPin } from 'lucid
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
 import { TimeDisplay } from '@/components/ui/TimeDisplay'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { GameStatusBadge } from '@/components/games/GameStatusBadge'
 
 interface User {
   id: string
@@ -161,7 +162,7 @@ export default function GamesList() {
                       )}
                       <h3 className="text-2xl font-bold text-gray-900">{it.name}</h3>
                     </div>
-                    
+
                     {/* Organizer */}
                     <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
                       <span className="text-gray-400">by</span>
@@ -177,22 +178,11 @@ export default function GamesList() {
 
                   {/* Status Badge */}
                   <div className="flex-shrink-0">
-                    {status.state === 'published' ? (
-                      <span className="inline-flex items-center gap-2 text-sm font-semibold px-3 py-1.5 rounded-full bg-success/10 text-success">
-                        <CheckCircle2 className="h-4 w-4" />
-                        Published
-                      </span>
-                    ) : status.state === 'scheduled' ? (
-                      <span className="inline-flex items-center gap-2 text-sm font-semibold px-3 py-1.5 rounded-full bg-amber-50 text-amber-700">
-                        <Clock className="h-4 w-4" />
-                        Scheduled
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-2 text-sm font-semibold px-3 py-1.5 rounded-full bg-gray-100 text-gray-600">
-                        <CircleDashed className="h-4 w-4" />
-                        Draft
-                      </span>
-                    )}
+                  <GameStatusBadge
+                    state={
+                      status.state
+                    }
+                  />
                   </div>
                 </div>
 

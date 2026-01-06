@@ -1,489 +1,559 @@
-import { useParams, useNavigate } from 'react-router-dom'
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { API_BASE_URL, redirectToLogin } from '@/lib/api'
-import { fetchWithDemoRecovery } from '@/lib/fetchWithDemoRecovery'
-import { ArrowLeft, Loader2, CheckCircle2, Clock, Users, Crown, XCircle, Rocket, Circle as CircleDashed } from 'lucide-react'
-import { Input } from '@/components/ui/input'
-import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer'
-import { PriceDisplay } from '@/components/games/PriceDisplay'
-import { ParticipantCountDisplay } from '@/components/games/ParticipantCountDisplay'
-import { Popover, PopoverContent, PopoverAnchor } from '@/components/ui/popover'
-import { TimeDisplay } from '@/components/ui/TimeDisplay'
-import UserProfileMenu from '@/components/auth/UserProfileMenu'
-import { NumberLimitEditor } from '@/components/ui/NumberLimitEditor'
-import { ParticipantGrid } from '@/components/games/ParticipantGrid'
+import { useParams, useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { API_BASE_URL, redirectToLogin } from "@/lib/api";
+import { fetchWithDemoRecovery } from "@/lib/fetchWithDemoRecovery";
+import {
+  ArrowLeft,
+  Loader2,
+  CheckCircle2,
+  Clock,
+  Users,
+  Crown,
+  XCircle,
+  Rocket,
+  Copy,
+  Check,
+} from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
+import { PriceDisplay } from "@/components/games/PriceDisplay";
+import { ParticipantCountDisplay } from "@/components/games/ParticipantCountDisplay";
+import {
+  Popover,
+  PopoverContent,
+  PopoverAnchor,
+} from "@/components/ui/popover";
+import { TimeDisplay } from "@/components/ui/TimeDisplay";
+import UserProfileMenu from "@/components/auth/UserProfileMenu";
+import { NumberLimitEditor } from "@/components/ui/NumberLimitEditor";
+import { ParticipantGrid } from "@/components/games/ParticipantGrid";
+import { GameStatusBadge } from "@/components/games/GameStatusBadge";
 
 interface Game {
-  id: string
-  name: string
-  organizerId: number
-  description?: string
-  location?: string
-  startsAt?: string
-  durationMinutes?: number
-  maxPlayers?: number
-  maxWaitlistSize?: number
-  totalPriceCents?: number
-  createdAt: string
-  updatedAt: string
-  publishedAt?: string | null
+  id: string;
+  name: string;
+  organizerId: number;
+  description?: string;
+  location?: string;
+  startsAt?: string;
+  durationMinutes?: number;
+  maxPlayers?: number;
+  maxWaitlistSize?: number;
+  totalPriceCents?: number;
+  createdAt: string;
+  updatedAt: string;
+  publishedAt?: string | null;
 }
 
 interface AuthUser {
-  id: string
-  email: string
-  name?: string
-  picture?: string
-  isDemo: boolean
+  id: string;
+  email: string;
+  name?: string;
+  picture?: string;
+  isDemo: boolean;
 }
 
 interface Participant {
-  status: 'going' | 'not_going' | 'waitlisted'
-  user: AuthUser
-  createdAt: string
-  updatedAt: string
+  status: "going" | "not_going" | "waitlisted";
+  user: AuthUser;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export default function GameDetailPage() {
-  const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
-  
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+
   // Helper function to get initials from name
   const getInitials = (name?: string, email?: string) => {
     if (name) {
-      const parts = name.split(' ').filter(p => p.length > 0)
+      const parts = name.split(" ").filter((p) => p.length > 0);
       if (parts.length > 0) {
-        return parts.slice(0, 3).map(p => p[0].toUpperCase()).join('')
+        return parts
+          .slice(0, 3)
+          .map((p) => p[0].toUpperCase())
+          .join("");
       }
-      return name.slice(0, 2).toUpperCase()
+      return name.slice(0, 2).toUpperCase();
     }
     if (email) {
-      return email.slice(0, 2).toUpperCase()
+      return email.slice(0, 2).toUpperCase();
     }
-    return '??'
-  }
+    return "??";
+  };
 
-  const [game, setGame] = useState<Game | null>(null)
-  const [organizer, setOrganizer] = useState<AuthUser | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [user, setUser] = useState<AuthUser | null>(null)
-  const [organizerHintOpen, setOrganizerHintOpen] = useState(false)
-  const [isPublishing, setIsPublishing] = useState(false)
-  const [publishError, setPublishError] = useState<string | null>(null)
-  const [publishAtInput, setPublishAtInput] = useState('')
-  const [nowTs, setNowTs] = useState(() => Date.now())
-  const [isEditingSchedule, setIsEditingSchedule] = useState(false)
+  const [game, setGame] = useState<Game | null>(null);
+  const [organizer, setOrganizer] = useState<AuthUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [organizerHintOpen, setOrganizerHintOpen] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishError, setPublishError] = useState<string | null>(null);
+  const [publishAtInput, setPublishAtInput] = useState("");
+  const [nowTs, setNowTs] = useState(() => Date.now());
+  const [isEditingSchedule, setIsEditingSchedule] = useState(false);
 
   // Participants state
-  const [participants, setParticipants] = useState<Participant[]>([])
-  const [isLoadingParticipants, setIsLoadingParticipants] = useState(false)
-  const [participantsError, setParticipantsError] = useState<string | null>(null)
-  const [isUpdatingParticipation, setIsUpdatingParticipation] = useState(false)
-  const [showUngoingConfirmation, setShowUngoingConfirmation] = useState(false)
+  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [isLoadingParticipants, setIsLoadingParticipants] = useState(false);
+  const [participantsError, setParticipantsError] = useState<string | null>(
+    null
+  );
+  const [isUpdatingParticipation, setIsUpdatingParticipation] = useState(false);
+  const [showUngoingConfirmation, setShowUngoingConfirmation] = useState(false);
+
+  // Share state
+  const [shareUrlCopied, setShareUrlCopied] = useState(false);
 
   // Editing state
-  const [editingField, setEditingField] = useState<string | null>(null)
-  const [editValue, setEditValue] = useState<string>('')
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState<string>("");
 
   // Autosave status per field
-  const saveTimersRef = useRef<Record<string, number | undefined>>({})
-  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null)
+  const saveTimersRef = useRef<Record<string, number | undefined>>({});
+  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
 
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        setIsLoading(true)
-        setError(null)
+        setIsLoading(true);
+        setError(null);
 
-        const response = await fetchWithDemoRecovery(`${API_BASE_URL}/api/games/${id}`, {
-          credentials: 'include',
-        })
+        const response = await fetchWithDemoRecovery(
+          `${API_BASE_URL}/api/games/${id}`,
+          {
+            credentials: "include",
+          }
+        );
 
         if (!response.ok) {
           if (response.status === 401) {
-            redirectToLogin()
-            return
+            redirectToLogin();
+            return;
           }
           if (response.status === 404) {
-            throw new Error('Game not found')
+            throw new Error("Game not found");
           }
-          throw new Error('Failed to load game')
+          throw new Error("Failed to load game");
         }
 
-        const gameData = await response.json()
-        setGame(gameData.game)
-        setOrganizer(gameData.organizer)
+        const gameData = await response.json();
+        setGame(gameData.game);
+        setOrganizer(gameData.organizer);
 
         // Fetch authenticated user (optional if unauthenticated)
         try {
-          const meResp = await fetchWithDemoRecovery(`${API_BASE_URL}/api/auth/me`, {
-            credentials: 'include',
-          })
+          const meResp = await fetchWithDemoRecovery(
+            `${API_BASE_URL}/api/auth/me`,
+            {
+              credentials: "include",
+            }
+          );
           if (meResp.ok) {
-            const me = await meResp.json()
-            setUser(me)
+            const me = await meResp.json();
+            setUser(me);
           }
         } catch {
           // ignore user fetch errors, treat as not logged in
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Something went wrong')
+        setError(err instanceof Error ? err.message : "Something went wrong");
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
+    };
 
     if (id) {
-      fetchAll()
+      fetchAll();
     }
-  }, [id])
+  }, [id]);
 
   useEffect(() => {
-    const timer = window.setInterval(() => setNowTs(Date.now()), 30000)
-    return () => window.clearInterval(timer)
-  }, [])
+    const timer = window.setInterval(() => setNowTs(Date.now()), 30000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const refreshGame = async () => {
-    if (!id) return
+    if (!id) return;
     try {
-      const response = await fetchWithDemoRecovery(`${API_BASE_URL}/api/games/${id}`, {
-        credentials: 'include',
-      })
+      const response = await fetchWithDemoRecovery(
+        `${API_BASE_URL}/api/games/${id}`,
+        {
+          credentials: "include",
+        }
+      );
       if (response.ok) {
-        const gameData = await response.json()
-        setGame(gameData.game)
-        setOrganizer(gameData.organizer)
+        const gameData = await response.json();
+        setGame(gameData.game);
+        setOrganizer(gameData.organizer);
       }
     } catch (err) {
-      console.error('Error refreshing game:', err)
+      console.error("Error refreshing game:", err);
     }
-  }
+  };
 
   const fetchParticipants = async () => {
-    if (!id || !game?.publishedAt) return
+    if (!id || !game?.publishedAt) return;
     try {
-      setIsLoadingParticipants(true)
-      setParticipantsError(null)
-      const response = await fetchWithDemoRecovery(`${API_BASE_URL}/api/games/${id}/participants`, {
-        credentials: 'include',
-      })
+      setIsLoadingParticipants(true);
+      setParticipantsError(null);
+      const response = await fetchWithDemoRecovery(
+        `${API_BASE_URL}/api/games/${id}/participants`,
+        {
+          credentials: "include",
+        }
+      );
       if (response.ok) {
-        const data = await response.json()
-        setParticipants(data)
+        const data = await response.json();
+        setParticipants(data);
       } else if (response.status === 401) {
-        redirectToLogin()
+        redirectToLogin();
       } else {
-        throw new Error('Failed to load participants')
+        throw new Error("Failed to load participants");
       }
     } catch (err) {
-      setParticipantsError(err instanceof Error ? err.message : 'Failed to load participants')
+      setParticipantsError(
+        err instanceof Error ? err.message : "Failed to load participants"
+      );
     } finally {
-      setIsLoadingParticipants(false)
+      setIsLoadingParticipants(false);
     }
-  }
+  };
 
   useEffect(() => {
     if (game?.publishedAt) {
-      fetchParticipants()
+      fetchParticipants();
     }
-  }, [game?.publishedAt, id])
+  }, [game?.publishedAt, id]);
 
   const handleUserChange = (newUser: any) => {
-    setUser(newUser)
+    setUser(newUser);
     // Refetch game when user changes
-    refreshGame()
+    refreshGame();
     if (game?.publishedAt) {
-      fetchParticipants()
+      fetchParticipants();
     }
-  }
+  };
 
-  const updateParticipation = async (status: 'going' | 'not_going') => {
-    if (!id || !user) return
+  const updateParticipation = async (status: "going" | "not_going") => {
+    if (!id || !user) return;
     try {
-      setIsUpdatingParticipation(true)
-      const response = await fetchWithDemoRecovery(`${API_BASE_URL}/api/games/${id}/participants`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ status }),
-      })
+      setIsUpdatingParticipation(true);
+      const response = await fetchWithDemoRecovery(
+        `${API_BASE_URL}/api/games/${id}/participants`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ status }),
+        }
+      );
       if (response.ok) {
-        await fetchParticipants()
+        await fetchParticipants();
       } else if (response.status === 401) {
-        redirectToLogin()
+        redirectToLogin();
       } else {
-        const txt = await response.text()
-        throw new Error(txt || 'Failed to update participation')
+        const txt = await response.text();
+        throw new Error(txt || "Failed to update participation");
       }
     } catch (err) {
-      setParticipantsError(err instanceof Error ? err.message : 'Failed to update participation')
+      setParticipantsError(
+        err instanceof Error ? err.message : "Failed to update participation"
+      );
     } finally {
-      setIsUpdatingParticipation(false)
+      setIsUpdatingParticipation(false);
     }
-  }
+  };
 
   const isOrganizer = useMemo(() => {
-    if (!game || !user) return false
-    const userIdNum = Number.parseInt(user.id, 10)
-    if (Number.isNaN(userIdNum)) return false
-    return userIdNum === game.organizerId
-  }, [game, user])
+    if (!game || !user) return false;
+    const userIdNum = Number.parseInt(user.id, 10);
+    if (Number.isNaN(userIdNum)) return false;
+    return userIdNum === game.organizerId;
+  }, [game, user]);
 
   const currentUserParticipation = useMemo(() => {
-    if (!user) return null
-    return participants.find(p => p.user.id === user.id)
-  }, [participants, user])
+    if (!user) return null;
+    return participants.find((p) => p.user.id === user.id);
+  }, [participants, user]);
 
   const participantCounts = useMemo(() => {
-    const going = participants.filter(p => p.status === 'going').length
-    const waitlisted = participants.filter(p => p.status === 'waitlisted').length
-    const notGoing = participants.filter(p => p.status === 'not_going').length
-    return { going, waitlisted, notGoing }
-  }, [participants])
+    const going = participants.filter((p) => p.status === "going").length;
+    const waitlisted = participants.filter(
+      (p) => p.status === "waitlisted"
+    ).length;
+    const notGoing = participants.filter(
+      (p) => p.status === "not_going"
+    ).length;
+    return { going, waitlisted, notGoing };
+  }, [participants]);
 
   const isGameFull = useMemo(() => {
-    if (!game?.maxPlayers || game.maxPlayers === -1) return false
+    if (!game?.maxPlayers || game.maxPlayers === -1) return false;
     if (participantCounts.going >= game.maxPlayers) {
       // Game is full, check if waitlist is available
-      if (game.maxWaitlistSize === 0) return true // Waitlist disabled
-      if (game.maxWaitlistSize === -1) return false // Unlimited waitlist
-      if (participantCounts.waitlisted >= game.maxWaitlistSize) return true // Waitlist full
+      if (game.maxWaitlistSize === 0) return true; // Waitlist disabled
+      if (game.maxWaitlistSize === -1) return false; // Unlimited waitlist
+      if (participantCounts.waitlisted >= (game.maxWaitlistSize || 0))
+        return true; // Waitlist full
     }
-    return false
-  }, [game, participantCounts])
+    return false;
+  }, [game, participantCounts]);
 
   const joinButtonDisabled = useMemo(() => {
-    return isUpdatingParticipation || isGameFull
-  }, [isUpdatingParticipation, isGameFull])
+    return isUpdatingParticipation || isGameFull;
+  }, [isUpdatingParticipation, isGameFull]);
   const publishRequirements = useMemo(() => {
-    if (!game) return []
+    if (!game) return [];
     return [
       {
-        label: 'Location set',
+        label: "Location set",
         met: !!game.location,
-        field: 'location'
+        field: "location",
       },
       {
-        label: 'Start time set',
+        label: "Start time set",
         met: !!game.startsAt,
-        field: 'startsAt'
+        field: "startsAt",
       },
       {
-        label: 'Duration set',
-        met: typeof game.durationMinutes === 'number' && game.durationMinutes > 0,
-        field: 'durationMinutes'
+        label: "Duration set",
+        met:
+          typeof game.durationMinutes === "number" && game.durationMinutes > 0,
+        field: "durationMinutes",
       },
       {
-        label: 'Max players set',
-        met: typeof game.maxPlayers === 'number' && game.maxPlayers > 0,
-        field: 'maxPlayers'
+        label: "Max players set",
+        met: typeof game.maxPlayers === "number" && game.maxPlayers > 0,
+        field: "maxPlayers",
       },
       {
-        label: 'Waitlist size set',
-        met: typeof game.maxWaitlistSize === 'number',
-        field: 'maxWaitlistSize'
+        label: "Waitlist size set",
+        met: typeof game.maxWaitlistSize === "number",
+        field: "maxWaitlistSize",
       },
       {
-        label: 'Pricing set',
-        met: typeof game.totalPriceCents === 'number' && game.totalPriceCents >= 0,
-        field: 'totalPriceCents'
-      }
-    ]
-  }, [game])
+        label: "Pricing set",
+        met:
+          typeof game.totalPriceCents === "number" && game.totalPriceCents >= 0,
+        field: "totalPriceCents",
+      },
+    ];
+  }, [game]);
 
   const canPublish = useMemo(() => {
-    return publishRequirements.every(req => req.met)
-  }, [publishRequirements])
+    return publishRequirements.every((req) => req.met);
+  }, [publishRequirements]);
 
   const publishedAtDate = useMemo(() => {
-    if (!game?.publishedAt) return null
-    const d = new Date(game.publishedAt)
-    if (Number.isNaN(d.getTime())) return null
-    return d
-  }, [game?.publishedAt])
+    if (!game?.publishedAt) return null;
+    const d = new Date(game.publishedAt);
+    if (Number.isNaN(d.getTime())) return null;
+    return d;
+  }, [game?.publishedAt]);
 
   const isScheduled = useMemo(() => {
-    if (!publishedAtDate) return false
-    return publishedAtDate.getTime() > nowTs
-  }, [publishedAtDate, nowTs])
+    if (!publishedAtDate) return false;
+    return publishedAtDate.getTime() > nowTs;
+  }, [publishedAtDate, nowTs]);
 
   const isPublished = useMemo(() => {
-    if (!publishedAtDate) return false
-    return publishedAtDate.getTime() <= nowTs
-  }, [publishedAtDate, nowTs])
+    if (!publishedAtDate) return false;
+    return publishedAtDate.getTime() <= nowTs;
+  }, [publishedAtDate, nowTs]);
 
   useEffect(() => {
     if (game?.publishedAt) {
-      setPublishAtInput(toLocalInputValue(game.publishedAt))
-      setIsEditingSchedule(false)
+      setPublishAtInput(toLocalInputValue(game.publishedAt));
+      setIsEditingSchedule(false);
     } else {
-      setPublishAtInput('')
+      setPublishAtInput("");
     }
-  }, [game?.publishedAt])
+  }, [game?.publishedAt]);
 
   // Focus input when editing starts
   useEffect(() => {
     if (editingField && inputRef.current) {
-      inputRef.current.focus()
+      inputRef.current.focus();
     }
-  }, [editingField])
+  }, [editingField]);
 
   function startEditing(field: string, currentValue: unknown) {
-    if (!isOrganizer) return
-    setEditingField(field)
-    if (field === 'totalPriceCents' && typeof currentValue === 'number') {
-      setEditValue(formatCentsAsDollars(currentValue))
-    } else if (typeof currentValue === 'number') {
-      setEditValue(String(currentValue))
-    } else if (typeof currentValue === 'string') {
-      setEditValue(currentValue)
+    if (!isOrganizer) return;
+    setEditingField(field);
+    if (field === "totalPriceCents" && typeof currentValue === "number") {
+      setEditValue(formatCentsAsDollars(currentValue));
+    } else if (typeof currentValue === "number") {
+      setEditValue(String(currentValue));
+    } else if (typeof currentValue === "string") {
+      setEditValue(currentValue);
     } else {
-      setEditValue('')
+      setEditValue("");
     }
   }
 
   function cancelEditing() {
-    setEditingField(null)
-    setEditValue('')
-    cancelAllDebounces()
+    setEditingField(null);
+    setEditValue("");
+    cancelAllDebounces();
   }
 
   function cancelAllDebounces() {
-    Object.keys(saveTimersRef.current).forEach(field => {
-      const timerId = saveTimersRef.current[field]
+    Object.keys(saveTimersRef.current).forEach((field) => {
+      const timerId = saveTimersRef.current[field];
       if (timerId !== undefined) {
-        clearTimeout(timerId)
-        saveTimersRef.current[field] = undefined
+        clearTimeout(timerId);
+        saveTimersRef.current[field] = undefined;
       }
-    })
+    });
   }
 
-  async function updatePublishTime(publishedAtValue: string | null, requireReady = true) {
-    if (!isOrganizer || !id) return false
+  async function updatePublishTime(
+    publishedAtValue: string | null,
+    requireReady = true
+  ) {
+    if (!isOrganizer || !id) return false;
     if (requireReady && !canPublish) {
-      setPublishError('Complete all required fields before publishing.')
-      return false
+      setPublishError("Complete all required fields before publishing.");
+      return false;
     }
 
-    setIsPublishing(true)
-    setPublishError(null)
+    setIsPublishing(true);
+    setPublishError(null);
 
     try {
       const resp = await fetch(`${API_BASE_URL}/api/games/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ publishedAt: publishedAtValue }),
-      })
+      });
 
       if (!resp.ok) {
         if (resp.status === 401) {
-          redirectToLogin()
-          return false
+          redirectToLogin();
+          return false;
         }
-        const txt = await resp.text()
-        throw new Error(txt || 'Failed to update publish time')
+        const txt = await resp.text();
+        throw new Error(txt || "Failed to update publish time");
       }
 
-      const updated = await resp.json()
-      setGame(updated.game)
-      setOrganizer(updated.organizer)
-      return true
+      const updated = await resp.json();
+      setGame(updated.game);
+      setOrganizer(updated.organizer);
+      return true;
     } catch (e) {
-      setPublishError(e instanceof Error ? e.message : 'Failed to update publish time')
-      return false
+      setPublishError(
+        e instanceof Error ? e.message : "Failed to update publish time"
+      );
+      return false;
     } finally {
-      setIsPublishing(false)
+      setIsPublishing(false);
     }
   }
 
   async function handlePublishNow() {
-    const ok = await updatePublishTime(new Date().toISOString())
-    if (ok) setIsEditingSchedule(false)
+    const ok = await updatePublishTime(new Date().toISOString());
+    if (ok) setIsEditingSchedule(false);
   }
 
   async function handleSchedulePublish() {
     if (!publishAtInput) {
-      setPublishError('Select a date and time to schedule publishing.')
-      return
+      setPublishError("Select a date and time to schedule publishing.");
+      return;
     }
-    const iso = fromLocalInputValue(publishAtInput)
+    const iso = fromLocalInputValue(publishAtInput);
     if (!iso) {
-      setPublishError('Invalid date and time. Please pick a valid value.')
-      return
+      setPublishError("Invalid date and time. Please pick a valid value.");
+      return;
     }
-    const ok = await updatePublishTime(iso)
-    if (ok) setIsEditingSchedule(false)
+    const ok = await updatePublishTime(iso);
+    if (ok) setIsEditingSchedule(false);
   }
 
   async function saveField(field: string, value: unknown) {
-    if (!isOrganizer || !id) return
+    if (!isOrganizer || !id) return;
     // Skip sending empty strings to avoid accidental clearing until supported
-    if (typeof value === 'string' && value.trim() === '') return
-    if (value === undefined) return
+    if (typeof value === "string" && value.trim() === "") return;
+    if (value === undefined) return;
 
     try {
       const resp = await fetch(`${API_BASE_URL}/api/games/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ [field]: value }),
-      })
+      });
       if (!resp.ok) {
         if (resp.status === 401) {
-          redirectToLogin()
-          return
+          redirectToLogin();
+          return;
         }
-        const txt = await resp.text()
-        throw new Error(txt || 'Failed to save')
+        const txt = await resp.text();
+        throw new Error(txt || "Failed to save");
       }
-      const updated = await resp.json()
-      setGame(updated)
-      setEditingField(null)
+      const updated = await resp.json();
+      setGame(updated);
+      setEditingField(null);
     } catch (e) {
-      console.error('Failed to save field:', field, e)
+      console.error("Failed to save field:", field, e);
     }
   }
 
   function handleBlur(field: string) {
-    if (editingField !== field) return
-    cancelDebouncedSave(field)
-    
-    let valueToSave: unknown = editValue
-    if (field === 'totalPriceCents') {
+    if (editingField !== field) return;
+    cancelDebouncedSave(field);
+
+    let valueToSave: unknown = editValue;
+    if (field === "totalPriceCents") {
       // Convert dollars.cents format to cents
-      const dollars = parseFloat(editValue)
+      const dollars = parseFloat(editValue);
       if (isNaN(dollars)) {
-        valueToSave = undefined
+        valueToSave = undefined;
       } else {
         // Round to ensure we have whole cents
-        valueToSave = Math.round(dollars * 100)
+        valueToSave = Math.round(dollars * 100);
       }
-    } else if (field === 'maxPlayers' || field === 'durationMinutes') {
-      const num = Number(editValue)
-      valueToSave = isNaN(num) ? undefined : num
-    } else if (field === 'startsAt') {
-      valueToSave = fromLocalInputValue(editValue)
+    } else if (field === "maxPlayers" || field === "durationMinutes") {
+      const num = Number(editValue);
+      valueToSave = isNaN(num) ? undefined : num;
+    } else if (field === "startsAt") {
+      valueToSave = fromLocalInputValue(editValue);
     }
-    
-    if (valueToSave !== undefined && valueToSave !== '') {
-      saveField(field, valueToSave)
+
+    if (valueToSave !== undefined && valueToSave !== "") {
+      saveField(field, valueToSave);
     } else {
-      cancelEditing()
+      cancelEditing();
     }
   }
 
   function cancelDebouncedSave(field: string) {
-    const timers = saveTimersRef.current
-    const existing = timers[field]
+    const timers = saveTimersRef.current;
+    const existing = timers[field];
     if (existing !== undefined) {
-      clearTimeout(existing)
-      timers[field] = undefined
+      clearTimeout(existing);
+      timers[field] = undefined;
     }
+  }
+
+  function handleCopyShareLink() {
+    const shareUrl = window.location.href;
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      setShareUrlCopied(true);
+      setTimeout(() => setShareUrlCopied(false), 2000);
+    });
   }
 
   if (isLoading) {
@@ -491,7 +561,7 @@ export default function GameDetailPage() {
       <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-orange-50 to-blue-50 flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -500,7 +570,7 @@ export default function GameDetailPage() {
         <div className="container mx-auto px-4 py-8">
           <Button
             variant="ghost"
-            onClick={() => navigate('/')}
+            onClick={() => navigate("/")}
             className="mb-8"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -513,7 +583,7 @@ export default function GameDetailPage() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (!game) {
@@ -522,7 +592,7 @@ export default function GameDetailPage() {
         <div className="container mx-auto px-4 py-8">
           <Button
             variant="ghost"
-            onClick={() => navigate('/')}
+            onClick={() => navigate("/")}
             className="mb-8"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -534,7 +604,7 @@ export default function GameDetailPage() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -608,25 +678,44 @@ export default function GameDetailPage() {
 
                 {/* Status Badge */}
                 <div className="flex flex-wrap gap-2 items-center">
+                  <GameStatusBadge
+                    state={
+                      isPublished
+                        ? "published"
+                        : isScheduled
+                        ? "scheduled"
+                        : "draft"
+                    }
+                    publishedAt={publishedAtDate ?? undefined}
+                  />
                   {isPublished && (
-                    <span className="inline-flex items-center gap-1.5 px-4 py-2 bg-success text-white text-sm font-semibold rounded-full shadow-md">
-                      <CheckCircle2 className="h-4 w-4" />
-                      Game locked
-                    </span>
-                  )}
-                  {isScheduled && (
-                    <span className="inline-flex items-center gap-1.5 px-4 py-2 bg-secondary text-secondary-foreground text-sm font-semibold rounded-full shadow-md">
-                      <Clock className="h-4 w-4" />
-                      Publishing soon
-                    </span>
-                  )}
-                  {!isPublished && !isScheduled && (
-                    <span className="inline-flex items-center gap-1.5 px-4 py-2 bg-gray-300 text-gray-700 text-sm font-semibold rounded-full shadow-md">
-                      <CircleDashed className="h-4 w-4" />
-                      Draft
-                    </span>
+                    <button
+                      onClick={handleCopyShareLink}
+                      className="inline-flex items-center gap-2 text-sm font-semibold px-3 py-1.5 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition"
+                      title="Copy game link"
+                    >
+                      {shareUrlCopied ? (
+                        <>
+                          <Check className="h-4 w-4" />
+                          Copied!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-4 w-4" />
+                          Share
+                        </>
+                      )}
+                    </button>
                   )}
                 </div>
+                {isOrganizer && isPublished && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-900 mt-2">
+                    <span className="font-semibold">
+                      This game is published
+                    </span>{" "}
+                    — Anyone with the link can see and join it.
+                  </div>
+                )}
               </div>
             </div>
 
@@ -634,32 +723,32 @@ export default function GameDetailPage() {
             {isPublished && (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6">
                 <div className="text-center">
-                {/* Organizer Info */}
-                {organizer && (
-                  <div className="flex items-center gap-3 mt-2">
-                    <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
-                      {organizer.picture ? (
-                        <img
-                          src={organizer.picture}
-                          alt={organizer.name || organizer.email}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-primary text-white text-xs flex items-center justify-center font-bold">
-                          {getInitials(organizer.name, organizer.email)}
-                        </div>
-                      )}
+                  {/* Organizer Info */}
+                  {organizer && (
+                    <div className="flex items-center gap-3 mt-2">
+                      <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+                        {organizer.picture ? (
+                          <img
+                            src={organizer.picture}
+                            alt={organizer.name || organizer.email}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-primary text-white text-xs flex items-center justify-center font-bold">
+                            {getInitials(organizer.name, organizer.email)}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 font-medium">
+                          Organizer
+                        </p>
+                        <p className="text-sm font-semibold text-gray-900">
+                          {organizer.name || organizer.email}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs text-gray-500 font-medium">
-                        Organizer
-                      </p>
-                      <p className="text-sm font-semibold text-gray-900">
-                        {organizer.name || organizer.email}
-                      </p>
-                    </div>
-                  </div>
-                )}
+                  )}
                 </div>
                 <ParticipantCountDisplay
                   count={participantCounts.going}
@@ -813,9 +902,9 @@ export default function GameDetailPage() {
                     value={game?.maxPlayers}
                     onSave={(value) => {
                       if (value !== undefined) {
-                        saveField("maxPlayers", value)
+                        saveField("maxPlayers", value);
                       } else {
-                        cancelEditing()
+                        cancelEditing();
                       }
                     }}
                     onCancel={cancelEditing}
@@ -823,7 +912,7 @@ export default function GameDetailPage() {
                     placeholder="Enter max players"
                     label={{
                       limited: "Set maximum",
-                      unlimited: "No limit"
+                      unlimited: "No limit",
                     }}
                   />
                 ) : (
@@ -856,9 +945,9 @@ export default function GameDetailPage() {
                     value={game?.maxWaitlistSize}
                     onSave={(value) => {
                       if (value !== undefined) {
-                        saveField("maxWaitlistSize", value)
+                        saveField("maxWaitlistSize", value);
                       } else {
-                        cancelEditing()
+                        cancelEditing();
                       }
                     }}
                     onCancel={cancelEditing}
@@ -1028,7 +1117,8 @@ export default function GameDetailPage() {
                             ? `/${game.maxWaitlistSize}`
                             : game?.maxWaitlistSize === -1
                             ? ", unlimited"
-                            : ""})
+                            : ""}
+                          )
                         </span>
                       </p>
                       <ParticipantGrid
@@ -1084,6 +1174,17 @@ export default function GameDetailPage() {
                     <Rocket className="h-5 w-5 text-primary" />
                     Ready to share this game?
                   </h3>
+
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-blue-900">
+                    <p className="font-semibold mb-1">📍 Visibility</p>
+                    <p>
+                      This game is currently{" "}
+                      <span className="font-semibold">only visible to you</span>
+                      . Once published, anyone with the link will be able to see
+                      and join it.
+                    </p>
+                  </div>
+
                   <div className="space-y-2 mb-4">
                     {publishRequirements.map((req) => (
                       <div
@@ -1120,7 +1221,7 @@ export default function GameDetailPage() {
                       ) : (
                         <>
                           <Rocket className="mr-2 h-4 w-4" />
-                          Publish
+                          Publish now
                         </>
                       )}
                     </Button>
@@ -1129,7 +1230,7 @@ export default function GameDetailPage() {
                         variant="outline"
                         onClick={() => setIsEditingSchedule(!isEditingSchedule)}
                       >
-                        Schedule
+                        {isScheduled ? "Re-schedule" : "Schedule"}
                       </Button>
                     )}
                   </div>
@@ -1170,16 +1271,19 @@ export default function GameDetailPage() {
                       disabled={isUpdatingParticipation}
                       className="w-full bg-accent/10 border-accent text-accent hover:bg-accent/20"
                     >
-                      {isUpdatingParticipation
-                        ? "Updating..."
-                        : "You're going"}
+                      {isUpdatingParticipation ? "Updating..." : "You're going"}
                     </Button>
-                    <Dialog open={showUngoingConfirmation} onOpenChange={setShowUngoingConfirmation}>
+                    <Dialog
+                      open={showUngoingConfirmation}
+                      onOpenChange={setShowUngoingConfirmation}
+                    >
                       <DialogContent>
                         <DialogHeader>
                           <DialogTitle>Change your vote?</DialogTitle>
                           <DialogDescription>
-                            If you change to "not going", you'll be removed from the participant list and move to the bottom of the waitlist if there's space. Are you sure?
+                            If you change to "not going", you'll be removed from
+                            the participant list and move to the bottom of the
+                            waitlist if there's space. Are you sure?
                           </DialogDescription>
                         </DialogHeader>
                         <DialogFooter>
@@ -1192,12 +1296,14 @@ export default function GameDetailPage() {
                           <Button
                             variant="destructive"
                             onClick={async () => {
-                              setShowUngoingConfirmation(false)
-                              await updateParticipation("not_going")
+                              setShowUngoingConfirmation(false);
+                              await updateParticipation("not_going");
                             }}
                             disabled={isUpdatingParticipation}
                           >
-                            {isUpdatingParticipation ? "Updating..." : "Yes, change my vote"}
+                            {isUpdatingParticipation
+                              ? "Updating..."
+                              : "Yes, change my vote"}
                           </Button>
                         </DialogFooter>
                       </DialogContent>
@@ -1210,7 +1316,9 @@ export default function GameDetailPage() {
                       disabled={joinButtonDisabled}
                       className="w-full bg-accent"
                     >
-                      {isUpdatingParticipation ? "Signing up..." : "Count me in!"}
+                      {isUpdatingParticipation
+                        ? "Signing up..."
+                        : "Count me in!"}
                     </Button>
                     {isGameFull && (
                       <p className="text-xs text-gray-500 text-center mt-2">
@@ -1230,32 +1338,32 @@ export default function GameDetailPage() {
 
 function toLocalInputValue(iso: string) {
   try {
-    const d = new Date(iso)
-    const pad = (n: number) => String(n).padStart(2, '0')
-    const yyyy = d.getFullYear()
-    const mm = pad(d.getMonth() + 1)
-    const dd = pad(d.getDate())
-    const hh = pad(d.getHours())
-    const mi = pad(d.getMinutes())
-    return `${yyyy}-${mm}-${dd}T${hh}:${mi}`
+    const d = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    const mm = pad(d.getMonth() + 1);
+    const dd = pad(d.getDate());
+    const hh = pad(d.getHours());
+    const mi = pad(d.getMinutes());
+    return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
   } catch {
-    return ''
+    return "";
   }
 }
 
 function fromLocalInputValue(val: string) {
   // Convert local datetime input back to ISO string
   try {
-    const d = new Date(val)
-    return d.toISOString()
+    const d = new Date(val);
+    return d.toISOString();
   } catch {
-    return ''
+    return "";
   }
 }
 
 function formatCentsAsDollars(cents?: number) {
-  if (typeof cents !== 'number' || Number.isNaN(cents)) return ''
-  if (cents === 0) return '0'
-  const dollars = cents / 100
-  return dollars.toFixed(2)
+  if (typeof cents !== "number" || Number.isNaN(cents)) return "";
+  if (cents === 0) return "0";
+  const dollars = cents / 100;
+  return dollars.toFixed(2);
 }
