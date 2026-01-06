@@ -14,6 +14,7 @@ import { Popover, PopoverContent, PopoverAnchor } from '@/components/ui/popover'
 import { TimeDisplay } from '@/components/ui/TimeDisplay'
 import UserProfileMenu from '@/components/auth/UserProfileMenu'
 import { NumberLimitEditor } from '@/components/ui/NumberLimitEditor'
+import { ParticipantGrid } from '@/components/games/ParticipantGrid'
 
 interface Game {
   id: string
@@ -1004,98 +1005,60 @@ export default function GameDetailPage() {
               ) : participants.length > 0 ? (
                 <div>
                   {/* People Grid */}
-                  <div className="flex flex-wrap gap-4 mb-6">
-                    {participants
-                      .filter((p) => p.status === "going")
-                      .map((p) => {
-                        const isOrganizerParticipating =
-                          organizer && p.user.id === organizer.id;
-                        return (
-                          <div
-                            key={p.user.id}
-                            className="flex flex-col items-center gap-2"
-                          >
-                            <div className="relative w-16 h-16">
-                              <div className="w-16 h-16 rounded-full overflow-hidden ring-4 ring-success/30 shadow-md">
-                                {p.user.picture ? (
-                                  <img
-                                    src={p.user.picture}
-                                    alt={p.user.name || p.user.email}
-                                    className="w-full h-full object-cover"
-                                  />
-                                ) : (
-                                  <div className="w-full h-full bg-primary text-white flex items-center justify-center font-bold">
-                                    {getInitials(p.user.name, p.user.email)}
-                                  </div>
-                                )}
-                              </div>
-                              {isOrganizerParticipating && (
-                                <div className="absolute -bottom-1 -right-1 bg-primary rounded-full p-1.5 shadow-lg border-2 border-white">
-                                  <Crown className="h-3 w-3 text-white" />
-                                </div>
-                              )}
-                            </div>
-                            <span className="text-xs text-center text-gray-700 font-medium max-w-16 truncate">
-                              {p.user.name || p.user.email}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    {/* Empty slots */}
-                    {game?.maxPlayers &&
-                      Array.from({
-                        length: Math.max(
-                          0,
-                          game.maxPlayers - participantCounts.going
-                        ),
-                      }).map((_, i) => (
-                        <div
-                          key={`empty-${i}`}
-                          className="flex flex-col items-center gap-2"
-                        >
-                          <div className="w-16 h-16 rounded-full border-4 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center">
-                            <span className="text-gray-400 text-sm">?</span>
-                          </div>
-                          <span className="text-xs text-gray-400 font-medium max-w-16 truncate">
-                            Open
-                          </span>
-                        </div>
-                      ))}
+                  <div className="mb-6">
+                    <ParticipantGrid
+                      participants={participants
+                        .filter((p) => p.status === "going")
+                        .map((p) => p.user)}
+                      organizerId={game?.organizerId}
+                      maxCount={game?.maxPlayers}
+                      icon={Crown}
+                    />
                   </div>
 
                   {/* Waitlist */}
                   {participantCounts.waitlisted > 0 && (
                     <div className="mt-6 pt-6 border-t border-gray-200">
-                      <p className="text-sm font-semibold text-gray-700 mb-3">
-                        Waitlist ({participantCounts.waitlisted}{typeof game?.maxWaitlistSize === 'number' && game.maxWaitlistSize > 0 ? `/${game.maxWaitlistSize}` : game?.maxWaitlistSize === -1 ? ', unlimited' : ''})
+                      <p className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-gray-600" />
+                        <span>
+                          Waitlist ({participantCounts.waitlisted}
+                          {typeof game?.maxWaitlistSize === "number" &&
+                          game.maxWaitlistSize > 0
+                            ? `/${game.maxWaitlistSize}`
+                            : game?.maxWaitlistSize === -1
+                            ? ", unlimited"
+                            : ""})
+                        </span>
                       </p>
-                      <div className="space-y-2">
-                        {participants
+                      <ParticipantGrid
+                        participants={participants
                           .filter((p) => p.status === "waitlisted")
-                          .map((p) => (
-                            <div
-                              key={p.user.id}
-                              className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50"
-                            >
-                              <div className="w-8 h-8 rounded-full overflow-hidden">
-                                {p.user.picture ? (
-                                  <img
-                                    src={p.user.picture}
-                                    alt={p.user.name || p.user.email}
-                                    className="w-full h-full object-cover"
-                                  />
-                                ) : (
-                                  <div className="w-full h-full bg-primary/50 text-white text-xs flex items-center justify-center font-bold">
-                                    {getInitials(p.user.name, p.user.email)}
-                                  </div>
-                                )}
-                              </div>
-                              <span className="text-sm text-gray-700">
-                                {p.user.name || p.user.email}
-                              </span>
-                            </div>
-                          ))}
-                      </div>
+                          .map((p) => p.user)}
+                        organizerId={game?.organizerId}
+                        maxCount={game?.maxWaitlistSize}
+                        icon={Clock}
+                        size="sm"
+                        opacity={0.7}
+                        emptySlotLabel="Available"
+                      />
+                    </div>
+                  )}
+                  {participantCounts.notGoing > 0 && (
+                    <div className="mt-6 pt-6 border-t border-gray-200">
+                      <p className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                        <XCircle className="h-4 w-4 text-gray-600" />
+                        <span>Not going ({participantCounts.notGoing})</span>
+                      </p>
+                      <ParticipantGrid
+                        participants={participants
+                          .filter((p) => p.status === "not_going")
+                          .map((p) => p.user)}
+                        organizerId={game?.organizerId}
+                        size="sm"
+                        opacity={0.6}
+                        icon={XCircle}
+                      />
                     </div>
                   )}
                 </div>
