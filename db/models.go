@@ -27,12 +27,13 @@ type Game struct {
 }
 
 type GameParticipant struct {
-	UserID    int64
-	GameID    string
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	Going     sql.NullBool
-	Confirmed sql.NullBool
+	UserID         int64
+	GameID         string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	GoingUpdatedAt time.Time
+	Going          sql.NullBool
+	ConfirmedAt    sql.NullTime
 }
 
 type User struct {

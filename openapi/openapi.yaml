@@ -648,6 +648,10 @@ components:
         status:
           $ref: '#/components/schemas/ParticipationStatusUpdate'
           description: Desired participation status for the authenticated user
+        confirmed:
+          type: boolean
+          description: If the participant has confirmed (can only be set to false by the server when important details are changed on the game)
+          enum: [true]
 
     GameListItem:
       type: object

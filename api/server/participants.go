@@ -41,7 +41,10 @@ func (s *server) GetApiGamesIdParticipants(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Get participants list
-	rows, err := s.querier.ParticipantsList(r.Context(), id)
+	rows, err := s.querier.ParticipantsList(r.Context(), db.ParticipantsListParams{
+		OrganizerID: game.OrganizerID,
+		GameID:      game.ID,
+	})
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to retrieve participants: %s", err.Error()), http.StatusInternalServerError)
 		return
@@ -136,13 +139,17 @@ func (s *server) PostApiGamesIdParticipants(w http.ResponseWriter, r *http.Reque
 	}
 
 	going := sql.NullBool{Bool: req.Status == api.Going, Valid: true}
-	confirmed := sql.NullBool{Valid: true, Bool: true}
+
+	confirmedAt := sql.NullTime{
+		Time:  time.Now(),
+		Valid: req.Confirmed != nil,
+	}
 
 	if err := s.querier.ParticipantsUpsert(r.Context(), db.ParticipantsUpsertParams{
-		UserID:    int64(authInfo.UserId),
-		GameID:    id,
-		Going:     going,
-		Confirmed: confirmed,
+		UserID:      int64(authInfo.UserId),
+		GameID:      id,
+		Going:       going,
+		ConfirmedAt: confirmedAt,
 	}); err != nil {
 		http.Error(w, fmt.Sprintf("failed to update participation: %s", err.Error()), http.StatusInternalServerError)
 		return

@@ -213,6 +213,47 @@ func TestPostApiGamesIdParticipants_OrganizerCanUpdateWhenUnpublished(t *testing
 	}
 }
 
+func TestPostApiGamesIdParticipants_ConfirmParticipation(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "organizer@example.com")
+	participantID := dbtesting.UpsertTestUser(t, sqlDB, "participant@example.com")
+
+	querier := db.New(sqlDB)
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
+
+	// Published game so non-organizer can interact
+	createGame(t, querier, "g1", organizerID, sql.NullTime{Time: time.Now().Add(-time.Hour), Valid: true})
+
+	confirm := api.True
+	req := api.UpdateGameParticipationRequest{Status: api.Going, Confirmed: &confirm}
+	body, _ := json.Marshal(req)
+
+	r := httptest.NewRequest(http.MethodPost, "/api/games/g1/participants", bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(participantID)}))
+	w := httptest.NewRecorder()
+
+	srv.PostApiGamesIdParticipants(w, r, "g1")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, w.Code)
+	}
+
+	// Confirmed_at should be set (non-null) and recent
+	var confirmedAt sql.NullTime
+	row := sqlDB.QueryRow(`select confirmed_at from game_participants where user_id = ? and game_id = ?`, participantID, "g1")
+	if err := row.Scan(&confirmedAt); err != nil {
+		t.Fatalf("failed to load participant row: %v", err)
+	}
+	if !confirmedAt.Valid {
+		t.Fatalf("expected confirmed_at to be set, got NULL")
+	}
+	if time.Since(confirmedAt.Time) > 5*time.Second {
+		t.Fatalf("expected confirmed_at to be recent, got %v", confirmedAt.Time)
+	}
+}
+
 func createGame(t *testing.T, querier *db.Queries, id string, organizerID int64, publishedAt sql.NullTime) {
 	t.Helper()
 
@@ -343,35 +384,35 @@ func TestGetApiGamesIdParticipants_StatusComputation(t *testing.T) {
 
 	// User 1 & 2: going (should be in main list)
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		UserID:    user1,
-		GameID:    "g1",
-		Going:     sql.NullBool{Bool: true, Valid: true},
-		Confirmed: sql.NullBool{Bool: true, Valid: true},
+		UserID:      int64(user1),
+		GameID:      "g1",
+		Going:       sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
 	})
 	time.Sleep(10 * time.Millisecond) // Ensure different timestamps
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		UserID:    user2,
-		GameID:    "g1",
-		Going:     sql.NullBool{Bool: true, Valid: true},
-		Confirmed: sql.NullBool{Bool: true, Valid: true},
+		UserID:      int64(user2),
+		GameID:      "g1",
+		Going:       sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
 	})
 	time.Sleep(10 * time.Millisecond)
 
 	// User 3: going (should be waitlisted because max is 2)
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		UserID:    user3,
-		GameID:    "g1",
-		Going:     sql.NullBool{Bool: true, Valid: true},
-		Confirmed: sql.NullBool{Bool: true, Valid: true},
+		UserID:      int64(user3),
+		GameID:      "g1",
+		Going:       sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
 	})
 	time.Sleep(10 * time.Millisecond)
 
 	// User 4: not going
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		UserID:    user4,
-		GameID:    "g1",
-		Going:     sql.NullBool{Bool: false, Valid: true},
-		Confirmed: sql.NullBool{Bool: true, Valid: true},
+		UserID:      int64(user4),
+		GameID:      "g1",
+		Going:       sql.NullBool{Bool: false, Valid: true},
+		ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
 	})
 
 	// Get participants list
@@ -432,6 +473,358 @@ func TestGetApiGamesIdParticipants_StatusComputation(t *testing.T) {
 	}
 }
 
+func TestGetApiGamesIdParticipants_OrganizerPriorityEvenWhenLate(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "organizer@example.com")
+	userEarly := dbtesting.UpsertTestUser(t, sqlDB, "early@example.com")
+	userLate := dbtesting.UpsertTestUser(t, sqlDB, "late@example.com")
+
+	querier := db.New(sqlDB)
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
+
+	_, err := querier.GameCreate(context.Background(), db.GameCreateParams{
+		ID:                 "g1",
+		OrganizerID:        organizerID,
+		Name:               "Test Game",
+		PublishedAt:        sql.NullTime{Time: time.Now().Add(-time.Hour), Valid: true},
+		Description:        sql.NullString{},
+		TotalPriceCents:    0,
+		Location:           sql.NullString{},
+		StartsAt:           sql.NullTime{},
+		DurationMinutes:    60,
+		MaxPlayers:         2,
+		MaxWaitlistSize:    -1,
+		MaxGuestsPerPlayer: -1,
+	})
+	if err != nil {
+		t.Fatalf("failed to create game: %v", err)
+	}
+
+	// Fill both player slots before the organizer marks as going.
+	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
+		UserID:      int64(userEarly),
+		GameID:      "g1",
+		Going:       sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
+	})
+	time.Sleep(10 * time.Millisecond)
+	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
+		UserID:      int64(userLate),
+		GameID:      "g1",
+		Going:       sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
+	})
+
+	// Organizer joins after the other two but should still be prioritized into the main list.
+	time.Sleep(10 * time.Millisecond)
+	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
+		UserID:      int64(organizerID),
+		GameID:      "g1",
+		Going:       sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
+	})
+
+	r := httptest.NewRequest(http.MethodGet, "/api/games/g1/participants", nil)
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w := httptest.NewRecorder()
+
+	srv.GetApiGamesIdParticipants(w, r, "g1")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, w.Code)
+	}
+
+	var participants []api.ParticipantWithUser
+	if err := json.NewDecoder(w.Body).Decode(&participants); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if len(participants) != 3 {
+		t.Fatalf("expected 3 participants, got %d", len(participants))
+	}
+
+	if participants[0].User.Id != strconv.FormatInt(organizerID, 10) {
+		t.Fatalf("expected organizer first, got user %s", participants[0].User.Id)
+	}
+	status, _ := participants[0].Status.AsParticipationStatusUpdate()
+	if status != api.Going {
+		t.Fatalf("organizer should be going, got %v", status)
+	}
+
+	if participants[1].User.Id != strconv.FormatInt(userEarly, 10) {
+		t.Fatalf("expected early participant second, got user %s", participants[1].User.Id)
+	}
+	status, _ = participants[1].Status.AsParticipationStatusUpdate()
+	if status != api.Going {
+		t.Fatalf("early participant should be going, got %v", status)
+	}
+
+	if participants[2].User.Id != strconv.FormatInt(userLate, 10) {
+		t.Fatalf("expected late participant third, got user %s", participants[2].User.Id)
+	}
+	waitlistStatus, err := participants[2].Status.AsParticipationStatus1()
+	if err != nil || waitlistStatus != api.Waitlisted {
+		t.Fatalf("late participant should be waitlisted, got %v (err %v)", waitlistStatus, err)
+	}
+}
+
+func TestGetApiGamesIdParticipants_NonGoingDoesNotConsumeSlot(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "organizer@example.com")
+	going1 := dbtesting.UpsertTestUser(t, sqlDB, "going1@example.com")
+	notGoing := dbtesting.UpsertTestUser(t, sqlDB, "notgoing@example.com")
+	going2 := dbtesting.UpsertTestUser(t, sqlDB, "going2@example.com")
+
+	querier := db.New(sqlDB)
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
+
+	_, err := querier.GameCreate(context.Background(), db.GameCreateParams{
+		ID:                 "g1",
+		OrganizerID:        organizerID,
+		Name:               "Test Game",
+		PublishedAt:        sql.NullTime{Time: time.Now().Add(-time.Hour), Valid: true},
+		Description:        sql.NullString{},
+		TotalPriceCents:    0,
+		Location:           sql.NullString{},
+		StartsAt:           sql.NullTime{},
+		DurationMinutes:    60,
+		MaxPlayers:         2,
+		MaxWaitlistSize:    -1,
+		MaxGuestsPerPlayer: -1,
+	})
+	if err != nil {
+		t.Fatalf("failed to create game: %v", err)
+	}
+
+	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
+		UserID:      int64(going1),
+		GameID:      "g1",
+		Going:       sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
+	})
+	time.Sleep(10 * time.Millisecond)
+	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
+		UserID:      int64(notGoing),
+		GameID:      "g1",
+		Going:       sql.NullBool{Bool: false, Valid: true},
+		ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
+	})
+	time.Sleep(10 * time.Millisecond)
+	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
+		UserID:      int64(going2),
+		GameID:      "g1",
+		Going:       sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
+	})
+
+	r := httptest.NewRequest(http.MethodGet, "/api/games/g1/participants", nil)
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w := httptest.NewRecorder()
+
+	srv.GetApiGamesIdParticipants(w, r, "g1")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, w.Code)
+	}
+
+	var participants []api.ParticipantWithUser
+	if err := json.NewDecoder(w.Body).Decode(&participants); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if len(participants) != 3 {
+		t.Fatalf("expected 3 participants, got %d", len(participants))
+	}
+
+	status0, _ := participants[0].Status.AsParticipationStatusUpdate()
+	if status0 != api.Going {
+		t.Fatalf("first participant should be going, got %v", status0)
+	}
+	status1, _ := participants[1].Status.AsParticipationStatusUpdate()
+	if status1 != api.NotGoing {
+		t.Fatalf("second participant should be not_going, got %v", status1)
+	}
+	status2, _ := participants[2].Status.AsParticipationStatusUpdate()
+	if status2 != api.Going {
+		t.Fatalf("third participant should still be going (not waitlisted), got %v", status2)
+	}
+}
+
+func TestGetApiGamesIdParticipants_OrganizerNotGoingDoesNotBlockSlots(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "organizer@example.com")
+	going1 := dbtesting.UpsertTestUser(t, sqlDB, "going1@example.com")
+	going2 := dbtesting.UpsertTestUser(t, sqlDB, "going2@example.com")
+
+	querier := db.New(sqlDB)
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
+
+	_, err := querier.GameCreate(context.Background(), db.GameCreateParams{
+		ID:                 "g1",
+		OrganizerID:        organizerID,
+		Name:               "Test Game",
+		PublishedAt:        sql.NullTime{Time: time.Now().Add(-time.Hour), Valid: true},
+		Description:        sql.NullString{},
+		TotalPriceCents:    0,
+		Location:           sql.NullString{},
+		StartsAt:           sql.NullTime{},
+		DurationMinutes:    60,
+		MaxPlayers:         2,
+		MaxWaitlistSize:    -1,
+		MaxGuestsPerPlayer: -1,
+	})
+	if err != nil {
+		t.Fatalf("failed to create game: %v", err)
+	}
+
+	// Organizer marks not going; should not consume a slot or change waitlist math.
+	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
+		UserID:      int64(organizerID),
+		GameID:      "g1",
+		Going:       sql.NullBool{Bool: false, Valid: true},
+		ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
+	})
+	time.Sleep(10 * time.Millisecond)
+	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
+		UserID:      int64(going1),
+		GameID:      "g1",
+		Going:       sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
+	})
+	time.Sleep(10 * time.Millisecond)
+	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
+		UserID:      int64(going2),
+		GameID:      "g1",
+		Going:       sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
+	})
+
+	r := httptest.NewRequest(http.MethodGet, "/api/games/g1/participants", nil)
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w := httptest.NewRecorder()
+
+	srv.GetApiGamesIdParticipants(w, r, "g1")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, w.Code)
+	}
+
+	var participants []api.ParticipantWithUser
+	if err := json.NewDecoder(w.Body).Decode(&participants); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if len(participants) != 3 {
+		t.Fatalf("expected 3 participants, got %d", len(participants))
+	}
+
+	// Organizer is first by priority but not going.
+	status0, _ := participants[0].Status.AsParticipationStatusUpdate()
+	if status0 != api.NotGoing {
+		t.Fatalf("organizer should be not_going, got %v", status0)
+	}
+
+	// Both other users should occupy the two main slots (not waitlisted).
+	status1, _ := participants[1].Status.AsParticipationStatusUpdate()
+	if status1 != api.Going {
+		t.Fatalf("second participant should be going, got %v", status1)
+	}
+	status2, _ := participants[2].Status.AsParticipationStatusUpdate()
+	if status2 != api.Going {
+		t.Fatalf("third participant should be going, got %v", status2)
+	}
+}
+
+func TestGetApiGamesIdParticipants_NoWaitlistCapacityStillReturnsWaitlisted(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "organizer@example.com")
+	user1 := dbtesting.UpsertTestUser(t, sqlDB, "user1@example.com")
+	user2 := dbtesting.UpsertTestUser(t, sqlDB, "user2@example.com")
+	user3 := dbtesting.UpsertTestUser(t, sqlDB, "user3@example.com")
+
+	querier := db.New(sqlDB)
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
+
+	_, err := querier.GameCreate(context.Background(), db.GameCreateParams{
+		ID:                 "g1",
+		OrganizerID:        organizerID,
+		Name:               "Test Game",
+		PublishedAt:        sql.NullTime{Time: time.Now().Add(-time.Hour), Valid: true},
+		Description:        sql.NullString{},
+		TotalPriceCents:    0,
+		Location:           sql.NullString{},
+		StartsAt:           sql.NullTime{},
+		DurationMinutes:    60,
+		MaxPlayers:         1,
+		MaxWaitlistSize:    0,
+		MaxGuestsPerPlayer: -1,
+	})
+	if err != nil {
+		t.Fatalf("failed to create game: %v", err)
+	}
+
+	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
+		UserID:      int64(user1),
+		GameID:      "g1",
+		Going:       sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
+	})
+	time.Sleep(10 * time.Millisecond)
+	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
+		UserID:      int64(user2),
+		GameID:      "g1",
+		Going:       sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
+	})
+	time.Sleep(10 * time.Millisecond)
+	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
+		UserID:      int64(user3),
+		GameID:      "g1",
+		Going:       sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
+	})
+
+	r := httptest.NewRequest(http.MethodGet, "/api/games/g1/participants", nil)
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w := httptest.NewRecorder()
+
+	srv.GetApiGamesIdParticipants(w, r, "g1")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, w.Code)
+	}
+
+	var participants []api.ParticipantWithUser
+	if err := json.NewDecoder(w.Body).Decode(&participants); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if len(participants) != 3 {
+		t.Fatalf("expected 3 participants, got %d", len(participants))
+	}
+
+	mainStatus, _ := participants[0].Status.AsParticipationStatusUpdate()
+	if mainStatus != api.Going {
+		t.Fatalf("first participant should be going (main slot), got %v", mainStatus)
+	}
+	wl1, err := participants[1].Status.AsParticipationStatus1()
+	if err != nil || wl1 != api.Waitlisted {
+		t.Fatalf("second participant should be waitlisted despite zero waitlist size, got %v (err %v)", wl1, err)
+	}
+	wl2, err := participants[2].Status.AsParticipationStatus1()
+	if err != nil || wl2 != api.Waitlisted {
+		t.Fatalf("third participant should be waitlisted despite zero waitlist size, got %v (err %v)", wl2, err)
+	}
+}
+
 func TestGetApiGamesIdParticipants_UnlimitedPlayers(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
@@ -463,10 +856,10 @@ func TestGetApiGamesIdParticipants_UnlimitedPlayers(t *testing.T) {
 	for i := 1; i <= 3; i++ {
 		userID := dbtesting.UpsertTestUser(t, sqlDB, "user"+strconv.Itoa(i)+"@example.com")
 		querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-			UserID:    userID,
-			GameID:    "g1",
-			Going:     sql.NullBool{Bool: true, Valid: true},
-			Confirmed: sql.NullBool{Bool: true, Valid: true},
+			UserID:      int64(userID),
+			GameID:      "g1",
+			Going:       sql.NullBool{Bool: true, Valid: true},
+			ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
 		})
 		time.Sleep(10 * time.Millisecond)
 	}

@@ -5,8 +5,9 @@ create table game_participants (
     game_id text not null,
     created_at datetime default current_timestamp not null,
     updated_at datetime default current_timestamp not null,
+    going_updated_at datetime default current_timestamp not null, -- this is the timestamp we use to figure out who makes it into the game and who's in the waitlist
     going boolean default true,
-    confirmed boolean default true, -- this flag will be set to false if important information changes on the game after the participant has cast his/her vote
+    confirmed_at datetime default current_timestamp, -- this field will be cleared if important details change on the game
     primary key (user_id, game_id)
 );
 -- +goose StatementEnd

@@ -12,27 +12,30 @@ import (
 
 const participantsList = `-- name: ParticipantsList :many
 select
-    game_participants.user_id, game_participants.game_id, game_participants.created_at, game_participants.updated_at, game_participants.going, game_participants.confirmed,
-    users.id, users.name, users.email, users.photo, users.created_at, users.updated_at, users.is_demo,
-    -- we need the following fields to figure out the participation status
-    games.max_players,
-    games.max_waitlist_size
+    users.id = ?1 as is_organizer,
+    game_participants.user_id, game_participants.game_id, game_participants.created_at, game_participants.updated_at, game_participants.going_updated_at, game_participants.going, game_participants.confirmed_at,
+    users.id, users.name, users.email, users.photo, users.created_at, users.updated_at, users.is_demo
 from game_participants
-join games on game_participants.game_id = games.id
 join users on game_participants.user_id = users.id
-where games.id = ?
-order by game_participants.updated_at asc
+where game_participants.game_id = ?2
+order by
+    1 desc, -- if the user is the organizer, they should have priority
+    game_participants.going_updated_at asc
 `
 
-type ParticipantsListRow struct {
-	GameParticipant GameParticipant
-	User            User
-	MaxPlayers      int64
-	MaxWaitlistSize int64
+type ParticipantsListParams struct {
+	OrganizerID int64
+	GameID      string
 }
 
-func (q *Queries) ParticipantsList(ctx context.Context, id string) ([]ParticipantsListRow, error) {
-	rows, err := q.db.QueryContext(ctx, participantsList, id)
+type ParticipantsListRow struct {
+	IsOrganizer     bool
+	GameParticipant GameParticipant
+	User            User
+}
+
+func (q *Queries) ParticipantsList(ctx context.Context, arg ParticipantsListParams) ([]ParticipantsListRow, error) {
+	rows, err := q.db.QueryContext(ctx, participantsList, arg.OrganizerID, arg.GameID)
 	if err != nil {
 		return nil, err
 	}
@@ -41,12 +44,14 @@ func (q *Queries) ParticipantsList(ctx context.Context, id string) ([]Participan
 	for rows.Next() {
 		var i ParticipantsListRow
 		if err := rows.Scan(
+			&i.IsOrganizer,
 			&i.GameParticipant.UserID,
 			&i.GameParticipant.GameID,
 			&i.GameParticipant.CreatedAt,
 			&i.GameParticipant.UpdatedAt,
+			&i.GameParticipant.GoingUpdatedAt,
 			&i.GameParticipant.Going,
-			&i.GameParticipant.Confirmed,
+			&i.GameParticipant.ConfirmedAt,
 			&i.User.ID,
 			&i.User.Name,
 			&i.User.Email,
@@ -54,8 +59,6 @@ func (q *Queries) ParticipantsList(ctx context.Context, id string) ([]Participan
 			&i.User.CreatedAt,
 			&i.User.UpdatedAt,
 			&i.User.IsDemo,
-			&i.MaxPlayers,
-			&i.MaxWaitlistSize,
 		); err != nil {
 			return nil, err
 		}
@@ -74,22 +77,22 @@ const participantsUpsert = `-- name: ParticipantsUpsert :exec
 insert into game_participants(
     user_id,
     game_id,
-    created_at,
-    updated_at,
     going,
-    confirmed
-) values (?, ?, current_timestamp, current_timestamp, ?, ?)
+    going_updated_at,
+    confirmed_at
+) values (?, ?, ?, current_timestamp, ?)
 on conflict(user_id, game_id) do update set
     updated_at = current_timestamp,
     going = coalesce(excluded.going, game_participants.going),
-    confirmed = coalesce(excluded.confirmed, game_participants.confirmed)
+    going_updated_at = iif(excluded.going = game_participants.going, game_participants.going_updated_at, current_timestamp),
+    confirmed_at = coalesce(excluded.confirmed_at, game_participants.confirmed_at)
 `
 
 type ParticipantsUpsertParams struct {
-	UserID    int64
-	GameID    string
-	Going     sql.NullBool
-	Confirmed sql.NullBool
+	UserID      int64
+	GameID      string
+	Going       sql.NullBool
+	ConfirmedAt sql.NullTime
 }
 
 func (q *Queries) ParticipantsUpsert(ctx context.Context, arg ParticipantsUpsertParams) error {
@@ -97,7 +100,7 @@ func (q *Queries) ParticipantsUpsert(ctx context.Context, arg ParticipantsUpsert
 		arg.UserID,
 		arg.GameID,
 		arg.Going,
-		arg.Confirmed,
+		arg.ConfirmedAt,
 	)
 	return err
 }

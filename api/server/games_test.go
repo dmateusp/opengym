@@ -483,20 +483,20 @@ func TestGetApiGames_ReturnsParticipantGames(t *testing.T) {
 
 	// User1 participates in game1 and game2 (but not game3)
 	err = querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		UserID:    int64(user1ID),
-		GameID:    game1.ID,
-		Going:     sql.NullBool{Bool: true, Valid: true},
-		Confirmed: sql.NullBool{Bool: true, Valid: true},
+		UserID:      int64(user1ID),
+		GameID:      game1.ID,
+		Going:       sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
 	})
 	if err != nil {
 		t.Fatalf("failed to add user1 to game1: %v", err)
 	}
 
 	err = querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		UserID:    int64(user1ID),
-		GameID:    game2.ID,
-		Going:     sql.NullBool{Bool: true, Valid: true},
-		Confirmed: sql.NullBool{Bool: false, Valid: true},
+		UserID:      int64(user1ID),
+		GameID:      game2.ID,
+		Going:       sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
 	})
 	if err != nil {
 		t.Fatalf("failed to add user1 to game2: %v", err)
@@ -610,20 +610,20 @@ func TestGetApiGames_ReturnsBothOrganizerAndParticipantGames(t *testing.T) {
 
 	// User1 also participates in game3 and game4 (organized by user2)
 	err = querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		UserID:    int64(user1ID),
-		GameID:    game3.ID,
-		Going:     sql.NullBool{Bool: true, Valid: true},
-		Confirmed: sql.NullBool{Bool: true, Valid: true},
+		UserID:      int64(user1ID),
+		GameID:      game3.ID,
+		Going:       sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
 	})
 	if err != nil {
 		t.Fatalf("failed to add user1 to game3: %v", err)
 	}
 
 	err = querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		UserID:    int64(user1ID),
-		GameID:    game4.ID,
-		Going:     sql.NullBool{Bool: true, Valid: true},
-		Confirmed: sql.NullBool{Bool: true, Valid: true},
+		UserID:      int64(user1ID),
+		GameID:      game4.ID,
+		Going:       sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
 	})
 	if err != nil {
 		t.Fatalf("failed to add user1 to game4: %v", err)
@@ -761,10 +761,10 @@ func TestGetApiGames_OnlyReturnsUserGames(t *testing.T) {
 
 	// User1 participates in only one of User2's games (game3)
 	err = querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		UserID:    int64(user1ID),
-		GameID:    game3.ID,
-		Going:     sql.NullBool{Bool: true, Valid: true},
-		Confirmed: sql.NullBool{Bool: true, Valid: true},
+		UserID:      int64(user1ID),
+		GameID:      game3.ID,
+		Going:       sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
 	})
 	if err != nil {
 		t.Fatalf("failed to add user1 to game3: %v", err)
