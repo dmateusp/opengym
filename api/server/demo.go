@@ -45,7 +45,7 @@ func (s *server) PostApiDemoUsersUserIdImpersonate(w http.ResponseWriter, r *htt
 		return
 	}
 
-	now := time.Now()
+	now := s.clock.Now()
 
 	jwtToken := jwt.NewWithClaims(
 		jwt.SigningMethodHS256,

@@ -8,6 +8,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"time"
 )
 
 const participantsList = `-- name: ParticipantsList :many
@@ -80,19 +81,20 @@ insert into game_participants(
     going,
     going_updated_at,
     confirmed_at
-) values (?, ?, ?, current_timestamp, ?)
+) values (?, ?, ?, ?, ?)
 on conflict(user_id, game_id) do update set
     updated_at = current_timestamp,
     going = coalesce(excluded.going, game_participants.going),
-    going_updated_at = iif(excluded.going = game_participants.going, game_participants.going_updated_at, current_timestamp),
+    going_updated_at = iif(excluded.going = game_participants.going, game_participants.going_updated_at, excluded.going_updated_at),
     confirmed_at = coalesce(excluded.confirmed_at, game_participants.confirmed_at)
 `
 
 type ParticipantsUpsertParams struct {
-	UserID      int64
-	GameID      string
-	Going       sql.NullBool
-	ConfirmedAt sql.NullTime
+	UserID         int64
+	GameID         string
+	Going          sql.NullBool
+	GoingUpdatedAt time.Time
+	ConfirmedAt    sql.NullTime
 }
 
 func (q *Queries) ParticipantsUpsert(ctx context.Context, arg ParticipantsUpsertParams) error {
@@ -100,6 +102,7 @@ func (q *Queries) ParticipantsUpsert(ctx context.Context, arg ParticipantsUpsert
 		arg.UserID,
 		arg.GameID,
 		arg.Going,
+		arg.GoingUpdatedAt,
 		arg.ConfirmedAt,
 	)
 	return err

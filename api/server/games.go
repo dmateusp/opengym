@@ -216,7 +216,7 @@ func (srv *server) GetApiGamesId(w http.ResponseWriter, r *http.Request, id stri
 
 	// Non-organizers cannot see drafts or scheduled games until publishedAt is reached
 	if !isOrganizer {
-		if !game.Game.PublishedAt.Valid || game.Game.PublishedAt.Time.After(time.Now()) {
+		if !game.Game.PublishedAt.Valid || game.Game.PublishedAt.Time.After(srv.clock.Now()) {
 			http.Error(w, "game not found", http.StatusNotFound)
 			return
 		}
@@ -240,7 +240,7 @@ func (srv *server) PatchApiGamesId(w http.ResponseWriter, r *http.Request, id st
 		return
 	}
 
-	now := time.Now()
+	now := srv.clock.Now()
 
 	game, err := srv.querier.GameGetById(r.Context(), id)
 	if err != nil {

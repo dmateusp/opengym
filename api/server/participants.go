@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/dmateusp/opengym/api"
 	"github.com/dmateusp/opengym/auth"
@@ -34,7 +33,7 @@ func (s *server) GetApiGamesIdParticipants(w http.ResponseWriter, r *http.Reques
 
 	// Non-organizers cannot view participants of unpublished or future games
 	if game.OrganizerID != int64(authInfo.UserId) {
-		if !game.PublishedAt.Valid || game.PublishedAt.Time.After(time.Now()) {
+		if !game.PublishedAt.Valid || game.PublishedAt.Time.After(s.clock.Now()) {
 			http.Error(w, "game not found", http.StatusNotFound)
 			return
 		}
@@ -132,7 +131,7 @@ func (s *server) PostApiGamesIdParticipants(w http.ResponseWriter, r *http.Reque
 
 	// Non-organizers cannot interact with unpublished or future games.
 	if game.OrganizerID != int64(authInfo.UserId) {
-		if !game.PublishedAt.Valid || game.PublishedAt.Time.After(time.Now()) {
+		if !game.PublishedAt.Valid || game.PublishedAt.Time.After(s.clock.Now()) {
 			http.Error(w, "game not found", http.StatusNotFound)
 			return
 		}
@@ -141,15 +140,16 @@ func (s *server) PostApiGamesIdParticipants(w http.ResponseWriter, r *http.Reque
 	going := sql.NullBool{Bool: req.Status == api.Going, Valid: true}
 
 	confirmedAt := sql.NullTime{
-		Time:  time.Now(),
+		Time:  s.clock.Now(),
 		Valid: req.Confirmed != nil,
 	}
 
 	if err := s.querier.ParticipantsUpsert(r.Context(), db.ParticipantsUpsertParams{
-		UserID:      int64(authInfo.UserId),
-		GameID:      id,
-		Going:       going,
-		ConfirmedAt: confirmedAt,
+		UserID:         int64(authInfo.UserId),
+		GameID:         id,
+		Going:          going,
+		ConfirmedAt:    confirmedAt,
+		GoingUpdatedAt: s.clock.Now(),
 	}); err != nil {
 		http.Error(w, fmt.Sprintf("failed to update participation: %s", err.Error()), http.StatusInternalServerError)
 		return

@@ -80,7 +80,7 @@ func normalizeRedirectPage(raw string) (string, error) {
 	return normalized, nil
 }
 
-func makeStateToken(ttl time.Duration, redirectPage string) (string, int64, error) {
+func makeStateToken(now time.Time, ttl time.Duration, redirectPage string) (string, int64, error) {
 	normalizedRedirect, err := normalizeRedirectPage(redirectPage)
 	if err != nil {
 		return "", 0, err
@@ -96,14 +96,14 @@ func makeStateToken(ttl time.Duration, redirectPage string) (string, int64, erro
 		return "", 0, fmt.Errorf("failed to marshal oauth state: %w", err)
 	}
 
-	exp := time.Now().Add(ttl).Unix()
+	exp := now.Add(ttl).Unix()
 	encodedPayloadStr := base64.RawURLEncoding.EncodeToString(encodedPayload)
 	sig := base64.RawURLEncoding.EncodeToString(computeStateSignature(encodedPayloadStr, exp))
 
 	return encodedPayloadStr + ":" + strconv.FormatInt(exp, 10) + ":" + sig, exp, nil
 }
 
-func parseStateToken(token string) (*OAuthState, error) {
+func parseStateToken(now time.Time, token string) (*OAuthState, error) {
 	parts := strings.Split(token, ":")
 	if len(parts) != 3 {
 		return nil, fmt.Errorf("invalid oauth state format")
@@ -117,7 +117,7 @@ func parseStateToken(token string) (*OAuthState, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid oauth state expiry: %w", err)
 	}
-	if time.Now().Unix() > exp {
+	if now.Unix() > exp {
 		return nil, fmt.Errorf("oauth state expired")
 	}
 
@@ -187,7 +187,7 @@ func (srv *server) GetApiAuthProviderCallback(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	state, err := parseStateToken(*params.State)
+	state, err := parseStateToken(srv.clock.Now(), *params.State)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("invalid or expired oauth state: %s", err.Error()), http.StatusBadRequest)
 		return
@@ -289,7 +289,7 @@ func (srv *server) GetApiAuthProviderCallback(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	now := time.Now()
+	now := srv.clock.Now()
 	jwtToken := jwt.NewWithClaims(
 		jwt.SigningMethodHS256,
 		jwt.RegisteredClaims{
@@ -357,7 +357,7 @@ func (srv *server) GetApiAuthProviderLogin(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	state, exp, err := makeStateToken(5*time.Minute, r.URL.Query().Get("redirect_page"))
+	state, exp, err := makeStateToken(srv.clock.Now(), 5*time.Minute, r.URL.Query().Get("redirect_page"))
 	if err != nil {
 		http.Error(w, fmt.Sprintf("invalid redirect page: %s", err.Error()), http.StatusBadRequest)
 		return

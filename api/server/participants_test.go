@@ -16,6 +16,7 @@ import (
 	"github.com/dmateusp/opengym/api"
 	"github.com/dmateusp/opengym/api/server"
 	"github.com/dmateusp/opengym/auth"
+	"github.com/dmateusp/opengym/clock"
 	"github.com/dmateusp/opengym/db"
 	dbtesting "github.com/dmateusp/opengym/db/testing"
 )
@@ -23,9 +24,10 @@ import (
 func TestPostApiGamesIdParticipants_Unauthorized(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
+	staticClock := clock.StaticClock{Time: time.Now()}
 
 	querier := db.New(sqlDB)
-	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock)
 
 	body, _ := json.Marshal(api.UpdateGameParticipationRequest{Status: api.Going})
 	r := httptest.NewRequest(http.MethodPost, "/api/games/g1/participants", bytes.NewReader(body))
@@ -41,10 +43,11 @@ func TestPostApiGamesIdParticipants_Unauthorized(t *testing.T) {
 func TestPostApiGamesIdParticipants_InvalidBody(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
+	staticClock := clock.StaticClock{Time: time.Now()}
 
 	userID := dbtesting.UpsertTestUser(t, sqlDB, "user@example.com")
 	querier := db.New(sqlDB)
-	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock)
 
 	r := httptest.NewRequest(http.MethodPost, "/api/games/g1/participants", bytes.NewReader([]byte("{invalid")))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(userID)}))
@@ -60,10 +63,11 @@ func TestPostApiGamesIdParticipants_InvalidBody(t *testing.T) {
 func TestPostApiGamesIdParticipants_InvalidStatus(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
+	staticClock := clock.StaticClock{Time: time.Now()}
 
 	userID := dbtesting.UpsertTestUser(t, sqlDB, "user@example.com")
 	querier := db.New(sqlDB)
-	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock)
 
 	createGame(t, querier, "g1", userID, sql.NullTime{Time: time.Now().Add(-time.Hour), Valid: true})
 
@@ -82,10 +86,11 @@ func TestPostApiGamesIdParticipants_InvalidStatus(t *testing.T) {
 func TestPostApiGamesIdParticipants_GameNotFound(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
+	staticClock := clock.StaticClock{Time: time.Now()}
 
 	userID := dbtesting.UpsertTestUser(t, sqlDB, "user@example.com")
 	querier := db.New(sqlDB)
-	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock)
 
 	body, _ := json.Marshal(api.UpdateGameParticipationRequest{Status: api.Going})
 	r := httptest.NewRequest(http.MethodPost, "/api/games/missing/participants", bytes.NewReader(body))
@@ -110,6 +115,7 @@ func TestPostApiGamesIdParticipants_NonOrganizerRestrictions(t *testing.T) {
 		{name: "published", publishedAt: sql.NullTime{Time: time.Now().Add(-time.Hour), Valid: true}, expectCode: http.StatusOK},
 	}
 
+	staticClock := clock.StaticClock{Time: time.Now()}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			sqlDB := dbtesting.SetupTestDB(t)
@@ -119,7 +125,7 @@ func TestPostApiGamesIdParticipants_NonOrganizerRestrictions(t *testing.T) {
 			participantID := dbtesting.UpsertTestUser(t, sqlDB, "participant@example.com")
 
 			querier := db.New(sqlDB)
-			srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
+			srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock)
 
 			createGame(t, querier, "g1", organizerID, tc.publishedAt)
 
@@ -172,10 +178,11 @@ func TestPostApiGamesIdParticipants_NonOrganizerRestrictions(t *testing.T) {
 func TestPostApiGamesIdParticipants_OrganizerCanUpdateWhenUnpublished(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
+	staticClock := clock.StaticClock{Time: time.Now()}
 
 	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "organizer@example.com")
 	querier := db.New(sqlDB)
-	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock)
 
 	createGame(t, querier, "g1", organizerID, sql.NullTime{Valid: false})
 
@@ -216,12 +223,13 @@ func TestPostApiGamesIdParticipants_OrganizerCanUpdateWhenUnpublished(t *testing
 func TestPostApiGamesIdParticipants_ConfirmParticipation(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
+	staticClock := clock.StaticClock{Time: time.Now()}
 
 	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "organizer@example.com")
 	participantID := dbtesting.UpsertTestUser(t, sqlDB, "participant@example.com")
 
 	querier := db.New(sqlDB)
-	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock)
 
 	// Published game so non-organizer can interact
 	createGame(t, querier, "g1", organizerID, sql.NullTime{Time: time.Now().Add(-time.Hour), Valid: true})
@@ -279,9 +287,10 @@ func createGame(t *testing.T, querier *db.Queries, id string, organizerID int64,
 func TestGetApiGamesIdParticipants_Unauthorized(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
+	staticClock := clock.StaticClock{Time: time.Now()}
 
 	querier := db.New(sqlDB)
-	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock)
 
 	r := httptest.NewRequest(http.MethodGet, "/api/games/g1/participants", nil)
 	w := httptest.NewRecorder()
@@ -296,10 +305,11 @@ func TestGetApiGamesIdParticipants_Unauthorized(t *testing.T) {
 func TestGetApiGamesIdParticipants_GameNotFound(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
+	staticClock := clock.StaticClock{Time: time.Now()}
 
 	userID := dbtesting.UpsertTestUser(t, sqlDB, "user@example.com")
 	querier := db.New(sqlDB)
-	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock)
 
 	r := httptest.NewRequest(http.MethodGet, "/api/games/missing/participants", nil)
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(userID)}))
@@ -323,6 +333,8 @@ func TestGetApiGamesIdParticipants_NonOrganizerRestrictions(t *testing.T) {
 		{name: "published", publishedAt: sql.NullTime{Time: time.Now().Add(-time.Hour), Valid: true}, expectCode: http.StatusOK},
 	}
 
+	staticClock := clock.StaticClock{Time: time.Now()}
+
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			sqlDB := dbtesting.SetupTestDB(t)
@@ -332,7 +344,7 @@ func TestGetApiGamesIdParticipants_NonOrganizerRestrictions(t *testing.T) {
 			participantID := dbtesting.UpsertTestUser(t, sqlDB, "participant@example.com")
 
 			querier := db.New(sqlDB)
-			srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
+			srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock)
 
 			createGame(t, querier, "g1", organizerID, tc.publishedAt)
 
@@ -352,10 +364,11 @@ func TestGetApiGamesIdParticipants_NonOrganizerRestrictions(t *testing.T) {
 func TestGetApiGamesIdParticipants_StatusComputation(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
+	staticClock := clock.StaticClock{Time: time.Now()}
 
 	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "organizer@example.com")
 	querier := db.New(sqlDB)
-	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock)
 
 	// Create a game with max 2 players
 	_, err := querier.GameCreate(context.Background(), db.GameCreateParams{
@@ -384,35 +397,36 @@ func TestGetApiGamesIdParticipants_StatusComputation(t *testing.T) {
 
 	// User 1 & 2: going (should be in main list)
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		UserID:      int64(user1),
-		GameID:      "g1",
-		Going:       sql.NullBool{Bool: true, Valid: true},
-		ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt: staticClock.Now(),
+		UserID:         int64(user1),
+		GameID:         "g1",
+		Going:          sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
 	})
-	time.Sleep(10 * time.Millisecond) // Ensure different timestamps
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		UserID:      int64(user2),
-		GameID:      "g1",
-		Going:       sql.NullBool{Bool: true, Valid: true},
-		ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt: staticClock.Now(),
+		UserID:         int64(user2),
+		GameID:         "g1",
+		Going:          sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
 	})
-	time.Sleep(10 * time.Millisecond)
 
 	// User 3: going (should be waitlisted because max is 2)
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		UserID:      int64(user3),
-		GameID:      "g1",
-		Going:       sql.NullBool{Bool: true, Valid: true},
-		ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt: staticClock.Now(),
+		UserID:         int64(user3),
+		GameID:         "g1",
+		Going:          sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
 	})
-	time.Sleep(10 * time.Millisecond)
 
 	// User 4: not going
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		UserID:      int64(user4),
-		GameID:      "g1",
-		Going:       sql.NullBool{Bool: false, Valid: true},
-		ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt: staticClock.Now(),
+		UserID:         int64(user4),
+		GameID:         "g1",
+		Going:          sql.NullBool{Bool: false, Valid: true},
+		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
 	})
 
 	// Get participants list
@@ -476,13 +490,14 @@ func TestGetApiGamesIdParticipants_StatusComputation(t *testing.T) {
 func TestGetApiGamesIdParticipants_OrganizerPriorityEvenWhenLate(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
+	staticClock := clock.StaticClock{Time: time.Now()}
 
 	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "organizer@example.com")
 	userEarly := dbtesting.UpsertTestUser(t, sqlDB, "early@example.com")
 	userLate := dbtesting.UpsertTestUser(t, sqlDB, "late@example.com")
 
 	querier := db.New(sqlDB)
-	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock)
 
 	_, err := querier.GameCreate(context.Background(), db.GameCreateParams{
 		ID:                 "g1",
@@ -504,26 +519,29 @@ func TestGetApiGamesIdParticipants_OrganizerPriorityEvenWhenLate(t *testing.T) {
 
 	// Fill both player slots before the organizer marks as going.
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		UserID:      int64(userEarly),
-		GameID:      "g1",
-		Going:       sql.NullBool{Bool: true, Valid: true},
-		ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt: staticClock.Now(),
+		UserID:         int64(userEarly),
+		GameID:         "g1",
+		Going:          sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
 	})
-	time.Sleep(10 * time.Millisecond)
+
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		UserID:      int64(userLate),
-		GameID:      "g1",
-		Going:       sql.NullBool{Bool: true, Valid: true},
-		ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt: staticClock.Now(),
+		UserID:         int64(userLate),
+		GameID:         "g1",
+		Going:          sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
 	})
 
 	// Organizer joins after the other two but should still be prioritized into the main list.
-	time.Sleep(10 * time.Millisecond)
+
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		UserID:      int64(organizerID),
-		GameID:      "g1",
-		Going:       sql.NullBool{Bool: true, Valid: true},
-		ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt: staticClock.Now(),
+		UserID:         int64(organizerID),
+		GameID:         "g1",
+		Going:          sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
 	})
 
 	r := httptest.NewRequest(http.MethodGet, "/api/games/g1/participants", nil)
@@ -573,6 +591,7 @@ func TestGetApiGamesIdParticipants_OrganizerPriorityEvenWhenLate(t *testing.T) {
 func TestGetApiGamesIdParticipants_NonGoingDoesNotConsumeSlot(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
+	staticClock := clock.StaticClock{Time: time.Now()}
 
 	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "organizer@example.com")
 	going1 := dbtesting.UpsertTestUser(t, sqlDB, "going1@example.com")
@@ -580,7 +599,7 @@ func TestGetApiGamesIdParticipants_NonGoingDoesNotConsumeSlot(t *testing.T) {
 	going2 := dbtesting.UpsertTestUser(t, sqlDB, "going2@example.com")
 
 	querier := db.New(sqlDB)
-	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock)
 
 	_, err := querier.GameCreate(context.Background(), db.GameCreateParams{
 		ID:                 "g1",
@@ -601,24 +620,27 @@ func TestGetApiGamesIdParticipants_NonGoingDoesNotConsumeSlot(t *testing.T) {
 	}
 
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		UserID:      int64(going1),
-		GameID:      "g1",
-		Going:       sql.NullBool{Bool: true, Valid: true},
-		ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt: staticClock.Now(),
+		UserID:         int64(going1),
+		GameID:         "g1",
+		Going:          sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
 	})
-	time.Sleep(10 * time.Millisecond)
+
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		UserID:      int64(notGoing),
-		GameID:      "g1",
-		Going:       sql.NullBool{Bool: false, Valid: true},
-		ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt: staticClock.Now(),
+		UserID:         int64(notGoing),
+		GameID:         "g1",
+		Going:          sql.NullBool{Bool: false, Valid: true},
+		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
 	})
-	time.Sleep(10 * time.Millisecond)
+
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		UserID:      int64(going2),
-		GameID:      "g1",
-		Going:       sql.NullBool{Bool: true, Valid: true},
-		ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt: staticClock.Now(),
+		UserID:         int64(going2),
+		GameID:         "g1",
+		Going:          sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
 	})
 
 	r := httptest.NewRequest(http.MethodGet, "/api/games/g1/participants", nil)
@@ -657,13 +679,14 @@ func TestGetApiGamesIdParticipants_NonGoingDoesNotConsumeSlot(t *testing.T) {
 func TestGetApiGamesIdParticipants_OrganizerNotGoingDoesNotBlockSlots(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
+	staticClock := clock.StaticClock{Time: time.Now()}
 
 	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "organizer@example.com")
 	going1 := dbtesting.UpsertTestUser(t, sqlDB, "going1@example.com")
 	going2 := dbtesting.UpsertTestUser(t, sqlDB, "going2@example.com")
 
 	querier := db.New(sqlDB)
-	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock)
 
 	_, err := querier.GameCreate(context.Background(), db.GameCreateParams{
 		ID:                 "g1",
@@ -685,24 +708,27 @@ func TestGetApiGamesIdParticipants_OrganizerNotGoingDoesNotBlockSlots(t *testing
 
 	// Organizer marks not going; should not consume a slot or change waitlist math.
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		UserID:      int64(organizerID),
-		GameID:      "g1",
-		Going:       sql.NullBool{Bool: false, Valid: true},
-		ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt: staticClock.Now(),
+		UserID:         int64(organizerID),
+		GameID:         "g1",
+		Going:          sql.NullBool{Bool: false, Valid: true},
+		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
 	})
-	time.Sleep(10 * time.Millisecond)
+
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		UserID:      int64(going1),
-		GameID:      "g1",
-		Going:       sql.NullBool{Bool: true, Valid: true},
-		ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt: staticClock.Now(),
+		UserID:         int64(going1),
+		GameID:         "g1",
+		Going:          sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
 	})
-	time.Sleep(10 * time.Millisecond)
+
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		UserID:      int64(going2),
-		GameID:      "g1",
-		Going:       sql.NullBool{Bool: true, Valid: true},
-		ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt: staticClock.Now(),
+		UserID:         int64(going2),
+		GameID:         "g1",
+		Going:          sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
 	})
 
 	r := httptest.NewRequest(http.MethodGet, "/api/games/g1/participants", nil)
@@ -744,6 +770,7 @@ func TestGetApiGamesIdParticipants_OrganizerNotGoingDoesNotBlockSlots(t *testing
 func TestGetApiGamesIdParticipants_NoWaitlistCapacityStillReturnsWaitlisted(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
+	staticClock := clock.StaticClock{Time: time.Now()}
 
 	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "organizer@example.com")
 	user1 := dbtesting.UpsertTestUser(t, sqlDB, "user1@example.com")
@@ -751,7 +778,7 @@ func TestGetApiGamesIdParticipants_NoWaitlistCapacityStillReturnsWaitlisted(t *t
 	user3 := dbtesting.UpsertTestUser(t, sqlDB, "user3@example.com")
 
 	querier := db.New(sqlDB)
-	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock)
 
 	_, err := querier.GameCreate(context.Background(), db.GameCreateParams{
 		ID:                 "g1",
@@ -772,24 +799,27 @@ func TestGetApiGamesIdParticipants_NoWaitlistCapacityStillReturnsWaitlisted(t *t
 	}
 
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		UserID:      int64(user1),
-		GameID:      "g1",
-		Going:       sql.NullBool{Bool: true, Valid: true},
-		ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt: staticClock.Now(),
+		UserID:         int64(user1),
+		GameID:         "g1",
+		Going:          sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
 	})
-	time.Sleep(10 * time.Millisecond)
+
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		UserID:      int64(user2),
-		GameID:      "g1",
-		Going:       sql.NullBool{Bool: true, Valid: true},
-		ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt: staticClock.Now(),
+		UserID:         int64(user2),
+		GameID:         "g1",
+		Going:          sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
 	})
-	time.Sleep(10 * time.Millisecond)
+
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		UserID:      int64(user3),
-		GameID:      "g1",
-		Going:       sql.NullBool{Bool: true, Valid: true},
-		ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt: staticClock.Now(),
+		UserID:         int64(user3),
+		GameID:         "g1",
+		Going:          sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
 	})
 
 	r := httptest.NewRequest(http.MethodGet, "/api/games/g1/participants", nil)
@@ -828,10 +858,11 @@ func TestGetApiGamesIdParticipants_NoWaitlistCapacityStillReturnsWaitlisted(t *t
 func TestGetApiGamesIdParticipants_UnlimitedPlayers(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
+	staticClock := clock.StaticClock{Time: time.Now()}
 
 	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "organizer@example.com")
 	querier := db.New(sqlDB)
-	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator())
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock)
 
 	// Create a game with unlimited players
 	_, err := querier.GameCreate(context.Background(), db.GameCreateParams{
@@ -856,12 +887,13 @@ func TestGetApiGamesIdParticipants_UnlimitedPlayers(t *testing.T) {
 	for i := 1; i <= 3; i++ {
 		userID := dbtesting.UpsertTestUser(t, sqlDB, "user"+strconv.Itoa(i)+"@example.com")
 		querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-			UserID:      int64(userID),
-			GameID:      "g1",
-			Going:       sql.NullBool{Bool: true, Valid: true},
-			ConfirmedAt: sql.NullTime{Time: time.Now(), Valid: true},
+			GoingUpdatedAt: staticClock.Now(),
+			UserID:         int64(userID),
+			GameID:         "g1",
+			Going:          sql.NullBool{Bool: true, Valid: true},
+			ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
 		})
-		time.Sleep(10 * time.Millisecond)
+
 	}
 
 	// Get participants list

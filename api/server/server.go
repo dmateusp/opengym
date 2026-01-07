@@ -4,6 +4,7 @@ import (
 	"flag"
 
 	"github.com/dmateusp/opengym/api"
+	"github.com/dmateusp/opengym/clock"
 	"github.com/dmateusp/opengym/db"
 )
 
@@ -15,12 +16,18 @@ var (
 type server struct {
 	querier                     db.QuerierWithTxSupport
 	randomAlphanumericGenerator RandomAlphanumericGenerator
+	clock                       clock.Clock
 }
 
-func NewServer(querier db.QuerierWithTxSupport, randomAlphanumericGenerator RandomAlphanumericGenerator) *server {
+func NewServer(
+	querier db.QuerierWithTxSupport,
+	randomAlphanumericGenerator RandomAlphanumericGenerator,
+	clock clock.Clock,
+) *server {
 	return &server{
 		querier:                     querier,
 		randomAlphanumericGenerator: randomAlphanumericGenerator,
+		clock:                       clock,
 	}
 }
 

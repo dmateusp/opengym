@@ -12,6 +12,7 @@ import (
 	"github.com/dmateusp/opengym/api"
 	"github.com/dmateusp/opengym/api/server"
 	"github.com/dmateusp/opengym/auth"
+	"github.com/dmateusp/opengym/clock"
 	"github.com/dmateusp/opengym/cors"
 	"github.com/dmateusp/opengym/db"
 	"github.com/dmateusp/opengym/demo"
@@ -81,7 +82,7 @@ func main() {
 	}
 
 	// Create the API handler with auth and logging middleware
-	apiHandler := api.HandlerWithOptions(server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator()), api.StdHTTPServerOptions{
+	apiHandler := api.HandlerWithOptions(server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), clock.RealClock{}), api.StdHTTPServerOptions{
 		Middlewares: []api.MiddlewareFunc{ // Middleware is executed last to first
 			auth.AuthMiddleware,
 			log.LogRequestsAndResponsesMiddleware,
