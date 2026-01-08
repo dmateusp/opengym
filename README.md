@@ -4,40 +4,76 @@ opengym is a web-app to organize and participate in group sports.
 
 The name comes from the term "open gym" used in volleyball to refer to a casual practice session which isn't coach-led.
 
-##  Background
+## Getting started
 
-I'm part of a few informal (unfederated) volleyball groups, and we currently use WhatsApp polls to organize games.
+You can start running a "demo" version of opengym locally by running:
 
-This is how it works:
+```bash
+go run cmd/opengymserver/main.go -demo.enabled=true -demo.auth.signing-secret=`openssl rand -hex 32`
+```
 
-* A poll is created with the place, date, time and duration of the game.
-* Members of the group can vote to join the game.
-  * The game can be capped to a set number of players, the remaining vote into a waitlist.
-  * The admin can allow players to bring guests from outside the group.
-* When a minimum of players is reached, the organizer books the space.
-* The poll is declared "closed" a day or a few days before the game.
-* Total cost is divided among the players and payment is collected.
-  * Payment can be collected before or after the game depending on the organizer.
-  * The organizer can accept multiple payments methods.
+and starting the front-end with:
 
-WhatsApp polls are very accessible and easy to use, but they have limited features:
+```bash
+cd frontend
+pnpm run dev
+```
 
-* Can't edit details of a poll, so if the date, time or place of the game changes, you have to communicate the new details to everyone and confirm their participation.
-* Waitlists are by order of voting, and it can be difficult as a participant to follow your status in the list.
-* It's hard to verify who paid and who didn't.
-* You can't actually lock a poll.
-* You can't track if participants drop out.
+The demo version allows you to try out the various features of opengym both as a player and as an organizer.
 
-##  Roadmap
+Once started, access the front-end and click on the profile on the top-right corner to impersonate any of the demo users.
 
-* [ ] Admins and participants can log-in easily using OAuth.
-* [ ] An admin can create a game and define basic details about the game.
-* [ ] Participants can join a game, leave a game, and view the game details.
-* [ ] Admins can enable a waitlist.
-* [ ] Admins can lock a game.
-* [ ] Admins can allow participants to bring guests. These participants are responsible for their guests' payment.
-* [ ] Changes in participants' voting are tracked and shown.
-* [ ] Payment total per participant is shown.
-* [ ] Participants can signal that they paid, admins can confirm they received the payment.
-* [ ] When admins change the game's important details (date, time, place, duration), the participants' votes are set to be confirmed again.
-* [ ] Configurable payment links and methods are available.
+###  Creating a game
+
+Any user can create a game, initially they only need to provide a name for it.
+The game is created in "draft" mode, which means it is not yet visible to other users.
+
+A game has the following configurations:
+
+- **Name:** a short title for the game.
+- **Location:** where the game will take place.
+- **When:** the date and time the game will start.
+- **Duration:** the length of the game.
+- **Price:** the total cost incurred by the organizer. (Can be free)
+  - This price is divided among the players. Each player is shown an equal share of the price, unless they are bringing guests, in which case they are responsible for their guests' share too.
+  - Note that payment is *not handled by opengym*. But opengym helps organizers keep track of who paid and who did not.
+- **Players:** how many players can join the game before it's full.
+  - This can be unlimited or a specific number.
+- **Waitlist:** how many players can be put in a waitlist if the game is full.
+  - This can be disabled, unlimited, or a specific number.
+
+### Publishing a game
+
+Publishing a game is disabled until the organizer has set all of the important information of the game (information that would directly influence a player's decision to join).
+Once all of the required information has been set, the organizer can either publish the game right away or schedule it for publishing at a later date/time.
+Scheduling a game's publication gives the organizer a chance to tell potential participants about when a game will be available to join, making it fairer in cases where spots are limited.
+
+Once a game is published, anyone with the link can join the game.
+
+Note that opengym does not currently make games "searchable" on the platform. In its current version, it is made for small private communities/groups to organize games with their existing members, rather than providing features to allow communities to recruit new members.
+
+###  Participating in a game - first come first served
+
+A player can vote to join a game, and later flip his/her vote as their availability changes.
+
+opengym tracks the date-time a player voted to join a game, and uses this information to determine the order in which players are added to the game.
+
+- An organizer always has priority to join his/her game.
+  - The organizer doesn't have to join a game.
+  - If the organizer joins the game, they will be added as the first player, potentially pushing the last player to the waitlist.
+- Players can vote to join the game until both the game and the waitlist are full.
+- If a player decides to leave the game, their vote is moved to a "Not going" section.
+  - If that player was going to the game, the first player in the waitlist will takes his/her spot.
+  - If that player decides to join the game again, they will be added to the bottom of the waitlist.
+
+## Contributing
+
+To suggest a new feature, open a GitHub discussion. When we've discussed the feature and decided to implement it, we'll create a GitHub issue.
+
+Not all contributions are code, we also welcome documentation, translations, and general feedback/ideas.
+
+The [AGENTS.md](./AGENTS.md) file describes the tooling we use for development, it should contain everything you need to know to start contributing code.
+
+## Deployment
+
+⚠️ Coming soon.
