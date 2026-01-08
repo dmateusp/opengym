@@ -662,16 +662,24 @@ export default function GameDetailPage() {
                     </div>
                   )}
                   {editingField === "name" && isOrganizer ? (
-                    <Input
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      onBlur={() => handleBlur("name")}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleBlur("name");
-                        if (e.key === "Escape") setEditingField(null);
-                      }}
-                      className="text-3xl font-bold"
-                    />
+                    <div>
+                      <Input
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onBlur={() => handleBlur("name")}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleBlur("name");
+                          if (e.key === "Escape") setEditingField(null);
+                        }}
+                        maxLength={100}
+                        className={`text-3xl font-bold ${editValue.length >= 100 ? 'border-red-500' : ''}`}
+                      />
+                      <div className="mt-1 flex justify-end">
+                        <span className={`text-xs ${editValue.length >= 100 ? 'text-red-600' : 'text-gray-500'}`}>
+                          {editValue.length}/100
+                        </span>
+                      </div>
+                    </div>
                   ) : (
                     <h1
                       className="text-4xl font-bold text-gray-900 cursor-text transition"
@@ -1048,17 +1056,25 @@ export default function GameDetailPage() {
                 </span>
               </div>
               {editingField === "description" && isOrganizer ? (
-                <textarea
-                  ref={
-                    inputRef as unknown as React.RefObject<HTMLTextAreaElement>
-                  }
-                  value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
-                  onBlur={() => handleBlur("description")}
-                  className="w-full p-3 border-2 border-primary rounded-xl resize-none focus:outline-none"
-                  rows={3}
-                  placeholder={t('common.tellPeopleAboutGame')}
-                />
+                <div>
+                  <textarea
+                    ref={
+                      inputRef as unknown as React.RefObject<HTMLTextAreaElement>
+                    }
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    onBlur={() => handleBlur("description")}
+                    maxLength={1000}
+                    className={`w-full p-3 border-2 rounded-xl resize-none focus:outline-none ${editValue.length >= 1000 ? 'border-red-500' : 'border-primary'}`}
+                    rows={3}
+                    placeholder={t('common.tellPeopleAboutGame')}
+                  />
+                  <div className="mt-1 flex justify-end">
+                    <span className={`text-xs ${editValue.length >= 1000 ? 'text-red-600' : 'text-gray-500'}`}>
+                      {editValue.length}/1000
+                    </span>
+                  </div>
+                </div>
               ) : (
                 <div
                   onClick={() =>

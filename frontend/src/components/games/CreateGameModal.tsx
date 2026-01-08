@@ -18,12 +18,18 @@ export default function CreateGameModal({ isOpen, onClose }: CreateGameModalProp
   const [gameName, setGameName] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const NAME_MAX = 100
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    if (!gameName.trim()) {
+    const trimmed = gameName.trim()
+
+    if (!trimmed) {
       setError(t('game.gameNameRequired'))
+      return
+    }
+    if (gameName.length > NAME_MAX) {
+      setError(`${gameName.length}/${NAME_MAX}`)
       return
     }
 
@@ -38,7 +44,7 @@ export default function CreateGameModal({ isOpen, onClose }: CreateGameModalProp
         },
         credentials: 'include',
         body: JSON.stringify({
-          name: gameName.trim(),
+          name: trimmed,
         }),
       })
 
@@ -98,9 +104,17 @@ export default function CreateGameModal({ isOpen, onClose }: CreateGameModalProp
               onChange={(e) => setGameName(e.target.value)}
               disabled={isLoading}
               autoFocus
+              maxLength={NAME_MAX}
               className="rounded-xl border-2 focus:border-primary focus:ring-0 text-base"
             />
-            <p className="text-xs text-gray-500">Keep it simple and fun</p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-gray-500">Keep it simple and fun</p>
+              <p
+                className={`text-xs ${gameName.length >= NAME_MAX ? 'text-red-600' : 'text-gray-500'}`}
+              >
+                {gameName.length}/{NAME_MAX}
+              </p>
+            </div>
           </div>
 
           {error && (
@@ -121,7 +135,9 @@ export default function CreateGameModal({ isOpen, onClose }: CreateGameModalProp
             </Button>
             <Button
               type="submit"
-              disabled={isLoading || !gameName.trim()}
+              disabled={
+                isLoading || !gameName.trim() || gameName.length > NAME_MAX
+              }
               className="bg-accent rounded-full"
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
