@@ -59,13 +59,18 @@ func (s *server) GetApiGamesIdParticipants(w http.ResponseWriter, r *http.Reques
 		// Determine participation status based on going flag and position
 		if row.GameParticipant.Going.Valid && row.GameParticipant.Going.Bool {
 			// User marked as going - check if they're in the main list or waitlisted
-			if game.MaxPlayers == -1 || goingCount < game.MaxPlayers {
+			participantCount := int64(1) // Count the participant themselves
+			if row.GameParticipant.Guests.Valid {
+				participantCount += row.GameParticipant.Guests.Int64
+			}
+
+			if game.MaxPlayers == -1 || goingCount+participantCount <= game.MaxPlayers {
 				// Either unlimited players or there's space in the main list
 				if err := status.FromParticipationStatusUpdate(api.Going); err != nil {
 					http.Error(w, fmt.Sprintf("failed to encode status: %s", err.Error()), http.StatusInternalServerError)
 					return
 				}
-				goingCount++
+				goingCount += participantCount
 			} else {
 				// Waitlisted
 				if err := status.FromParticipationStatus1(api.Waitlisted); err != nil {
@@ -119,7 +124,15 @@ func (s *server) PostApiGamesIdParticipants(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	game, err := s.querier.GameGetById(r.Context(), id)
+	tx, err := s.dbConn.BeginTx(r.Context(), nil)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to begin transaction: %s", err.Error()), http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	querierWithTx := s.querier.WithTx(tx)
+	game, err := querierWithTx.GameGetById(r.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.Error(w, "game not found", http.StatusNotFound)
@@ -144,14 +157,31 @@ func (s *server) PostApiGamesIdParticipants(w http.ResponseWriter, r *http.Reque
 		Valid: req.Confirmed != nil,
 	}
 
-	if err := s.querier.ParticipantsUpsert(r.Context(), db.ParticipantsUpsertParams{
+	guests := sql.NullInt64{}
+	if req.Guests != nil {
+		if game.MaxGuestsPerPlayer == -1 || int64(*req.Guests) <= game.MaxGuestsPerPlayer {
+			guests.Int64 = int64(*req.Guests)
+			guests.Valid = true
+		} else {
+			http.Error(w, "this game doesn't allow that many guests", http.StatusBadRequest)
+			return
+		}
+	}
+
+	if err := querierWithTx.ParticipantsUpsert(r.Context(), db.ParticipantsUpsertParams{
 		UserID:         int64(authInfo.UserId),
 		GameID:         id,
 		Going:          going,
 		ConfirmedAt:    confirmedAt,
 		GoingUpdatedAt: s.clock.Now(),
+		Guests:         guests,
 	}); err != nil {
 		http.Error(w, fmt.Sprintf("failed to update participation: %s", err.Error()), http.StatusInternalServerError)
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		http.Error(w, fmt.Sprintf("failed to commit transaction: %s", err.Error()), http.StatusInternalServerError)
 		return
 	}
 

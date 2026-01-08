@@ -82,7 +82,7 @@ func main() {
 	}
 
 	// Create the API handler with auth and logging middleware
-	apiHandler := api.HandlerWithOptions(server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), clock.RealClock{}), api.StdHTTPServerOptions{
+	apiHandler := api.HandlerWithOptions(server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), clock.RealClock{}, dbConn), api.StdHTTPServerOptions{
 		Middlewares: []api.MiddlewareFunc{ // Middleware is executed last to first
 			auth.AuthMiddleware,
 			log.LogRequestsAndResponsesMiddleware,

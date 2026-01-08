@@ -14,7 +14,7 @@ import (
 const participantsList = `-- name: ParticipantsList :many
 select
     users.id = ?1 as is_organizer,
-    game_participants.user_id, game_participants.game_id, game_participants.created_at, game_participants.updated_at, game_participants.going_updated_at, game_participants.going, game_participants.confirmed_at,
+    game_participants.user_id, game_participants.game_id, game_participants.created_at, game_participants.updated_at, game_participants.going_updated_at, game_participants.going, game_participants.confirmed_at, game_participants.guests,
     users.id, users.name, users.email, users.photo, users.created_at, users.updated_at, users.is_demo
 from game_participants
 join users on game_participants.user_id = users.id
@@ -53,6 +53,7 @@ func (q *Queries) ParticipantsList(ctx context.Context, arg ParticipantsListPara
 			&i.GameParticipant.GoingUpdatedAt,
 			&i.GameParticipant.Going,
 			&i.GameParticipant.ConfirmedAt,
+			&i.GameParticipant.Guests,
 			&i.User.ID,
 			&i.User.Name,
 			&i.User.Email,
@@ -80,13 +81,20 @@ insert into game_participants(
     game_id,
     going,
     going_updated_at,
-    confirmed_at
-) values (?, ?, ?, ?, ?)
+    confirmed_at,
+    guests
+) values (?, ?, ?, ?, ?, ?)
 on conflict(user_id, game_id) do update set
     updated_at = current_timestamp,
     going = coalesce(excluded.going, game_participants.going),
-    going_updated_at = iif(excluded.going = game_participants.going, game_participants.going_updated_at, excluded.going_updated_at),
-    confirmed_at = coalesce(excluded.confirmed_at, game_participants.confirmed_at)
+    -- we only update going_updated_at if a field relevant to a participant's order in the queue has changed
+    going_updated_at = iif(
+        excluded.going = game_participants.going and (excluded.guests is null or excluded.guests is game_participants.guests),
+        game_participants.going_updated_at,
+        excluded.going_updated_at
+    ),
+    confirmed_at = coalesce(excluded.confirmed_at, game_participants.confirmed_at),
+    guests = coalesce(excluded.guests, game_participants.guests)
 `
 
 type ParticipantsUpsertParams struct {
@@ -95,6 +103,7 @@ type ParticipantsUpsertParams struct {
 	Going          sql.NullBool
 	GoingUpdatedAt time.Time
 	ConfirmedAt    sql.NullTime
+	Guests         sql.NullInt64
 }
 
 func (q *Queries) ParticipantsUpsert(ctx context.Context, arg ParticipantsUpsertParams) error {
@@ -104,6 +113,7 @@ func (q *Queries) ParticipantsUpsert(ctx context.Context, arg ParticipantsUpsert
 		arg.Going,
 		arg.GoingUpdatedAt,
 		arg.ConfirmedAt,
+		arg.Guests,
 	)
 	return err
 }

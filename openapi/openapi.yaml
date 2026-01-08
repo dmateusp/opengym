@@ -655,6 +655,9 @@ components:
           type: boolean
           description: If the participant has confirmed (can only be set to false by the server when important details are changed on the game)
           enum: [true]
+        guests:
+          type: integer
+          description: Number of guests the participant is bringing
 
     GameListItem:
       type: object

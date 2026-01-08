@@ -1,6 +1,7 @@
 package server
 
 import (
+	"database/sql"
 	"flag"
 
 	"github.com/dmateusp/opengym/api"
@@ -17,17 +18,20 @@ type server struct {
 	querier                     db.QuerierWithTxSupport
 	randomAlphanumericGenerator RandomAlphanumericGenerator
 	clock                       clock.Clock
+	dbConn                      *sql.DB
 }
 
 func NewServer(
 	querier db.QuerierWithTxSupport,
 	randomAlphanumericGenerator RandomAlphanumericGenerator,
 	clock clock.Clock,
+	dbConn *sql.DB,
 ) *server {
 	return &server{
 		querier:                     querier,
 		randomAlphanumericGenerator: randomAlphanumericGenerator,
 		clock:                       clock,
+		dbConn:                      dbConn,
 	}
 }
 

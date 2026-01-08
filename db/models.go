@@ -34,6 +34,7 @@ type GameParticipant struct {
 	GoingUpdatedAt time.Time
 	Going          sql.NullBool
 	ConfirmedAt    sql.NullTime
+	Guests         sql.NullInt64
 }
 
 type User struct {
