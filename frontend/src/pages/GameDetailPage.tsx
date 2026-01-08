@@ -51,6 +51,7 @@ interface Game {
   durationMinutes?: number;
   maxPlayers?: number;
   maxWaitlistSize?: number;
+  maxGuestsPerPlayer?: number;
   totalPriceCents?: number;
   createdAt: string;
   updatedAt: string;
@@ -68,6 +69,7 @@ interface AuthUser {
 interface Participant {
   status: "going" | "not_going" | "waitlisted";
   user: AuthUser;
+  guests: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -115,6 +117,7 @@ export default function GameDetailPage() {
   );
   const [isUpdatingParticipation, setIsUpdatingParticipation] = useState(false);
   const [showUngoingConfirmation, setShowUngoingConfirmation] = useState(false);
+  const [guestCountInput, setGuestCountInput] = useState("0");
 
   // Share state
   const [shareUrlCopied, setShareUrlCopied] = useState(false);
@@ -249,17 +252,21 @@ export default function GameDetailPage() {
     }
   };
 
-  const updateParticipation = async (status: "going" | "not_going") => {
+  const updateParticipation = async (status: "going" | "not_going", guestCount?: number) => {
     if (!id || !user) return;
     try {
       setIsUpdatingParticipation(true);
+      const body: { status: string; guests?: number } = { status };
+      if (guestCount !== undefined) {
+        body.guests = guestCount;
+      }
       const response = await fetchWithDemoRecovery(
         `${API_BASE_URL}/api/games/${id}/participants`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ status }),
+          body: JSON.stringify(body),
         }
       );
       if (response.ok) {
@@ -345,6 +352,11 @@ export default function GameDetailPage() {
         label: t('game.waitlistSizeSet'),
         met: typeof game.maxWaitlistSize === "number",
         field: "maxWaitlistSize",
+      },
+      {
+        label: t('game.guestsPerPlayerSet'),
+        met: typeof game.maxGuestsPerPlayer === "number",
+        field: "maxGuestsPerPlayer",
       },
       {
         label: t('game.pricingSet'),
@@ -557,6 +569,18 @@ export default function GameDetailPage() {
       setShareUrlCopied(true);
       setTimeout(() => setShareUrlCopied(false), 2000);
     });
+  }
+
+  async function handleJoinWithGuests() {
+    const guestCount = parseInt(guestCountInput, 10);
+    if (isNaN(guestCount) || guestCount < 0) {
+      return;
+    }
+    const maxGuests = game?.maxGuestsPerPlayer ?? 0;
+    if (maxGuests !== -1 && guestCount > maxGuests) {
+      return;
+    }
+    await updateParticipation("going", guestCount);
   }
 
   if (isLoading) {
@@ -994,6 +1018,51 @@ export default function GameDetailPage() {
                 )}
               </div>
 
+              {/* Guests Per Player */}
+              <div>
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
+                  {t('common.guestsPerPlayer')}
+                </label>
+                {editingField === "maxGuestsPerPlayer" && isOrganizer ? (
+                  <NumberLimitEditor
+                    value={game?.maxGuestsPerPlayer}
+                    onSave={(value) => {
+                      if (value !== undefined) {
+                        saveField("maxGuestsPerPlayer", value);
+                      } else {
+                        cancelEditing();
+                      }
+                    }}
+                    onCancel={cancelEditing}
+                    placeholder={t('common.enterMaxGuests')}
+                  />
+                ) : (
+                  <div
+                    onClick={() =>
+                      startEditing(
+                        "maxGuestsPerPlayer",
+                        game?.maxGuestsPerPlayer ?? ""
+                      )
+                    }
+                    className={`text-lg font-semibold cursor-text transition ${
+                      typeof game?.maxGuestsPerPlayer === "number"
+                        ? "text-gray-900"
+                        : "text-gray-400"
+                    }`}
+                  >
+                    {typeof game?.maxGuestsPerPlayer === "number"
+                      ? game.maxGuestsPerPlayer === -1
+                        ? t('common.unlimited')
+                        : game.maxGuestsPerPlayer === 0
+                        ? t('common.disabled')
+                        : `${t('common.upTo')} ${game.maxGuestsPerPlayer}`
+                      : isOrganizer
+                      ? t('common.clickToSet')
+                      : "—"}
+                  </div>
+                )}
+              </div>
+
               {/* Price */}
               <div>
                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
@@ -1118,9 +1187,9 @@ export default function GameDetailPage() {
                   {/* People Grid */}
                   <div className="mb-6">
                     <ParticipantGrid
-                      participants={participants
-                        .filter((p) => p.status === "going")
-                        .map((p) => p.user)}
+                      participants={participants.filter(
+                        (p) => p.status === "going"
+                      )}
                       organizerId={game?.organizerId}
                       maxCount={game?.maxPlayers}
                       icon={Crown}
@@ -1144,9 +1213,9 @@ export default function GameDetailPage() {
                         </span>
                       </p>
                       <ParticipantGrid
-                        participants={participants
-                          .filter((p) => p.status === "waitlisted")
-                          .map((p) => p.user)}
+                        participants={participants.filter(
+                          (p) => p.status === "waitlisted"
+                        )}
                         organizerId={game?.organizerId}
                         maxCount={game?.maxWaitlistSize}
                         icon={Clock}
@@ -1163,9 +1232,9 @@ export default function GameDetailPage() {
                         <span>{t('participants.notGoingCount')} ({participantCounts.notGoing})</span>
                       </p>
                       <ParticipantGrid
-                        participants={participants
-                          .filter((p) => p.status === "not_going")
-                          .map((p) => p.user)}
+                        participants={participants.filter(
+                          (p) => p.status === "not_going"
+                        )}
                         organizerId={game?.organizerId}
                         size="sm"
                         opacity={0.6}
@@ -1329,22 +1398,87 @@ export default function GameDetailPage() {
                     </Dialog>
                   </>
                 ) : (
-                  <>
-                    <Button
-                      onClick={() => updateParticipation("going")}
-                      disabled={joinButtonDisabled}
-                      className="w-full bg-accent"
-                    >
-                      {isUpdatingParticipation
-                        ? t('participants.signingUp')
-                        : t('participants.countMeIn')}
-                    </Button>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-[1fr,auto] gap-3 items-end">
+                      <Button
+                        onClick={handleJoinWithGuests}
+                        disabled={joinButtonDisabled || (() => {
+                          const count = parseInt(guestCountInput, 10);
+                          if (isNaN(count) || count < 0) return true;
+                          const maxGuests = game?.maxGuestsPerPlayer ?? 0;
+                          if (maxGuests !== -1 && count > maxGuests) return true;
+                          return false;
+                        })()}
+                        className="bg-accent w-full"
+                      >
+                        {isUpdatingParticipation ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            {t('participants.joining')}
+                          </>
+                        ) : (
+                          t('participants.countMeIn')
+                        )}
+                      </Button>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-xs font-medium text-gray-600">
+                          {t('participants.guests')}
+                        </label>
+                        <Input
+                          type="number"
+                          min="0"
+                          max={
+                            game?.maxGuestsPerPlayer === -1
+                              ? undefined
+                              : game?.maxGuestsPerPlayer
+                          }
+                          value={guestCountInput}
+                          onChange={(e) => setGuestCountInput(e.target.value)}
+                          placeholder="0"
+                          disabled={game?.maxGuestsPerPlayer === 0 || isUpdatingParticipation}
+                          className="w-20 text-center"
+                        />
+                      </div>
+                    </div>
+                    {(() => {
+                      const count = parseInt(guestCountInput, 10);
+                      const maxGuests = game?.maxGuestsPerPlayer ?? 0;
+                      if (game?.maxGuestsPerPlayer === 0) {
+                        return (
+                          <p className="text-xs text-gray-500">
+                            {t('participants.noGuestsAllowed')}
+                          </p>
+                        );
+                      }
+                      if (!isNaN(count) && maxGuests !== -1 && count > maxGuests) {
+                        return (
+                          <p className="text-xs text-red-600">
+                            {t('participants.exceedsMaxGuests', { max: maxGuests })}
+                          </p>
+                        );
+                      }
+                      if (game?.maxGuestsPerPlayer === -1) {
+                        return (
+                          <p className="text-xs text-gray-500">
+                            {t('participants.unlimitedGuests')}
+                          </p>
+                        );
+                      }
+                      if (game?.maxGuestsPerPlayer && game.maxGuestsPerPlayer > 0) {
+                        return (
+                          <p className="text-xs text-gray-500">
+                            {t('participants.maxGuestsInfo', { max: game.maxGuestsPerPlayer })}
+                          </p>
+                        );
+                      }
+                      return null;
+                    })()}
                     {isGameFull && (
-                      <p className="text-xs text-gray-500 text-center mt-2">
+                      <p className="text-xs text-gray-500">
                         {t('participants.gameIsFull')}
                       </p>
                     )}
-                  </>
+                  </div>
                 )}
               </div>
             ) : null}

@@ -627,10 +627,14 @@ components:
       required:
         - status
         - user
+        - guests
       properties:
         status:
           $ref: '#/components/schemas/ParticipationStatus'
           description: Computed participation status (going, waitlisted, or not_going)
+        guests:
+          type: integer
+          description: Number of guests the participant is bringing
         user:
           $ref: '#/components/schemas/User'
           description: User information for the participant

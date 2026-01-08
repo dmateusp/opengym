@@ -88,6 +88,7 @@
     "durationSet": "Duration set",
     "maxPlayersSet": "Max players set",
     "waitlistSizeSet": "Waitlist size set",
+    "guestsPerPlayerSet": "Guests per player set",
     "pricingSet": "Pricing set",
     "completeFieldsBeforePublishing": "Complete all required fields before publishing.",
     "selectDateTimeToSchedule": "Select a date and time to schedule publishing.",
@@ -151,6 +152,7 @@
     "yes": "Yes",
     "no": "No",
     "ok": "OK",
+    "cancel": "Cancel",
     "close": "Close",
     "back": "Back",
     "dateFormatFriendly": "EEEE, MMMM do 'at' h:mm a",
@@ -180,6 +182,8 @@
     "enterMaxPlayers": "Enter max players",
     "setMaximum": "Set maximum",
     "enterMaxWaitlistSize": "Enter max waitlist size",
+    "guestsPerPlayer": "Guests per player",
+    "enterMaxGuests": "Enter max guests",
     "pricePlaceholder": "e.g., 15.50",
     "pickTimeToPublish": "Pick a time to publish",
     "by": "by"
@@ -211,6 +215,17 @@
     "yesChangeVote": "Yes, change my vote",
     "signingUp": "Signing up...",
     "countMeIn": "Count me in!",
-    "gameIsFull": "Game is full"
+    "gameIsFull": "Game is full",
+    "joinGame": "Join game",
+    "guests": "Guests",
+    "numberOfGuests": "Number of guests",
+    "howManyGuestsUnlimited": "How many guests are you bringing? (unlimited)",
+    "howManyGuestsLimited": "How many guests are you bringing? (max {{max}})",
+    "noGuestsAllowed": "This game does not allow guests.",
+    "unlimitedGuests": "Unlimited guests allowed",
+    "maxGuestsInfo": "Max {{max}} guests per player",
+    "exceedsMaxGuests": "Cannot exceed {{max}} guests",
+    "confirmJoin": "Confirm",
+    "joining": "Joining..."
   }
 }

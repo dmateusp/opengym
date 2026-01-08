@@ -1,4 +1,4 @@
-import { Crown } from 'lucide-react'
+import { Crown, Users } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 interface User {
@@ -8,8 +8,13 @@ interface User {
   picture?: string
 }
 
+interface ParticipantWithGuests {
+  user: User
+  guests?: number
+}
+
 interface ParticipantGridProps {
-  participants: User[]
+  participants: (User | ParticipantWithGuests)[]
   organizerId?: number
   maxCount?: number
   icon?: LucideIcon
@@ -73,7 +78,9 @@ export function ParticipantGrid({
 
   return (
     <div className="flex flex-wrap gap-4" style={containerStyle}>
-      {participants.map((participant) => {
+      {participants.map((item) => {
+        const participant = 'user' in item ? item.user : item
+        const guestCount = 'guests' in item ? item.guests : undefined
         const isOrganizerParticipating =
           organizerId && participant.id === String(organizerId)
         return (
@@ -109,6 +116,16 @@ export function ParticipantGrid({
                   className={`absolute -bottom-1 -right-1 bg-primary rounded-full ${config.crownPadding} shadow-lg border-2 border-white`}
                 >
                   <Crown className={`${config.crown} text-white`} />
+                </div>
+              )}
+              {guestCount !== undefined && guestCount > 0 && (
+                <div
+                  className={`absolute -top-1 -right-1 bg-secondary rounded-full px-2 py-1 shadow-lg border-2 border-white flex items-center justify-center`}
+                  title={`${guestCount} guest${guestCount !== 1 ? 's' : ''}`}
+                >
+                  <span className="text-white font-bold text-xs leading-none">
+                    +{guestCount}
+                  </span>
                 </div>
               )}
             </div>

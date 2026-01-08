@@ -90,11 +90,17 @@ func (s *server) GetApiGamesIdParticipants(w http.ResponseWriter, r *http.Reques
 		var user api.User
 		user.FromDb(row.User)
 
+		var guests int
+		if row.GameParticipant.Guests.Valid {
+			guests = int(row.GameParticipant.Guests.Int64)
+		}
+
 		participants = append(participants, api.ParticipantWithUser{
 			Status:    status,
 			User:      user,
 			CreatedAt: ptr.Ptr(row.GameParticipant.CreatedAt),
 			UpdatedAt: ptr.Ptr(row.GameParticipant.UpdatedAt),
+			Guests:    guests,
 		})
 	}
 
