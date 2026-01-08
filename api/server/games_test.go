@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -163,6 +164,137 @@ func TestPostApiGames_InvalidRequestBody(t *testing.T) {
 
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("Expected status %d, got %d", http.StatusBadRequest, w.Code)
+	}
+}
+
+func TestPostApiGames_NameValidation(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+	staticClock := clock.StaticClock{Time: time.Now()}
+
+	testUserID := dbtesting.UpsertTestUser(t, sqlDB, "john@example.com")
+	querier := db.New(sqlDB)
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock)
+
+	testCases := []struct {
+		name           string
+		gameName       string
+		expectedStatus int
+		expectedError  string
+	}{
+		{
+			name:           "empty name",
+			gameName:       "",
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  "name",
+		},
+		{
+			name:           "name too long",
+			gameName:       string(make([]byte, 101)), // 101 characters (max is 100)
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  "name",
+		},
+		{
+			name:           "name at max length",
+			gameName:       string(make([]byte, 100)), // exactly 100 characters
+			expectedStatus: http.StatusCreated,
+		},
+		{
+			name:           "valid short name",
+			gameName:       "A",
+			expectedStatus: http.StatusCreated,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := api.CreateGameRequest{
+				Name: tc.gameName,
+			}
+
+			body, _ := json.Marshal(req)
+			r := httptest.NewRequest(http.MethodPost, "/api/games", bytes.NewReader(body))
+			r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(testUserID)}))
+			w := httptest.NewRecorder()
+
+			srv.PostApiGames(w, r)
+
+			if w.Code != tc.expectedStatus {
+				t.Errorf("Expected status %d, got %d. Body: %s", tc.expectedStatus, w.Code, w.Body.String())
+			}
+
+			if tc.expectedError != "" && !strings.Contains(w.Body.String(), tc.expectedError) {
+				t.Errorf("Expected error to contain '%s', got: %s", tc.expectedError, w.Body.String())
+			}
+		})
+	}
+}
+
+func TestPostApiGames_DescriptionValidation(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+	staticClock := clock.StaticClock{Time: time.Now()}
+
+	testUserID := dbtesting.UpsertTestUser(t, sqlDB, "john@example.com")
+	querier := db.New(sqlDB)
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock)
+
+	testCases := []struct {
+		name           string
+		description    *string
+		expectedStatus int
+		expectedError  string
+	}{
+		{
+			name:           "description too long",
+			description:    ptr.Ptr(string(make([]byte, 1001))), // 1001 characters (max is 1000)
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  "description",
+		},
+		{
+			name:           "description at max length",
+			description:    ptr.Ptr(string(make([]byte, 1000))), // exactly 1000 characters
+			expectedStatus: http.StatusCreated,
+		},
+		{
+			name:           "valid description",
+			description:    ptr.Ptr("A valid description"),
+			expectedStatus: http.StatusCreated,
+		},
+		{
+			name:           "empty description",
+			description:    ptr.Ptr(""),
+			expectedStatus: http.StatusCreated,
+		},
+		{
+			name:           "nil description",
+			description:    nil,
+			expectedStatus: http.StatusCreated,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := api.CreateGameRequest{
+				Name:        "Valid Game Name",
+				Description: tc.description,
+			}
+
+			body, _ := json.Marshal(req)
+			r := httptest.NewRequest(http.MethodPost, "/api/games", bytes.NewReader(body))
+			r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(testUserID)}))
+			w := httptest.NewRecorder()
+
+			srv.PostApiGames(w, r)
+
+			if w.Code != tc.expectedStatus {
+				t.Errorf("Expected status %d, got %d. Body: %s", tc.expectedStatus, w.Code, w.Body.String())
+			}
+
+			if tc.expectedError != "" && !strings.Contains(w.Body.String(), tc.expectedError) {
+				t.Errorf("Expected error to contain '%s', got: %s", tc.expectedError, w.Body.String())
+			}
+		})
 	}
 }
 
@@ -1482,5 +1614,152 @@ func TestPatchApiGamesId_CannotClearAfterPublished(t *testing.T) {
 	srv.PatchApiGamesId(w, r, created.Id)
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("expected clearing after publish to be rejected with 400, got %d", w.Code)
+	}
+}
+
+func TestPatchApiGamesId_NameValidation(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+	staticClock := clock.StaticClock{Time: time.Now()}
+
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "john@example.com")
+	querier := db.New(sqlDB)
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock)
+
+	// Create a game first
+	createReq := api.CreateGameRequest{Name: "Original Game"}
+	body, _ := json.Marshal(createReq)
+	r := httptest.NewRequest(http.MethodPost, "/api/games", bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w := httptest.NewRecorder()
+	srv.PostApiGames(w, r)
+
+	var created api.Game
+	json.NewDecoder(w.Body).Decode(&created)
+
+	testCases := []struct {
+		name           string
+		gameName       *string
+		expectedStatus int
+		expectedError  string
+	}{
+		{
+			name:           "empty name",
+			gameName:       ptr.Ptr(""),
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  "name",
+		},
+		{
+			name:           "name too long",
+			gameName:       ptr.Ptr(string(make([]byte, 101))), // 101 characters (max is 100)
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  "name",
+		},
+		{
+			name:           "name at max length",
+			gameName:       ptr.Ptr(string(make([]byte, 100))), // exactly 100 characters
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "valid short name",
+			gameName:       ptr.Ptr("Updated Name"),
+			expectedStatus: http.StatusOK,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			updateReq := api.UpdateGameRequest{
+				Name: tc.gameName,
+			}
+
+			body, _ := json.Marshal(updateReq)
+			r := httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Id, bytes.NewReader(body))
+			r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+			w := httptest.NewRecorder()
+
+			srv.PatchApiGamesId(w, r, created.Id)
+
+			if w.Code != tc.expectedStatus {
+				t.Errorf("Expected status %d, got %d. Body: %s", tc.expectedStatus, w.Code, w.Body.String())
+			}
+
+			if tc.expectedError != "" && !strings.Contains(w.Body.String(), tc.expectedError) {
+				t.Errorf("Expected error to contain '%s', got: %s", tc.expectedError, w.Body.String())
+			}
+		})
+	}
+}
+
+func TestPatchApiGamesId_DescriptionValidation(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+	staticClock := clock.StaticClock{Time: time.Now()}
+
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "john@example.com")
+	querier := db.New(sqlDB)
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock)
+
+	// Create a game first
+	createReq := api.CreateGameRequest{Name: "Original Game"}
+	body, _ := json.Marshal(createReq)
+	r := httptest.NewRequest(http.MethodPost, "/api/games", bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w := httptest.NewRecorder()
+	srv.PostApiGames(w, r)
+
+	var created api.Game
+	json.NewDecoder(w.Body).Decode(&created)
+
+	testCases := []struct {
+		name           string
+		description    *string
+		expectedStatus int
+		expectedError  string
+	}{
+		{
+			name:           "description too long",
+			description:    ptr.Ptr(string(make([]byte, 1001))), // 1001 characters (max is 1000)
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  "description",
+		},
+		{
+			name:           "description at max length",
+			description:    ptr.Ptr(string(make([]byte, 1000))), // exactly 1000 characters
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "valid description",
+			description:    ptr.Ptr("Updated description"),
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "empty description",
+			description:    ptr.Ptr(""),
+			expectedStatus: http.StatusOK,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			updateReq := api.UpdateGameRequest{
+				Description: tc.description,
+			}
+
+			body, _ := json.Marshal(updateReq)
+			r := httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Id, bytes.NewReader(body))
+			r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+			w := httptest.NewRecorder()
+
+			srv.PatchApiGamesId(w, r, created.Id)
+
+			if w.Code != tc.expectedStatus {
+				t.Errorf("Expected status %d, got %d. Body: %s", tc.expectedStatus, w.Code, w.Body.String())
+			}
+
+			if tc.expectedError != "" && !strings.Contains(w.Body.String(), tc.expectedError) {
+				t.Errorf("Expected error to contain '%s', got: %s", tc.expectedError, w.Body.String())
+			}
+		})
 	}
 }

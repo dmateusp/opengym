@@ -480,10 +480,13 @@ components:
           type: string
           description: Name of the game
           example: "Sunday Morning Volleyball"
+          minLength: 1
+          maxLength: 100
         description:
           type: string
           description: Description of the game
           example: "Indoor volleyball - all levels welcome!"
+          maxLength: 1000
         totalPriceCents:
           type: integer
           description: Total price in cents

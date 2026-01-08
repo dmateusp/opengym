@@ -34,6 +34,22 @@ func (srv *server) PostApiGames(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate name
+	if len(req.Name) == 0 {
+		http.Error(w, "name cannot be empty", http.StatusBadRequest)
+		return
+	}
+	if len(req.Name) > 100 {
+		http.Error(w, "name cannot exceed 100 characters", http.StatusBadRequest)
+		return
+	}
+
+	// Validate description
+	if req.Description != nil && len(*req.Description) > 1000 {
+		http.Error(w, "description cannot exceed 1000 characters", http.StatusBadRequest)
+		return
+	}
+
 	var game db.Game
 	var err error
 
@@ -260,6 +276,24 @@ func (srv *server) PatchApiGamesId(w http.ResponseWriter, r *http.Request, id st
 	var req api.UpdateGameRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, fmt.Sprintf("invalid request body: %s", err.Error()), http.StatusBadRequest)
+		return
+	}
+
+	// Validate name
+	if req.Name != nil {
+		if len(*req.Name) == 0 {
+			http.Error(w, "name cannot be empty", http.StatusBadRequest)
+			return
+		}
+		if len(*req.Name) > 100 {
+			http.Error(w, "name cannot exceed 100 characters", http.StatusBadRequest)
+			return
+		}
+	}
+
+	// Validate description
+	if req.Description != nil && len(*req.Description) > 1000 {
+		http.Error(w, "description cannot exceed 1000 characters", http.StatusBadRequest)
 		return
 	}
 
