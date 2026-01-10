@@ -370,7 +370,10 @@ func (srv *server) PatchApiGamesId(w http.ResponseWriter, r *http.Request, id st
 	}
 
 	if req.MaxPlayers != nil {
-		params.MaxPlayers = int64(*req.MaxPlayers)
+		params.MaxPlayers = sql.NullInt64{
+			Valid: true,
+			Int64: int64(*req.MaxPlayers),
+		}
 		if int64(*req.MaxPlayers) == -1 {
 			params.GameSpotsLeft.Int64 = -1
 			params.GameSpotsLeft.Valid = true
@@ -381,11 +384,15 @@ func (srv *server) PatchApiGamesId(w http.ResponseWriter, r *http.Request, id st
 	}
 
 	if req.MaxGuestsPerPlayer != nil {
-		params.MaxGuestsPerPlayer = int64(*req.MaxGuestsPerPlayer)
+		params.MaxGuestsPerPlayer = sql.NullInt64{
+			Valid: true,
+			Int64: int64(*req.MaxGuestsPerPlayer),
+		}
 	}
 
 	if req.MaxWaitlistSize != nil {
-		params.MaxWaitlistSize = int64(*req.MaxWaitlistSize)
+		params.MaxWaitlistSize.Int64 = int64(*req.MaxWaitlistSize)
+		params.MaxWaitlistSize.Valid = true
 		if int64(*req.MaxWaitlistSize) == -1 {
 			params.WaitlistSpotsLeft.Int64 = -1
 			params.WaitlistSpotsLeft.Valid = true

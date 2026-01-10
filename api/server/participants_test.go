@@ -278,6 +278,8 @@ func createGame(t *testing.T, querier *db.Queries, id string, organizerID int64,
 		MaxPlayers:         -1,
 		MaxWaitlistSize:    0,
 		MaxGuestsPerPlayer: -1,
+		GameSpotsLeft:      -1,
+		WaitlistSpotsLeft:  0,
 	})
 	if err != nil {
 		t.Fatalf("failed to create game: %v", err)
@@ -384,6 +386,8 @@ func TestGetApiGamesIdParticipants_StatusComputation(t *testing.T) {
 		MaxPlayers:         2,
 		MaxWaitlistSize:    -1,
 		MaxGuestsPerPlayer: -1,
+		GameSpotsLeft:      2,
+		WaitlistSpotsLeft:  -1,
 	})
 	if err != nil {
 		t.Fatalf("failed to create game: %v", err)
@@ -512,6 +516,8 @@ func TestGetApiGamesIdParticipants_OrganizerPriorityEvenWhenLate(t *testing.T) {
 		MaxPlayers:         2,
 		MaxWaitlistSize:    -1,
 		MaxGuestsPerPlayer: -1,
+		GameSpotsLeft:      2,
+		WaitlistSpotsLeft:  -1,
 	})
 	if err != nil {
 		t.Fatalf("failed to create game: %v", err)
@@ -614,6 +620,8 @@ func TestGetApiGamesIdParticipants_NonGoingDoesNotConsumeSlot(t *testing.T) {
 		MaxPlayers:         2,
 		MaxWaitlistSize:    -1,
 		MaxGuestsPerPlayer: -1,
+		GameSpotsLeft:      2,
+		WaitlistSpotsLeft:  -1,
 	})
 	if err != nil {
 		t.Fatalf("failed to create game: %v", err)
@@ -793,6 +801,8 @@ func TestGetApiGamesIdParticipants_NoWaitlistCapacityStillReturnsWaitlisted(t *t
 		MaxPlayers:         1,
 		MaxWaitlistSize:    0,
 		MaxGuestsPerPlayer: -1,
+		GameSpotsLeft:      1,
+		WaitlistSpotsLeft:  0,
 	})
 	if err != nil {
 		t.Fatalf("failed to create game: %v", err)
@@ -878,6 +888,8 @@ func TestGetApiGamesIdParticipants_UnlimitedPlayers(t *testing.T) {
 		MaxPlayers:         -1, // Unlimited
 		MaxWaitlistSize:    0,
 		MaxGuestsPerPlayer: -1,
+		GameSpotsLeft:      -1,
+		WaitlistSpotsLeft:  0,
 	})
 	if err != nil {
 		t.Fatalf("failed to create game: %v", err)
@@ -954,6 +966,8 @@ func TestGetApiGamesIdParticipants_GuestsCountTowardsMaxPlayers(t *testing.T) {
 		MaxPlayers:         4,
 		MaxWaitlistSize:    -1,
 		MaxGuestsPerPlayer: -1,
+		GameSpotsLeft:      4,
+		WaitlistSpotsLeft:  -1,
 	})
 	if err != nil {
 		t.Fatalf("failed to create game: %v", err)
@@ -1060,6 +1074,8 @@ func TestPostApiGamesIdParticipants_GuestsExceedsLimit(t *testing.T) {
 		MaxPlayers:         10,
 		MaxWaitlistSize:    0,
 		MaxGuestsPerPlayer: 2,
+		GameSpotsLeft:      10,
+		WaitlistSpotsLeft:  0,
 	})
 	if err != nil {
 		t.Fatalf("failed to create game: %v", err)
@@ -1113,6 +1129,8 @@ func TestPostApiGamesIdParticipants_GuestsWithinLimit(t *testing.T) {
 		MaxPlayers:         10,
 		MaxWaitlistSize:    0,
 		MaxGuestsPerPlayer: 2,
+		GameSpotsLeft:      10,
+		WaitlistSpotsLeft:  0,
 	})
 	if err != nil {
 		t.Fatalf("failed to create game: %v", err)
@@ -1184,6 +1202,8 @@ func TestPostApiGamesIdParticipants_UpdateGuestsChangesQueueOrder(t *testing.T) 
 		MaxPlayers:         2,
 		MaxWaitlistSize:    -1,
 		MaxGuestsPerPlayer: -1,
+		GameSpotsLeft:      2,
+		WaitlistSpotsLeft:  -1,
 	})
 	if err != nil {
 		t.Fatalf("failed to create game: %v", err)
@@ -1258,5 +1278,537 @@ func TestPostApiGamesIdParticipants_UpdateGuestsChangesQueueOrder(t *testing.T) 
 	status1, err := participants[1].Status.AsParticipationStatus1()
 	if err != nil || status1 != api.Waitlisted {
 		t.Errorf("expected user1 status to be waitlisted, got %v (err %v)", status1, err)
+	}
+}
+
+func TestPostApiGamesIdParticipants_GoingReducesGameSpotsLeft(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+	staticClock := clock.StaticClock{Time: time.Now()}
+
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "organizer@example.com")
+	participantID := dbtesting.UpsertTestUser(t, sqlDB, "participant@example.com")
+
+	querier := db.New(sqlDB)
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
+
+	// Create a game with 5 spots and 2 waitlist spots
+	_, err := querier.GameCreate(context.Background(), db.GameCreateParams{
+		ID:                 "gspots",
+		OrganizerID:        organizerID,
+		Name:               "Spots Test",
+		PublishedAt:        sql.NullTime{Time: time.Now().Add(-time.Hour), Valid: true},
+		Description:        sql.NullString{},
+		TotalPriceCents:    0,
+		Location:           sql.NullString{},
+		StartsAt:           sql.NullTime{},
+		DurationMinutes:    60,
+		MaxPlayers:         5,
+		MaxWaitlistSize:    2,
+		MaxGuestsPerPlayer: 2,
+		GameSpotsLeft:      5,
+		WaitlistSpotsLeft:  2,
+	})
+	if err != nil {
+		t.Fatalf("failed to create game: %v", err)
+	}
+
+	guests := int(2)
+	req := api.UpdateGameParticipationRequest{Status: api.Going, Guests: &guests}
+	body, _ := json.Marshal(req)
+
+	r := httptest.NewRequest(http.MethodPost, "/api/games/gspots/participants", bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(participantID)}))
+	w := httptest.NewRecorder()
+
+	srv.PostApiGamesIdParticipants(w, r, "gspots")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d, body: %s", http.StatusOK, w.Code, w.Body.String())
+	}
+
+	// Verify game_spots_left decreased by 3, waitlist remains unchanged
+	var gameSpotsLeft, waitlistSpotsLeft int64
+	row := sqlDB.QueryRow(`select game_spots_left, waitlist_spots_left from games where id = ?`, "gspots")
+	if err := row.Scan(&gameSpotsLeft, &waitlistSpotsLeft); err != nil {
+		t.Fatalf("failed to load game row: %v", err)
+	}
+	if gameSpotsLeft != 2 {
+		t.Fatalf("expected game_spots_left=2, got %d", gameSpotsLeft)
+	}
+	if waitlistSpotsLeft != 2 {
+		t.Fatalf("expected waitlist_spots_left=2, got %d", waitlistSpotsLeft)
+	}
+}
+
+func TestPostApiGamesIdParticipants_NotGoingFreesGameSpotsLeft(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+	staticClock := clock.StaticClock{Time: time.Now()}
+
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "organizer@example.com")
+	userA := dbtesting.UpsertTestUser(t, sqlDB, "a@example.com")
+	userB := dbtesting.UpsertTestUser(t, sqlDB, "b@example.com")
+
+	querier := db.New(sqlDB)
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
+
+	// Create a game with 3 spots, fill them with A(1 guest) and B
+	_, err := querier.GameCreate(context.Background(), db.GameCreateParams{
+		ID:                 "gfree",
+		OrganizerID:        organizerID,
+		Name:               "Spots Free Test",
+		PublishedAt:        sql.NullTime{Time: time.Now().Add(-time.Hour), Valid: true},
+		Description:        sql.NullString{},
+		TotalPriceCents:    0,
+		Location:           sql.NullString{},
+		StartsAt:           sql.NullTime{},
+		DurationMinutes:    60,
+		MaxPlayers:         3,
+		MaxWaitlistSize:    2,
+		MaxGuestsPerPlayer: 2,
+		GameSpotsLeft:      3,
+		WaitlistSpotsLeft:  2,
+	})
+	if err != nil {
+		t.Fatalf("failed to create game: %v", err)
+	}
+
+	// A joins with no guests (uses 1 spot) via server
+	initReqA := api.UpdateGameParticipationRequest{Status: api.Going}
+	initBodyA, _ := json.Marshal(initReqA)
+	rA := httptest.NewRequest(http.MethodPost, "/api/games/gfree/participants", bytes.NewReader(initBodyA))
+	rA = rA.WithContext(auth.WithAuthInfo(rA.Context(), auth.AuthInfo{UserId: int(userA)}))
+	wA := httptest.NewRecorder()
+	srv.PostApiGamesIdParticipants(wA, rA, "gfree")
+	if wA.Code != http.StatusOK {
+		t.Fatalf("expected status %d for A join, got %d", http.StatusOK, wA.Code)
+	}
+
+	// B joins (uses 1 spot) via server
+	initReqB := api.UpdateGameParticipationRequest{Status: api.Going}
+	initBodyB, _ := json.Marshal(initReqB)
+	rB := httptest.NewRequest(http.MethodPost, "/api/games/gfree/participants", bytes.NewReader(initBodyB))
+	rB = rB.WithContext(auth.WithAuthInfo(rB.Context(), auth.AuthInfo{UserId: int(userB)}))
+	wB := httptest.NewRecorder()
+	srv.PostApiGamesIdParticipants(wB, rB, "gfree")
+	if wB.Code != http.StatusOK {
+		t.Fatalf("expected status %d for B join, got %d", http.StatusOK, wB.Code)
+	}
+
+	// A changes to not_going; this should free 1 spot in the main list
+	statusReq := api.NotGoing
+	req := api.UpdateGameParticipationRequest{Status: statusReq}
+	body, _ := json.Marshal(req)
+
+	r := httptest.NewRequest(http.MethodPost, "/api/games/gfree/participants", bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(userA)}))
+	w := httptest.NewRecorder()
+
+	srv.PostApiGamesIdParticipants(w, r, "gfree")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d, body: %s", http.StatusOK, w.Code, w.Body.String())
+	}
+
+	var gameSpotsLeft, waitlistSpotsLeft int64
+	row := sqlDB.QueryRow(`select game_spots_left, waitlist_spots_left from games where id = ?`, "gfree")
+	if err := row.Scan(&gameSpotsLeft, &waitlistSpotsLeft); err != nil {
+		t.Fatalf("failed to load game row: %v", err)
+	}
+	if gameSpotsLeft != 2 {
+		t.Fatalf("expected game_spots_left to increase to 2, got %d", gameSpotsLeft)
+	}
+}
+
+func TestPostApiGamesIdParticipants_WaitlistReducesWaitlistSpotsLeft(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+	staticClock := clock.StaticClock{Time: time.Now()}
+
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "organizer@example.com")
+	participantID := dbtesting.UpsertTestUser(t, sqlDB, "waitlisted@example.com")
+
+	querier := db.New(sqlDB)
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
+
+	// Full main list; finite waitlist of 2
+	_, err := querier.GameCreate(context.Background(), db.GameCreateParams{
+		ID:                 "gwl",
+		OrganizerID:        organizerID,
+		Name:               "Waitlist Test",
+		PublishedAt:        sql.NullTime{Time: time.Now().Add(-time.Hour), Valid: true},
+		Description:        sql.NullString{},
+		TotalPriceCents:    0,
+		Location:           sql.NullString{},
+		StartsAt:           sql.NullTime{},
+		DurationMinutes:    60,
+		MaxPlayers:         1,
+		MaxWaitlistSize:    2,
+		MaxGuestsPerPlayer: 2,
+		GameSpotsLeft:      0,
+		WaitlistSpotsLeft:  2,
+	})
+	if err != nil {
+		t.Fatalf("failed to create game: %v", err)
+	}
+
+	// Join (no guests) -> should go to waitlist and reduce waitlist spots by 1
+	req := api.UpdateGameParticipationRequest{Status: api.Going}
+	body, _ := json.Marshal(req)
+	r := httptest.NewRequest(http.MethodPost, "/api/games/gwl/participants", bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(participantID)}))
+	w := httptest.NewRecorder()
+	srv.PostApiGamesIdParticipants(w, r, "gwl")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d, body: %s", http.StatusOK, w.Code, w.Body.String())
+	}
+
+	// Verify waitlist spots decreased to 1 after join
+	{
+		var gameSpotsLeft, waitlistSpotsLeft int64
+		row := sqlDB.QueryRow(`select game_spots_left, waitlist_spots_left from games where id = ?`, "gwl")
+		if err := row.Scan(&gameSpotsLeft, &waitlistSpotsLeft); err != nil {
+			t.Fatalf("failed to load game row after join: %v", err)
+		}
+		if waitlistSpotsLeft != 1 {
+			t.Fatalf("expected waitlist_spots_left=1 after join, got %d", waitlistSpotsLeft)
+		}
+	}
+
+	var gameSpotsLeft, waitlistSpotsLeft int64
+	row := sqlDB.QueryRow(`select game_spots_left, waitlist_spots_left from games where id = ?`, "gwl")
+	if err := row.Scan(&gameSpotsLeft, &waitlistSpotsLeft); err != nil {
+		t.Fatalf("failed to load game row: %v", err)
+	}
+	if gameSpotsLeft != 0 {
+		t.Fatalf("expected game_spots_left=0, got %d", gameSpotsLeft)
+	}
+	if waitlistSpotsLeft != 1 {
+		t.Fatalf("expected waitlist_spots_left=1, got %d", waitlistSpotsLeft)
+	}
+}
+
+func TestPostApiGamesIdParticipants_NotGoingFreesWaitlistSpotsLeft(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+	staticClock := clock.StaticClock{Time: time.Now()}
+
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "organizer@example.com")
+	aheadID := dbtesting.UpsertTestUser(t, sqlDB, "ahead@example.com")
+	waitlistedID := dbtesting.UpsertTestUser(t, sqlDB, "waitlisted@example.com")
+
+	querier := db.New(sqlDB)
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
+
+	// Full main list; finite waitlist
+	_, err := querier.GameCreate(context.Background(), db.GameCreateParams{
+		ID:                 "gwl2",
+		OrganizerID:        organizerID,
+		Name:               "Waitlist Free Test",
+		PublishedAt:        sql.NullTime{Time: time.Now().Add(-time.Hour), Valid: true},
+		Description:        sql.NullString{},
+		TotalPriceCents:    0,
+		Location:           sql.NullString{},
+		StartsAt:           sql.NullTime{},
+		DurationMinutes:    60,
+		MaxPlayers:         1,
+		MaxWaitlistSize:    2,
+		MaxGuestsPerPlayer: 2,
+		GameSpotsLeft:      0,
+		WaitlistSpotsLeft:  2,
+	})
+	if err != nil {
+		t.Fatalf("failed to create game: %v", err)
+	}
+
+	// One ahead in the queue (going)
+	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
+		GoingUpdatedAt: staticClock.Now().Add(-time.Second),
+		UserID:         int64(aheadID),
+		GameID:         "gwl2",
+		Going:          sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
+	})
+
+	// Join to waitlist via POST
+	joinReq := api.UpdateGameParticipationRequest{Status: api.Going}
+	joinBody, _ := json.Marshal(joinReq)
+	r := httptest.NewRequest(http.MethodPost, "/api/games/gwl2/participants", bytes.NewReader(joinBody))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(waitlistedID)}))
+	w := httptest.NewRecorder()
+	srv.PostApiGamesIdParticipants(w, r, "gwl2")
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, w.Code)
+	}
+
+	// Now switch to not_going; should free waitlist spots by 1
+	leaveReq := api.UpdateGameParticipationRequest{Status: api.NotGoing}
+	leaveBody, _ := json.Marshal(leaveReq)
+	r = httptest.NewRequest(http.MethodPost, "/api/games/gwl2/participants", bytes.NewReader(leaveBody))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(waitlistedID)}))
+	w = httptest.NewRecorder()
+	srv.PostApiGamesIdParticipants(w, r, "gwl2")
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, w.Code)
+	}
+
+	var gameSpotsLeft, waitlistSpotsLeft int64
+	row := sqlDB.QueryRow(`select game_spots_left, waitlist_spots_left from games where id = ?`, "gwl2")
+	if err := row.Scan(&gameSpotsLeft, &waitlistSpotsLeft); err != nil {
+		t.Fatalf("failed to load game row: %v", err)
+	}
+	if waitlistSpotsLeft != 2 {
+		t.Fatalf("expected waitlist_spots_left back to 2, got %d", waitlistSpotsLeft)
+	}
+}
+
+func TestPostApiGamesIdParticipants_WaitlistUnlimitedNoWrite(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+	staticClock := clock.StaticClock{Time: time.Now()}
+
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "organizer@example.com")
+	participantID := dbtesting.UpsertTestUser(t, sqlDB, "waitlisted@example.com")
+
+	querier := db.New(sqlDB)
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
+
+	// Full main list; unlimited waitlist
+	_, err := querier.GameCreate(context.Background(), db.GameCreateParams{
+		ID:                 "gwl3",
+		OrganizerID:        organizerID,
+		Name:               "Waitlist Unlimited",
+		PublishedAt:        sql.NullTime{Time: time.Now().Add(-time.Hour), Valid: true},
+		Description:        sql.NullString{},
+		TotalPriceCents:    0,
+		Location:           sql.NullString{},
+		StartsAt:           sql.NullTime{},
+		DurationMinutes:    60,
+		MaxPlayers:         1,
+		MaxWaitlistSize:    -1,
+		MaxGuestsPerPlayer: 2,
+		GameSpotsLeft:      0,
+		WaitlistSpotsLeft:  -1,
+	})
+	if err != nil {
+		t.Fatalf("failed to create game: %v", err)
+	}
+
+	req := api.UpdateGameParticipationRequest{Status: api.Going}
+	body, _ := json.Marshal(req)
+	r := httptest.NewRequest(http.MethodPost, "/api/games/gwl3/participants", bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(participantID)}))
+	w := httptest.NewRecorder()
+	srv.PostApiGamesIdParticipants(w, r, "gwl3")
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, w.Code)
+	}
+
+	var waitlistSpotsLeft sql.NullInt64
+	row := sqlDB.QueryRow(`select waitlist_spots_left from games where id = ?`, "gwl3")
+	if err := row.Scan(&waitlistSpotsLeft); err != nil {
+		t.Fatalf("failed to load game row: %v", err)
+	}
+	if !waitlistSpotsLeft.Valid || waitlistSpotsLeft.Int64 != -1 {
+		t.Fatalf("expected waitlist_spots_left=-1 (unchanged), got %+v", waitlistSpotsLeft)
+	}
+}
+
+func TestOrganizerLateJoinFullGamePushesLastToWaitlist(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+	staticClock := clock.StaticClock{Time: time.Now()}
+
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "organizer@example.com")
+	userEarly := dbtesting.UpsertTestUser(t, sqlDB, "early@example.com")
+	userLate := dbtesting.UpsertTestUser(t, sqlDB, "late@example.com")
+
+	querier := db.New(sqlDB)
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
+
+	// Full main (2), waitlist capacity=1
+	_, err := querier.GameCreate(context.Background(), db.GameCreateParams{
+		ID:                 "gorgpush",
+		OrganizerID:        organizerID,
+		Name:               "Organizer Push",
+		PublishedAt:        sql.NullTime{Time: time.Now().Add(-time.Hour), Valid: true},
+		Description:        sql.NullString{},
+		TotalPriceCents:    0,
+		Location:           sql.NullString{},
+		StartsAt:           sql.NullTime{},
+		DurationMinutes:    60,
+		MaxPlayers:         2,
+		MaxWaitlistSize:    1,
+		MaxGuestsPerPlayer: -1,
+		GameSpotsLeft:      0,
+		WaitlistSpotsLeft:  1,
+	})
+	if err != nil {
+		t.Fatalf("failed to create game: %v", err)
+	}
+
+	// Fill main list
+	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
+		GoingUpdatedAt: staticClock.Now().Add(-2 * time.Second),
+		UserID:         int64(userEarly),
+		GameID:         "gorgpush",
+		Going:          sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
+	})
+	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
+		GoingUpdatedAt: staticClock.Now().Add(-1 * time.Second),
+		UserID:         int64(userLate),
+		GameID:         "gorgpush",
+		Going:          sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
+	})
+
+	// Organizer joins late via POST
+	req := api.UpdateGameParticipationRequest{Status: api.Going}
+	body, _ := json.Marshal(req)
+	r := httptest.NewRequest(http.MethodPost, "/api/games/gorgpush/participants", bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w := httptest.NewRecorder()
+	srv.PostApiGamesIdParticipants(w, r, "gorgpush")
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, w.Code)
+	}
+
+	// Waitlist spots should be consumed (now 0)
+	var waitlistSpotsLeft int64
+	row := sqlDB.QueryRow(`select waitlist_spots_left from games where id = ?`, "gorgpush")
+	if err := row.Scan(&waitlistSpotsLeft); err != nil {
+		t.Fatalf("failed to load game row: %v", err)
+	}
+	if waitlistSpotsLeft != 0 {
+		t.Fatalf("expected waitlist_spots_left=0, got %d", waitlistSpotsLeft)
+	}
+
+	// Listing should show organizer prioritized and late user pushed to waitlist
+	r = httptest.NewRequest(http.MethodGet, "/api/games/gorgpush/participants", nil)
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w = httptest.NewRecorder()
+	srv.GetApiGamesIdParticipants(w, r, "gorgpush")
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, w.Code)
+	}
+	var participants []api.ParticipantWithUser
+	if err := json.NewDecoder(w.Body).Decode(&participants); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if len(participants) != 3 {
+		t.Fatalf("expected 3 participants, got %d", len(participants))
+	}
+	if participants[0].User.Id != strconv.FormatInt(organizerID, 10) {
+		t.Fatalf("expected organizer first, got %s", participants[0].User.Id)
+	}
+	status, _ := participants[0].Status.AsParticipationStatusUpdate()
+	if status != api.Going {
+		t.Fatalf("organizer should be going, got %v", status)
+	}
+	status, _ = participants[1].Status.AsParticipationStatusUpdate()
+	if status != api.Going {
+		t.Fatalf("second should be going, got %v", status)
+	}
+	_, err = participants[2].Status.AsParticipationStatus1()
+	if err != nil {
+		t.Fatalf("third should be waitlisted, got parse error: %v", err)
+	}
+}
+
+func TestOrganizerLateJoinZeroWaitlist_AllowedAndDisplacesLastToNotGoing(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+	staticClock := clock.StaticClock{Time: time.Now()}
+
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "organizer@example.com")
+	user1 := dbtesting.UpsertTestUser(t, sqlDB, "u1@example.com")
+	user2 := dbtesting.UpsertTestUser(t, sqlDB, "u2@example.com")
+
+	querier := db.New(sqlDB)
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
+
+	// Full main; zero waitlist
+	_, err := querier.GameCreate(context.Background(), db.GameCreateParams{
+		ID:                 "gorgpush0",
+		OrganizerID:        organizerID,
+		Name:               "Organizer Push Zero",
+		PublishedAt:        sql.NullTime{Time: time.Now().Add(-time.Hour), Valid: true},
+		Description:        sql.NullString{},
+		TotalPriceCents:    0,
+		Location:           sql.NullString{},
+		StartsAt:           sql.NullTime{},
+		DurationMinutes:    60,
+		MaxPlayers:         2,
+		MaxWaitlistSize:    0,
+		MaxGuestsPerPlayer: -1,
+		GameSpotsLeft:      0,
+		WaitlistSpotsLeft:  0,
+	})
+	if err != nil {
+		t.Fatalf("failed to create game: %v", err)
+	}
+
+	// Fill main list
+	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
+		GoingUpdatedAt: staticClock.Now().Add(-2 * time.Second),
+		UserID:         int64(user1),
+		GameID:         "gorgpush0",
+		Going:          sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
+	})
+	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
+		GoingUpdatedAt: staticClock.Now().Add(-1 * time.Second),
+		UserID:         int64(user2),
+		GameID:         "gorgpush0",
+		Going:          sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
+	})
+
+	// Organizer attempts to join via POST; allowed even with no capacity
+	req := api.UpdateGameParticipationRequest{Status: api.Going}
+	body, _ := json.Marshal(req)
+	r := httptest.NewRequest(http.MethodPost, "/api/games/gorgpush0/participants", bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w := httptest.NewRecorder()
+	srv.PostApiGamesIdParticipants(w, r, "gorgpush0")
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, w.Code)
+	}
+
+	// Listing: organizer should be going and the last user should be considered not-going (displaced)
+	r = httptest.NewRequest(http.MethodGet, "/api/games/gorgpush0/participants", nil)
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w = httptest.NewRecorder()
+	srv.GetApiGamesIdParticipants(w, r, "gorgpush0")
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, w.Code)
+	}
+	var participants []api.ParticipantWithUser
+	if err := json.NewDecoder(w.Body).Decode(&participants); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if len(participants) != 3 {
+		t.Fatalf("expected 3 participants, got %d", len(participants))
+	}
+	// organizer first
+	if participants[0].User.Id != strconv.FormatInt(organizerID, 10) {
+		t.Fatalf("expected organizer first, got %s", participants[0].User.Id)
+	}
+	s, _ := participants[0].Status.AsParticipationStatusUpdate()
+	if s != api.Going {
+		t.Fatalf("organizer should be going, got %v", s)
+	}
+	// next one should be going (still in main list)
+	s, _ = participants[1].Status.AsParticipationStatusUpdate()
+	if s != api.Going {
+		t.Fatalf("second should be going, got %v", s)
+	}
+	// last displaced to not-going
+	s, _ = participants[2].Status.AsParticipationStatusUpdate()
+	if s != api.NotGoing {
+		t.Fatalf("third should be not_going, got %v", s)
 	}
 }

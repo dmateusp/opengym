@@ -284,9 +284,9 @@ type GameUpdateParams struct {
 	Location           sql.NullString
 	StartsAt           sql.NullTime
 	DurationMinutes    int64
-	MaxPlayers         int64
-	MaxWaitlistSize    int64
-	MaxGuestsPerPlayer int64
+	MaxPlayers         sql.NullInt64
+	MaxWaitlistSize    sql.NullInt64
+	MaxGuestsPerPlayer sql.NullInt64
 	GameSpotsLeft      sql.NullInt64
 	WaitlistSpotsLeft  sql.NullInt64
 	ID                 string
