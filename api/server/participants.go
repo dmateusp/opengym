@@ -163,13 +163,90 @@ func (s *server) PostApiGamesIdParticipants(w http.ResponseWriter, r *http.Reque
 		Valid: req.Confirmed != nil,
 	}
 
+	// Participant and his/her potential guests
+	participantsGroup := 1
+
 	guests := sql.NullInt64{}
 	if req.Guests != nil {
+		if *req.Guests < 0 {
+			http.Error(w, "invalid number of guests", http.StatusBadRequest)
+			return
+		}
 		if game.MaxGuestsPerPlayer == -1 || int64(*req.Guests) <= game.MaxGuestsPerPlayer {
 			guests.Int64 = int64(*req.Guests)
 			guests.Valid = true
 		} else {
 			http.Error(w, "this game doesn't allow that many guests", http.StatusBadRequest)
+			return
+		}
+
+		participantsGroup += int(*req.Guests)
+	}
+
+	var (
+		gameSpotsLeft,
+		waitlistSpotsLeft sql.NullInt64
+	)
+	// Reject if the game doesn't have enough spots left
+	switch req.Status {
+	case api.Going:
+		if game.MaxPlayers == -1 { // Unlimited max players
+			// do nothing
+		} else if participantsGroup <= int(game.GameSpotsLeft) {
+			gameSpotsLeft.Int64 = game.GameSpotsLeft - int64(participantsGroup)
+			gameSpotsLeft.Valid = true
+		} else if game.MaxWaitlistSize == -1 { // Unlimited waitlist size
+			// do nothing
+		} else if participantsGroup <= int(game.WaitlistSpotsLeft) {
+			waitlistSpotsLeft.Int64 = game.WaitlistSpotsLeft - int64(participantsGroup)
+			waitlistSpotsLeft.Valid = true
+		} else {
+			http.Error(w, "not enough spots left", http.StatusBadRequest)
+			return
+		}
+	case api.NotGoing: // We have to figure out if we're freeing spots in the "going" list, waitlist, or if the player was already in the "not going" list
+		if game.MaxPlayers == -1 {
+			break
+		}
+
+		participants, err := querierWithTx.ParticipantsList(r.Context(), db.ParticipantsListParams{
+			GameID: id,
+		})
+		if err != nil {
+			http.Error(w, fmt.Sprintf("failed to list participants: %s", err.Error()), http.StatusInternalServerError)
+			return
+		}
+
+		participantsAhead := 0
+		for _, participant := range participants {
+			if participant.User.ID == int64(authInfo.UserId) {
+				break
+			}
+			participantsAhead += int(participant.GameParticipant.Guests.Int64) + 1
+		}
+
+		if participantsAhead+participantsGroup <= int(game.MaxPlayers) {
+			gameSpotsLeft.Int64 = game.GameSpotsLeft - int64(participantsGroup)
+			gameSpotsLeft.Valid = true
+		} else if game.MaxWaitlistSize == -1 {
+			// the waitlist is unlimited, so we don't need to do anything
+		} else if participantsAhead+participantsGroup <= int(game.MaxWaitlistSize)+int(game.MaxPlayers) {
+			waitlistSpotsLeft.Int64 = game.WaitlistSpotsLeft - int64(participantsGroup)
+			waitlistSpotsLeft.Valid = true
+		}
+
+	default:
+		http.Error(w, "invalid status: "+string(req.Status), http.StatusBadRequest)
+		return
+	}
+
+	if gameSpotsLeft.Valid || waitlistSpotsLeft.Valid {
+		if err := querierWithTx.GameUpdate(r.Context(), db.GameUpdateParams{
+			ID:                id,
+			GameSpotsLeft:     gameSpotsLeft,
+			WaitlistSpotsLeft: waitlistSpotsLeft,
+		}); err != nil {
+			http.Error(w, fmt.Sprintf("failed to update game spots left: %s", err.Error()), http.StatusInternalServerError)
 			return
 		}
 	}

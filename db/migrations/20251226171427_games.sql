@@ -13,6 +13,8 @@ create table games (
   max_players integer default -1 not null, -- max number of players that can join the game, -1 = unlimited
   max_waitlist_size integer default 0 not null, -- max number of players that can be on the waitlist, 0 = disabled waitlist, -1 = unlimited
   max_guests_per_player integer default -1 not null, -- max number of guests a single player can bring along, 0 = disabled, -1 = unlimited
+  game_spots_left integer not null, -- the number of spots left in the game (excluding the waitlist), we calculate this at write time for simplicity
+  waitlist_spots_left integer not null,
   created_at datetime default current_timestamp not null,
   updated_at datetime default current_timestamp not null
 );

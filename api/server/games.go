@@ -88,6 +88,7 @@ func (srv *server) PostApiGames(w http.ResponseWriter, r *http.Request) {
 
 		if req.MaxPlayers != nil {
 			params.MaxPlayers = int64(*req.MaxPlayers)
+			params.GameSpotsLeft = int64(*req.MaxPlayers)
 		}
 
 		if req.MaxGuestsPerPlayer != nil {
@@ -96,6 +97,7 @@ func (srv *server) PostApiGames(w http.ResponseWriter, r *http.Request) {
 
 		if req.MaxWaitlistSize != nil {
 			params.MaxWaitlistSize = int64(*req.MaxWaitlistSize)
+			params.WaitlistSpotsLeft = int64(*req.MaxWaitlistSize)
 		}
 
 		game, err = srv.querier.GameCreate(r.Context(), params)
@@ -258,7 +260,16 @@ func (srv *server) PatchApiGamesId(w http.ResponseWriter, r *http.Request, id st
 
 	now := srv.clock.Now()
 
-	game, err := srv.querier.GameGetById(r.Context(), id)
+	tx, err := srv.dbConn.BeginTx(r.Context(), nil)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to begin transaction: %s", err.Error()), http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
+
+	querierWithTx := srv.querier.WithTx(tx)
+
+	game, err := querierWithTx.GameGetById(r.Context(), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.Error(w, "game not found", http.StatusNotFound)
@@ -360,6 +371,13 @@ func (srv *server) PatchApiGamesId(w http.ResponseWriter, r *http.Request, id st
 
 	if req.MaxPlayers != nil {
 		params.MaxPlayers = int64(*req.MaxPlayers)
+		if int64(*req.MaxPlayers) == -1 {
+			params.GameSpotsLeft.Int64 = -1
+			params.GameSpotsLeft.Valid = true
+		} else {
+			params.GameSpotsLeft.Int64 += int64(*req.MaxPlayers) - game.MaxPlayers
+			params.GameSpotsLeft.Valid = true
+		}
 	}
 
 	if req.MaxGuestsPerPlayer != nil {
@@ -368,19 +386,28 @@ func (srv *server) PatchApiGamesId(w http.ResponseWriter, r *http.Request, id st
 
 	if req.MaxWaitlistSize != nil {
 		params.MaxWaitlistSize = int64(*req.MaxWaitlistSize)
+		if int64(*req.MaxWaitlistSize) == -1 {
+			params.WaitlistSpotsLeft.Int64 = -1
+			params.WaitlistSpotsLeft.Valid = true
+		} else {
+			params.WaitlistSpotsLeft.Int64 += int64(*req.MaxWaitlistSize) - game.MaxWaitlistSize
+			params.WaitlistSpotsLeft.Valid = true
+		}
 	}
 
-	err = srv.querier.GameUpdate(r.Context(), params)
+	err = querierWithTx.GameUpdate(r.Context(), params)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to update game: %s", err.Error()), http.StatusInternalServerError)
 		return
 	}
 
-	updatedGame, err := srv.querier.GameGetById(r.Context(), id)
+	updatedGame, err := querierWithTx.GameGetById(r.Context(), id)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to retrieve updated game: %s", err.Error()), http.StatusInternalServerError)
 		return
 	}
+
+	tx.Commit()
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)

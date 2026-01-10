@@ -520,6 +520,16 @@ components:
           description: Maximum guests per player (0 to disable, -1 for unlimited)
           example: 2
           format: int64
+        gameSpotsLeft:
+          type: integer
+          description: Number of spots left in the game, excluding the waitlist (-1 for unlimited)
+          example: 10
+          format: int64
+        waitlistSpotsLeft:
+          type: integer
+          description: Number of spots left in the waitlist (-1 for unlimited)
+          example: 5
+          format: int64
 
     CreateGameRequest:
       allOf:
