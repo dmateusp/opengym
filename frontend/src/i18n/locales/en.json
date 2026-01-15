@@ -227,6 +227,8 @@
     "unlimitedGuests": "Unlimited guests allowed",
     "maxGuestsInfo": "Max {{max}} guests per player",
     "exceedsMaxGuests": "Cannot exceed {{max}} guests",
+    "organizerPriority": "Organizer priority",
+    "joiningWillDisplace": "Joining this game will push other participants to the waitlist or \"not going\" list to make room for you. As the organizer, you have priority. Do you want to continue?",
     "confirmJoin": "Confirm",
     "joining": "Joining..."
   }

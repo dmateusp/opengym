@@ -227,6 +227,8 @@
     "unlimitedGuests": "Convidados ilimitados permitidos",
     "maxGuestsInfo": "Máx {{max}} convidados por jogador",
     "exceedsMaxGuests": "Não pode exceder {{max}} convidados",
+    "organizerPriority": "Prioridade do organizador",
+    "joiningWillDisplace": "Ao entrares neste jogo, outros participantes serão movidos para a lista de espera ou \"não vou\" para te dar lugar. Como organizador, tens prioridade. Queres continuar?",
     "confirmJoin": "Confirmar",
     "joining": "A entrar..."
   }

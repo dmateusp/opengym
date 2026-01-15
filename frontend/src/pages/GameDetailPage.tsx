@@ -124,6 +124,7 @@ export default function GameDetailPage() {
   );
   const [isUpdatingParticipation, setIsUpdatingParticipation] = useState(false);
   const [showUngoingConfirmation, setShowUngoingConfirmation] = useState(false);
+  const [showOrganizerWarning, setShowOrganizerWarning] = useState(false);
   const [guestCountInput, setGuestCountInput] = useState("0");
 
   // Share state
@@ -343,9 +344,20 @@ export default function GameDetailPage() {
     return noGameSpots && noWaitlistSpots;
   }, [game]);
 
+  const organizerJoiningWouldDisplace = useMemo(() => {
+    if (!game || !isOrganizer) return false;
+    const guestCount = parseInt(guestCountInput, 10) || 0;
+    const totalSpotsNeeded = 1 + guestCount;
+    
+    const availableSpots = game.gameSpotsLeft ?? 0;
+    if (availableSpots === -1) return false; // Unlimited
+    
+    return availableSpots < totalSpotsNeeded;
+  }, [game, isOrganizer, guestCountInput]);
+
   const joinButtonDisabled = useMemo(() => {
-    return isUpdatingParticipation || isGameFull;
-  }, [isUpdatingParticipation, isGameFull]);
+    return isUpdatingParticipation || (!isOrganizer && isGameFull);
+  }, [isUpdatingParticipation, isOrganizer, isGameFull]);
   const publishRequirements = useMemo(() => {
     if (!game) return [];
     return [
@@ -608,6 +620,29 @@ export default function GameDetailPage() {
     if (maxGuests !== -1 && guestCount > maxGuests) {
       return;
     }
+    
+    console.log('handleJoinWithGuests:', { 
+      isOrganizer, 
+      organizerJoiningWouldDisplace,
+      gameSpotsLeft: game?.gameSpotsLeft,
+      guestCount,
+      totalNeeded: 1 + guestCount
+    });
+    
+    // Check if organizer joining would displace others
+    if (isOrganizer && organizerJoiningWouldDisplace) {
+      console.log('Showing organizer warning');
+      setShowOrganizerWarning(true);
+      return;
+    }
+    
+    console.log('Calling updateParticipation');
+    await updateParticipation("going", guestCount);
+  }
+
+  async function confirmOrganizerJoin() {
+    const guestCount = parseInt(guestCountInput, 10) || 0;
+    setShowOrganizerWarning(false);
     await updateParticipation("going", guestCount);
   }
 
@@ -1557,7 +1592,7 @@ export default function GameDetailPage() {
                       }
                       return null;
                     })()}
-                    {isGameFull && (
+                    {!isOrganizer && isGameFull && (
                       <p className="text-xs text-gray-500">
                         {t("participants.gameIsFull")}
                       </p>
@@ -1568,6 +1603,41 @@ export default function GameDetailPage() {
             ) : null}
           </div>
         </Card>
+        
+        {/* Organizer Warning Dialog */}
+        <Dialog
+          open={showOrganizerWarning}
+          onOpenChange={setShowOrganizerWarning}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Crown className="h-5 w-5 text-primary" />
+                {t("participants.organizerPriority")}
+              </DialogTitle>
+              <DialogDescription>
+                {t("participants.joiningWillDisplace")}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowOrganizerWarning(false)}
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button
+                onClick={confirmOrganizerJoin}
+                disabled={isUpdatingParticipation}
+                className="bg-primary"
+              >
+                {isUpdatingParticipation
+                  ? t("participants.joining")
+                  : t("participants.confirmJoin")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
