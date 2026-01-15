@@ -1,4 +1,4 @@
-import { Crown, Users } from 'lucide-react'
+import { Crown } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 interface User {
@@ -16,7 +16,10 @@ interface ParticipantWithGuests {
 interface ParticipantGridProps {
   participants: (User | ParticipantWithGuests)[]
   organizerId?: number
-  maxCount?: number
+  /** Total number of slots to display. Empty slots are calculated as totalSlots - occupiedSlots */
+  totalSlots?: number
+  /** Number of slots actually occupied (including guests). If not provided, defaults to participants.length */
+  occupiedSlots?: number
   icon?: LucideIcon
   size?: 'sm' | 'md' | 'lg'
   opacity?: number
@@ -50,7 +53,8 @@ const sizeConfig = {
 export function ParticipantGrid({
   participants,
   organizerId,
-  maxCount,
+  totalSlots,
+  occupiedSlots,
   icon: Icon,
   size = 'md',
   opacity = 1,
@@ -138,10 +142,10 @@ export function ParticipantGrid({
         )
       })}
       {/* Empty slots */}
-      {maxCount &&
-        maxCount > 0 &&
+      {totalSlots &&
+        totalSlots > 0 &&
         Array.from({
-          length: Math.max(0, maxCount - participants.length),
+          length: Math.max(0, totalSlots - (occupiedSlots ?? participants.length)),
         }).map((_, i) => (
           <div
             key={`empty-${i}`}

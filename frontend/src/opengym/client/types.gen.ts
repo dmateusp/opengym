@@ -88,6 +88,14 @@ export type GameFields = {
      * Maximum guests per player (0 to disable, -1 for unlimited)
      */
     maxGuestsPerPlayer?: number;
+    /**
+     * Number of spots left in the game, excluding the waitlist (-1 for unlimited)
+     */
+    gameSpotsLeft?: number;
+    /**
+     * Number of spots left in the waitlist (-1 for unlimited)
+     */
+    waitlistSpotsLeft?: number;
 };
 
 export type CreateGameRequest = GameFields & {
@@ -161,6 +169,10 @@ export type GameParticipation = {
 
 export type ParticipantWithUser = {
     status: ParticipationStatus;
+    /**
+     * Number of guests the participant is bringing
+     */
+    guests: number;
     user: User;
     /**
      * Timestamp when the participation record was created
@@ -174,6 +186,14 @@ export type ParticipantWithUser = {
 
 export type UpdateGameParticipationRequest = {
     status: ParticipationStatusUpdate;
+    /**
+     * If the participant has confirmed (can only be set to false by the server when important details are changed on the game)
+     */
+    confirmed?: true;
+    /**
+     * Number of guests the participant is bringing
+     */
+    guests?: number;
 };
 
 export type GameListItem = {

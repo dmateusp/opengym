@@ -80,6 +80,8 @@
     "noStayIn": "No, Stay In",
     "unlimited": "Unlimited",
     "spots": "spots",
+    "spotsLeft": "Spots left",
+    "waitlistSpotsLeft": "Waitlist spots left",
     "minutes": "minutes",
     "free": "Free",
     "perPlayer": "per player",
