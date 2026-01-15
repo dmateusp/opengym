@@ -230,6 +230,10 @@
     "organizerPriority": "Prioridade do organizador",
     "joiningWillDisplace": "Ao entrares neste jogo, outros participantes serão movidos para a lista de espera ou \"não vou\" para te dar lugar. Como organizador, tens prioridade. Queres continuar?",
     "confirmJoin": "Confirmar",
-    "joining": "A entrar..."
+    "joining": "A entrar...",
+    "leaveWaitlist": "Sair da lista de espera",
+    "leaveWaitlistConfirm": "Tens a certeza que queres sair da lista de espera?",
+    "stayOnWaitlist": "Manter-me na lista de espera",
+    "yesLeaveWaitlist": "Sim, sair da lista de espera"
   }
 }

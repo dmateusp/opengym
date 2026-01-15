@@ -1450,7 +1450,7 @@ export default function GameDetailPage() {
               </div>
             ) : user && isPublished ? (
               <div>
-                {currentUserParticipation?.status === "going" ? (
+                {currentUserParticipation && currentUserParticipation.status !== "not_going" ? (
                   <>
                     <Button
                       variant="outline"
@@ -1460,6 +1460,8 @@ export default function GameDetailPage() {
                     >
                       {isUpdatingParticipation
                         ? t("participants.updating")
+                        : currentUserParticipation.status === "waitlisted"
+                        ? t("participants.leaveWaitlist")
                         : t("participants.youreGoing")}
                     </Button>
                     <Dialog
@@ -1469,10 +1471,14 @@ export default function GameDetailPage() {
                       <DialogContent>
                         <DialogHeader>
                           <DialogTitle>
-                            {t("participants.changeYourVote")}
+                            {currentUserParticipation?.status === "waitlisted"
+                              ? t("participants.leaveWaitlist")
+                              : t("participants.changeYourVote")}
                           </DialogTitle>
                           <DialogDescription>
-                            {t("participants.changeToNotGoing")}
+                            {currentUserParticipation?.status === "waitlisted"
+                              ? t("participants.leaveWaitlistConfirm")
+                              : t("participants.changeToNotGoing")}
                           </DialogDescription>
                         </DialogHeader>
                         <DialogFooter>
@@ -1480,7 +1486,9 @@ export default function GameDetailPage() {
                             variant="outline"
                             onClick={() => setShowUngoingConfirmation(false)}
                           >
-                            {t("participants.keepMeGoing")}
+                            {currentUserParticipation?.status === "waitlisted"
+                              ? t("participants.stayOnWaitlist")
+                              : t("participants.keepMeGoing")}
                           </Button>
                           <Button
                             variant="destructive"
@@ -1492,6 +1500,8 @@ export default function GameDetailPage() {
                           >
                             {isUpdatingParticipation
                               ? t("participants.updating")
+                              : currentUserParticipation?.status === "waitlisted"
+                              ? t("participants.yesLeaveWaitlist")
                               : t("participants.yesChangeVote")}
                           </Button>
                         </DialogFooter>

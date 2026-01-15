@@ -230,6 +230,10 @@
     "organizerPriority": "Organizer priority",
     "joiningWillDisplace": "Joining this game will push other participants to the waitlist or \"not going\" list to make room for you. As the organizer, you have priority. Do you want to continue?",
     "confirmJoin": "Confirm",
-    "joining": "Joining..."
+    "joining": "Joining...",
+    "leaveWaitlist": "Leave waitlist",
+    "leaveWaitlistConfirm": "Are you sure you want to leave the waitlist?",
+    "stayOnWaitlist": "Keep me on the waitlist",
+    "yesLeaveWaitlist": "Yes, leave the waitlist"
   }
 }
