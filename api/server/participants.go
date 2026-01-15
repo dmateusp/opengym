@@ -268,7 +268,7 @@ func (s *server) PostApiGamesIdParticipants(w http.ResponseWriter, r *http.Reque
 				if game.MaxPlayers == -1 || goingCount+pc <= int(game.MaxPlayers) {
 					// main list
 					if participant.User.ID == int64(authInfo.UserId) {
-						gameSpotsLeft.Int64 = game.GameSpotsLeft + int64(participantsGroup)
+						gameSpotsLeft.Int64 = game.GameSpotsLeft + int64(pc)
 						gameSpotsLeft.Valid = true
 						break
 					}
@@ -277,7 +277,7 @@ func (s *server) PostApiGamesIdParticipants(w http.ResponseWriter, r *http.Reque
 					// waitlist
 					if participant.User.ID == int64(authInfo.UserId) {
 						if game.MaxWaitlistSize != -1 {
-							waitlistSpotsLeft.Int64 = game.WaitlistSpotsLeft + int64(participantsGroup)
+							waitlistSpotsLeft.Int64 = game.WaitlistSpotsLeft + int64(pc)
 							waitlistSpotsLeft.Valid = true
 						}
 						break
