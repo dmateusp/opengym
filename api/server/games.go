@@ -232,12 +232,10 @@ func (srv *server) GetApiGamesId(w http.ResponseWriter, r *http.Request, id stri
 	authInfo, hasAuth := auth.FromCtx(r.Context())
 	isOrganizer := hasAuth && int64(authInfo.UserId) == game.Game.OrganizerID
 
-	// Non-organizers cannot see drafts or scheduled games until publishedAt is reached
-	if !isOrganizer {
-		if !game.Game.PublishedAt.Valid || game.Game.PublishedAt.Time.After(srv.clock.Now()) {
-			http.Error(w, "game not found", http.StatusNotFound)
-			return
-		}
+	// Only organizers can see unpublished games
+	if !isOrganizer && (!game.Game.PublishedAt.Valid || game.Game.PublishedAt.Time.After(srv.clock.Now())) {
+		http.Error(w, "game not found", http.StatusNotFound)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
