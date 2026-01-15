@@ -243,6 +243,11 @@ func (s *server) PostApiGamesIdParticipants(w http.ResponseWriter, r *http.Reque
 			}
 		}
 	case api.NotGoing: // We have to figure out if we're freeing spots in the "going" list, waitlist, or if the player was already in the "not going" list
+		// Clear guests when someone is not going
+		guests.Int64 = 0
+		guests.Valid = true
+		participantsGroup = 1
+
 		if game.MaxPlayers == -1 {
 			break
 		}

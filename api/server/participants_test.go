@@ -1812,3 +1812,98 @@ func TestOrganizerLateJoinZeroWaitlist_AllowedAndDisplacesLastToNotGoing(t *test
 		t.Fatalf("third should be not_going, got %v", s)
 	}
 }
+
+func TestPostApiGamesIdParticipants_NotGoingClearsGuests(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+	staticClock := clock.StaticClock{Time: time.Now()}
+
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "organizer@example.com")
+	participantID := dbtesting.UpsertTestUser(t, sqlDB, "participant@example.com")
+
+	querier := db.New(sqlDB)
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
+
+	// Create a game with guests allowed
+	_, err := querier.GameCreate(context.Background(), db.GameCreateParams{
+		ID:                 "g1",
+		OrganizerID:        organizerID,
+		Name:               "Test Game",
+		PublishedAt:        sql.NullTime{Time: time.Now().Add(-time.Hour), Valid: true},
+		Description:        sql.NullString{},
+		TotalPriceCents:    0,
+		Location:           sql.NullString{},
+		StartsAt:           sql.NullTime{},
+		DurationMinutes:    60,
+		MaxPlayers:         10,
+		MaxWaitlistSize:    0,
+		MaxGuestsPerPlayer: 5,
+		GameSpotsLeft:      10,
+		WaitlistSpotsLeft:  0,
+	})
+	if err != nil {
+		t.Fatalf("failed to create game: %v", err)
+	}
+
+	// First, join with 3 guests
+	guests := int(3)
+	req := api.UpdateGameParticipationRequest{Status: api.Going, Guests: &guests}
+	body, _ := json.Marshal(req)
+
+	r := httptest.NewRequest(http.MethodPost, "/api/games/g1/participants", bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(participantID)}))
+	w := httptest.NewRecorder()
+
+	srv.PostApiGamesIdParticipants(w, r, "g1")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, w.Code)
+	}
+
+	// Verify guests were saved
+	var guestsCol sql.NullInt64
+	row := sqlDB.QueryRow(`select guests from game_participants where user_id = ? and game_id = ?`, participantID, "g1")
+	if err := row.Scan(&guestsCol); err != nil {
+		t.Fatalf("failed to load participant row: %v", err)
+	}
+	if !guestsCol.Valid || guestsCol.Int64 != 3 {
+		t.Fatalf("expected guests=3, got %+v", guestsCol)
+	}
+
+	// Now change to not going (with guests still in request, but they should be cleared)
+	guestsInRequest := int(2)
+	req = api.UpdateGameParticipationRequest{Status: api.NotGoing, Guests: &guestsInRequest}
+	body, _ = json.Marshal(req)
+
+	r = httptest.NewRequest(http.MethodPost, "/api/games/g1/participants", bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(participantID)}))
+	w = httptest.NewRecorder()
+
+	srv.PostApiGamesIdParticipants(w, r, "g1")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, w.Code)
+	}
+
+	var resp api.GameParticipation
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	status, err := resp.Status.AsParticipationStatusUpdate()
+	if err != nil {
+		t.Fatalf("failed to parse status: %v", err)
+	}
+	if status != api.NotGoing {
+		t.Fatalf("expected status not_going, got %s", status)
+	}
+
+	// Verify guests were cleared (set to 0)
+	row = sqlDB.QueryRow(`select guests from game_participants where user_id = ? and game_id = ?`, participantID, "g1")
+	if err := row.Scan(&guestsCol); err != nil {
+		t.Fatalf("failed to load participant row: %v", err)
+	}
+	if !guestsCol.Valid || guestsCol.Int64 != 0 {
+		t.Fatalf("expected guests to be cleared (0), got %+v", guestsCol)
+	}
+}
