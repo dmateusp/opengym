@@ -243,11 +243,6 @@ func (s *server) PostApiGamesIdParticipants(w http.ResponseWriter, r *http.Reque
 			}
 		}
 	case api.NotGoing: // We have to figure out if we're freeing spots in the "going" list, waitlist, or if the player was already in the "not going" list
-		// Clear guests when someone is not going
-		guests.Int64 = 0
-		guests.Valid = true
-		participantsGroup = 1
-
 		if game.MaxPlayers == -1 {
 			break
 		}
@@ -270,8 +265,6 @@ func (s *server) PostApiGamesIdParticipants(w http.ResponseWriter, r *http.Reque
 			}
 
 			if participant.GameParticipant.Going.Valid && participant.GameParticipant.Going.Bool {
-				fmt.Printf("DEBUG: Processing participant %d, goingCount=%d, waitlistCount=%d, pc=%d, MaxPlayers=%d, MaxWaitlistSize=%d\n",
-					participant.User.ID, goingCount, waitlistCount, pc, game.MaxPlayers, game.MaxWaitlistSize)
 				if game.MaxPlayers == -1 || goingCount+pc <= int(game.MaxPlayers) {
 					// main list
 					if participant.User.ID == int64(authInfo.UserId) {
@@ -306,6 +299,11 @@ func (s *server) PostApiGamesIdParticipants(w http.ResponseWriter, r *http.Reque
 				}
 			}
 		}
+
+		// Clear guests when someone is not going
+		guests.Int64 = 0
+		guests.Valid = true
+		participantsGroup = 1
 
 	default:
 		http.Error(w, "invalid status: "+string(req.Status), http.StatusBadRequest)
