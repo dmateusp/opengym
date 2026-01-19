@@ -17,4 +17,11 @@ i18n
     },
   })
 
+// Keep the document language in sync with the selected locale so native controls (e.g. date pickers)
+// adopt the current language when supported by the browser.
+document.documentElement.lang = i18n.language
+i18n.on('languageChanged', (lng) => {
+  document.documentElement.lang = lng
+})
+
 export default i18n

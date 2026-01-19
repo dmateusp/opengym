@@ -71,3 +71,16 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* react-day-picker (shadcn calendar) styles */
+.rdp {
+  --rdp-cell-size: 36px;
+  --rdp-caption-font-size: 14px;
+  --rdp-accent-color: hsl(var(--primary));
+  --rdp-background-color: hsl(var(--primary) / 0.1);
+  margin: 0;
+}
+
+.rdp-button_reset {
+  cursor: pointer;
+}

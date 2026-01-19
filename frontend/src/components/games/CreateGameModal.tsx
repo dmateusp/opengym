@@ -108,7 +108,6 @@ export default function CreateGameModal({ isOpen, onClose }: CreateGameModalProp
               className="rounded-xl border-2 focus:border-primary focus:ring-0 text-base"
             />
             <div className="flex items-center justify-between">
-              <p className="text-xs text-gray-500">Keep it simple and fun</p>
               <p
                 className={`text-xs ${gameName.length >= NAME_MAX ? 'text-red-600' : 'text-gray-500'}`}
               >

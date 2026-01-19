@@ -39,6 +39,8 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { NumberLimitEditor } from "@/components/ui/NumberLimitEditor";
 import { ParticipantGrid } from "@/components/games/ParticipantGrid";
 import { GameStatusBadge } from "@/components/games/GameStatusBadge";
+import { DateTimeEditor } from "@/components/ui/DateTimeEditor";
+import { enUS, pt } from "date-fns/locale";
 
 interface Game {
   id: string;
@@ -76,7 +78,7 @@ interface Participant {
 }
 
 export default function GameDetailPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
@@ -133,6 +135,11 @@ export default function GameDetailPage() {
   // Editing state
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>("");
+
+  const datePickerLocale = useMemo(
+    () => (i18n.language === "pt-PT" ? pt : enUS),
+    [i18n.language]
+  );
 
   // Autosave status per field
   const saveTimersRef = useRef<Record<string, number | undefined>>({});
@@ -449,6 +456,8 @@ export default function GameDetailPage() {
     setEditingField(field);
     if (field === "totalPriceCents" && typeof currentValue === "number") {
       setEditValue(formatCentsAsDollars(currentValue));
+    } else if (field === "startsAt" && typeof currentValue === "string") {
+      setEditValue(toLocalInputValue(currentValue));
     } else if (typeof currentValue === "number") {
       setEditValue(String(currentValue));
     } else if (typeof currentValue === "string") {
@@ -919,40 +928,56 @@ export default function GameDetailPage() {
 
               {/* Date & Time */}
               <div>
-                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
-                  {t("game.when")}
-                </label>
                 {editingField === "startsAt" && isOrganizer ? (
-                  <Input
-                    type="datetime-local"
-                    value={editValue}
-                    onChange={(e) => setEditValue(e.target.value)}
-                    onBlur={() => handleBlur("startsAt")}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleBlur("startsAt");
-                      if (e.key === "Escape") setEditingField(null);
-                    }}
-                  />
+                  <div className="space-y-2">
+                    <DateTimeEditor
+                      value={editValue || toLocalInputValue(game?.startsAt || "")}
+                      onChange={setEditValue}
+                      locale={datePickerLocale}
+                      dateLabel={t("game.date", { defaultValue: "Date" })}
+                      timeLabel={t("game.time", { defaultValue: "Time" })}
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={cancelEditing}
+                      >
+                        {t("game.cancel")}
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => handleBlur("startsAt")}
+                      >
+                        {t("game.save")}
+                      </Button>
+                    </div>
+                  </div>
                 ) : (
-                  <div
-                    onClick={() =>
-                      startEditing("startsAt", game?.startsAt || "")
-                    }
-                    className={`text-lg font-semibold cursor-text transition ${
-                      game?.startsAt ? "text-gray-900" : "text-gray-400"
-                    }`}
-                  >
-                    {game?.startsAt ? (
-                      <TimeDisplay
-                        timestamp={game.startsAt}
-                        displayFormat="friendly"
-                        className="text-gray-900"
-                      />
-                    ) : isOrganizer ? (
-                      t("game.clickToSetTime")
-                    ) : (
-                      "—"
-                    )}
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
+                      {t("game.when")}
+                    </label>
+                    <div
+                      onClick={() =>
+                        startEditing("startsAt", game?.startsAt || "")
+                      }
+                      className={`text-lg font-semibold cursor-text transition ${
+                        game?.startsAt ? "text-gray-900" : "text-gray-400"
+                      }`}
+                    >
+                      {game?.startsAt ? (
+                        <TimeDisplay
+                          timestamp={game.startsAt}
+                          displayFormat="friendly"
+                          className="text-gray-900"
+                        />
+                      ) : isOrganizer ? (
+                        t("game.clickToSetTime")
+                      ) : (
+                        "—"
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -989,7 +1014,7 @@ export default function GameDetailPage() {
                     {game?.durationMinutes
                       ? `${game.durationMinutes} min`
                       : isOrganizer
-                      ? "Click to set"
+                      ? t("game.clickToAddDuration")
                       : "—"}
                   </div>
                 )}
@@ -1421,23 +1446,25 @@ export default function GameDetailPage() {
                   </div>
 
                   {isEditingSchedule && canPublish && (
-                    <div className="mt-4 pt-4 border-t border-gray-200 space-y-2">
-                      <Input
-                        type="datetime-local"
+                    <div className="mt-4 pt-4 border-t border-gray-200 space-y-3">
+                      <DateTimeEditor
                         value={publishAtInput}
-                        onChange={(e) => setPublishAtInput(e.target.value)}
-                        placeholder={t("common.pickTimeToPublish")}
+                        onChange={setPublishAtInput}
+                        locale={datePickerLocale}
+                        dateLabel={t("game.date", { defaultValue: "Date" })}
+                        timeLabel={t("game.time", { defaultValue: "Time" })}
                       />
-                      <Button
-                        onClick={handleSchedulePublish}
-                        disabled={isPublishing || !publishAtInput}
-                        size="sm"
-                        className="w-full"
-                      >
-                        {isScheduled
-                          ? t("publish.updateSchedule")
-                          : t("publish.schedulePublish")}
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => setIsEditingSchedule(false)}
+                        >
+                          {t("common.cancel")}
+                        </Button>
+                        <Button onClick={handleSchedulePublish}>
+                          {isScheduled ? t("publish.updateSchedule") : t("publish.schedulePublish")}
+                        </Button>
+                      </div>
                     </div>
                   )}
 
@@ -1654,6 +1681,7 @@ export default function GameDetailPage() {
 }
 
 function toLocalInputValue(iso: string) {
+  if (!iso) return "";
   try {
     const d = new Date(iso);
     const pad = (n: number) => String(n).padStart(2, "0");

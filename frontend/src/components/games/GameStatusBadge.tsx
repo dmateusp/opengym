@@ -36,7 +36,7 @@ export function GameStatusBadge({ state, publishedAt }: GameStatusBadgeProps) {
       return (
         <span className="inline-flex items-center gap-2 text-sm font-semibold px-3 py-1.5 rounded-full bg-gray-100 text-gray-600">
           <CircleDashed className="h-4 w-4" />
-          Draft
+          {t("game.draft")}
         </span>
       );
   }
