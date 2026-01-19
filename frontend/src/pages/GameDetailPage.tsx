@@ -386,7 +386,7 @@ export default function GameDetailPage() {
       },
       {
         label: t("game.maxPlayersSet"),
-        met: typeof game.maxPlayers === "number" && game.maxPlayers > 0,
+        met: typeof game.maxPlayers === "number" && (game.maxPlayers > 0 || game.maxPlayers === -1),
         field: "maxPlayers",
       },
       {
