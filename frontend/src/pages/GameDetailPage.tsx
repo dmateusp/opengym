@@ -227,7 +227,7 @@ export default function GameDetailPage() {
   };
 
   const fetchParticipants = async () => {
-    if (!id || !game?.publishedAt) return;
+    if (!id) return;
     try {
       setIsLoadingParticipants(true);
       setParticipantsError(null);
@@ -426,7 +426,9 @@ export default function GameDetailPage() {
 
   const isPublished = useMemo(() => {
     if (!publishedAtDate) return false;
-    return publishedAtDate.getTime() <= nowTs;
+    // Treat as published if the timestamp is in the past, or within 60 seconds of now
+    // (to handle server/client clock differences when publishing "now")
+    return publishedAtDate.getTime() <= nowTs + 60000;
   }, [publishedAtDate, nowTs]);
 
   // Total slots to display in the participant grids.
@@ -529,7 +531,9 @@ export default function GameDetailPage() {
 
   async function handlePublishNow() {
     const ok = await updatePublishTime(new Date().toISOString());
-    if (ok) setIsEditingSchedule(false);
+    if (ok) {
+      setIsEditingSchedule(false);
+    }
   }
 
   async function handleSchedulePublish() {
