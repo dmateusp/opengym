@@ -117,11 +117,24 @@ func (srv *server) PostApiGames(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch organizer information
+	organizerRow, err := srv.querier.UserGetById(r.Context(), game.OrganizerID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to retrieve organizer: %s", err.Error()), http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	var apiGame api.Game
-	apiGame.FromDb(game)
-	err = json.NewEncoder(w).Encode(apiGame)
+	
+	gameWithOrganizer := db.GameGetByIdWithOrganizerRow{
+		Game: game,
+		User: organizerRow.User,
+	}
+	
+	var apiGameDetail api.GameDetail
+	apiGameDetail.FromDb(gameWithOrganizer)
+	err = json.NewEncoder(w).Encode(apiGameDetail)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to encode response: %s", err.Error()), http.StatusInternalServerError)
 		return
@@ -412,13 +425,26 @@ func (srv *server) PatchApiGamesId(w http.ResponseWriter, r *http.Request, id st
 		return
 	}
 
+	// Fetch organizer information
+	organizerRow, err := querierWithTx.UserGetById(r.Context(), updatedGame.OrganizerID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to retrieve organizer: %s", err.Error()), http.StatusInternalServerError)
+		return
+	}
+
 	tx.Commit()
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	var apiGame api.Game
-	apiGame.FromDb(updatedGame)
-	err = json.NewEncoder(w).Encode(apiGame)
+	
+	gameWithOrganizer := db.GameGetByIdWithOrganizerRow{
+		Game: updatedGame,
+		User: organizerRow.User,
+	}
+	
+	var apiGameDetail api.GameDetail
+	apiGameDetail.FromDb(gameWithOrganizer)
+	err = json.NewEncoder(w).Encode(apiGameDetail)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to encode response: %s", err.Error()), http.StatusInternalServerError)
 		return

@@ -58,33 +58,33 @@ func TestPostApiGames_Success(t *testing.T) {
 		t.Errorf("Expected status %d, got %d. Body: %s", http.StatusCreated, w.Code, w.Body.String())
 	}
 
-	var response api.Game
+	var response api.GameDetail
 	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
 	// Verify response matches OpenAPI schema
-	if response.Name != req.Name {
-		t.Errorf("Expected name %s, got %s", req.Name, response.Name)
+	if response.Game.Name != req.Name {
+		t.Errorf("Expected name %s, got %s", req.Name, response.Game.Name)
 	}
-	if response.OrganizerId != int(testUserID) {
-		t.Errorf("Expected organizer ID %d, got %d", testUserID, response.OrganizerId)
+	if response.Game.OrganizerId != int(testUserID) {
+		t.Errorf("Expected organizer ID %d, got %d", testUserID, response.Game.OrganizerId)
 	}
-	if response.Description == nil || *response.Description != *req.Description {
-		t.Errorf("Expected description %s, got %v", *req.Description, response.Description)
+	if response.Game.Description == nil || *response.Game.Description != *req.Description {
+		t.Errorf("Expected description %s, got %v", *req.Description, response.Game.Description)
 	}
-	if response.TotalPriceCents == nil || *response.TotalPriceCents != int64(*req.TotalPriceCents) {
-		t.Errorf("Expected price %d, got %v", *req.TotalPriceCents, response.TotalPriceCents)
+	if response.Game.TotalPriceCents == nil || *response.Game.TotalPriceCents != int64(*req.TotalPriceCents) {
+		t.Errorf("Expected price %d, got %v", *req.TotalPriceCents, response.Game.TotalPriceCents)
 	}
 
 	// Required fields per OpenAPI spec
-	if response.Id == "" {
+	if response.Game.Id == "" {
 		t.Error("Expected id to be set")
 	}
-	if response.CreatedAt.IsZero() {
+	if response.Game.CreatedAt.IsZero() {
 		t.Error("Expected createdAt to be set")
 	}
-	if response.UpdatedAt.IsZero() {
+	if response.Game.UpdatedAt.IsZero() {
 		t.Error("Expected updatedAt to be set")
 	}
 }
@@ -114,13 +114,13 @@ func TestPostApiGames_MinimalRequest(t *testing.T) {
 		t.Errorf("Expected status %d, got %d. Body: %s", http.StatusCreated, w.Code, w.Body.String())
 	}
 
-	var response api.Game
+	var response api.GameDetail
 	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
-	if response.Name != req.Name {
-		t.Errorf("Expected name %s, got %s", req.Name, response.Name)
+	if response.Game.Name != req.Name {
+		t.Errorf("Expected name %s, got %s", req.Name, response.Game.Name)
 	}
 }
 
@@ -335,16 +335,16 @@ func TestPostApiGames_IDClashRetry(t *testing.T) {
 		t.Errorf("Expected status %d, got %d. Body: %s", http.StatusCreated, w.Code, w.Body.String())
 	}
 
-	var response api.Game
+	var response api.GameDetail
 	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
-	if response.Id == "" {
+	if response.Game.Id == "" {
 		t.Error("Expected id to be set")
 	}
 
-	if response.Id != "bar" {
+	if response.Game.Id != "bar" {
 		t.Error("Expected id to be 'bar'")
 	}
 }
@@ -983,9 +983,9 @@ func TestPatchApiGamesId_Success(t *testing.T) {
 	w := httptest.NewRecorder()
 	srv.PostApiGames(w, r)
 
-	var createdGame api.Game
+	var createdGame api.GameDetail
 	json.NewDecoder(w.Body).Decode(&createdGame)
-	gameID := createdGame.Id
+	gameID := createdGame.Game.Id
 
 	// Now update it
 	newName := "Updated Name"
@@ -1009,19 +1009,19 @@ func TestPatchApiGamesId_Success(t *testing.T) {
 		t.Errorf("Expected status %d, got %d. Body: %s", http.StatusOK, w.Code, w.Body.String())
 	}
 
-	var response api.Game
+	var response api.GameDetail
 	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
 	// Verify response matches OpenAPI schema and updates
-	if response.Name != newName {
-		t.Errorf("Expected name %s, got %s", newName, response.Name)
+	if response.Game.Name != newName {
+		t.Errorf("Expected name %s, got %s", newName, response.Game.Name)
 	}
-	if response.Description == nil || *response.Description != newDescription {
-		t.Errorf("Expected description %s, got %v", newDescription, response.Description)
+	if response.Game.Description == nil || *response.Game.Description != newDescription {
+		t.Errorf("Expected description %s, got %v", newDescription, response.Game.Description)
 	}
-	if response.PublishedAt == nil {
+	if response.Game.PublishedAt == nil {
 		t.Error("Expected publishedAt to be set")
 	}
 }
@@ -1045,9 +1045,9 @@ func TestPatchApiGamesId_PartialUpdate(t *testing.T) {
 	w := httptest.NewRecorder()
 	srv.PostApiGames(w, r)
 
-	var createdGame api.Game
+	var createdGame api.GameDetail
 	json.NewDecoder(w.Body).Decode(&createdGame)
-	gameID := createdGame.Id
+	gameID := createdGame.Game.Id
 
 	// Now update only the name
 	newName := "Updated Name Only"
@@ -1066,13 +1066,13 @@ func TestPatchApiGamesId_PartialUpdate(t *testing.T) {
 		t.Errorf("Expected status %d, got %d. Body: %s", http.StatusOK, w.Code, w.Body.String())
 	}
 
-	var response api.Game
+	var response api.GameDetail
 	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
-	if response.Name != newName {
-		t.Errorf("Expected name %s, got %s", newName, response.Name)
+	if response.Game.Name != newName {
+		t.Errorf("Expected name %s, got %s", newName, response.Game.Name)
 	}
 }
 
@@ -1142,9 +1142,9 @@ func TestPatchApiGamesId_Forbidden(t *testing.T) {
 	w := httptest.NewRecorder()
 	srv.PostApiGames(w, r)
 
-	var createdGame api.Game
+	var createdGame api.GameDetail
 	json.NewDecoder(w.Body).Decode(&createdGame)
-	gameID := createdGame.Id
+	gameID := createdGame.Game.Id
 
 	// Create another user who tries to update the game
 	otherUser, err := sqlDB.Exec(`INSERT INTO users (email, name) VALUES (?, ?)`, "other@example.com", "Other User")
@@ -1188,9 +1188,9 @@ func TestPatchApiGamesId_InvalidRequestBody(t *testing.T) {
 	w := httptest.NewRecorder()
 	srv.PostApiGames(w, r)
 
-	var createdGame api.Game
+	var createdGame api.GameDetail
 	json.NewDecoder(w.Body).Decode(&createdGame)
-	gameID := createdGame.Id
+	gameID := createdGame.Game.Id
 
 	// Try to update with invalid JSON
 	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+gameID, bytes.NewReader([]byte("invalid json")))
@@ -1224,9 +1224,9 @@ func TestGetApiGamesId_Success(t *testing.T) {
 	w := httptest.NewRecorder()
 	srv.PostApiGames(w, r)
 
-	var createdGame api.Game
+	var createdGame api.GameDetail
 	json.NewDecoder(w.Body).Decode(&createdGame)
-	gameID := createdGame.Id
+	gameID := createdGame.Game.Id
 
 	// Now retrieve it
 	r = httptest.NewRequest(http.MethodGet, "/api/games/"+gameID, nil)
@@ -1245,17 +1245,17 @@ func TestGetApiGamesId_Success(t *testing.T) {
 	}
 
 	// Verify retrieved game matches created game
-	if gameDetail.Game.Id != createdGame.Id {
-		t.Errorf("Expected id %s, got %s", createdGame.Id, gameDetail.Game.Id)
+	if gameDetail.Game.Id != createdGame.Game.Id {
+		t.Errorf("Expected id %s, got %s", createdGame.Game.Id, gameDetail.Game.Id)
 	}
-	if gameDetail.Game.Name != createdGame.Name {
-		t.Errorf("Expected name %s, got %s", createdGame.Name, gameDetail.Game.Name)
+	if gameDetail.Game.Name != createdGame.Game.Name {
+		t.Errorf("Expected name %s, got %s", createdGame.Game.Name, gameDetail.Game.Name)
 	}
-	if gameDetail.Game.OrganizerId != createdGame.OrganizerId {
-		t.Errorf("Expected organizer ID %d, got %d", createdGame.OrganizerId, gameDetail.Game.OrganizerId)
+	if gameDetail.Game.OrganizerId != createdGame.Game.OrganizerId {
+		t.Errorf("Expected organizer ID %d, got %d", createdGame.Game.OrganizerId, gameDetail.Game.OrganizerId)
 	}
-	if gameDetail.Game.Description == nil || *gameDetail.Game.Description != *createdGame.Description {
-		t.Errorf("Expected description %v, got %v", createdGame.Description, gameDetail.Game.Description)
+	if gameDetail.Game.Description == nil || *gameDetail.Game.Description != *createdGame.Game.Description {
+		t.Errorf("Expected description %v, got %v", createdGame.Game.Description, gameDetail.Game.Description)
 	}
 
 	// Verify organizer information is returned
@@ -1308,13 +1308,13 @@ func TestGetApiGamesId_DraftHiddenFromNonOrganizer(t *testing.T) {
 	w := httptest.NewRecorder()
 	srv.PostApiGames(w, r)
 
-	var created api.Game
+	var created api.GameDetail
 	json.NewDecoder(w.Body).Decode(&created)
 
 	// Unauthenticated user should not see draft
-	r = httptest.NewRequest(http.MethodGet, "/api/games/"+created.Id, nil)
+	r = httptest.NewRequest(http.MethodGet, "/api/games/"+created.Game.Id, nil)
 	w = httptest.NewRecorder()
-	srv.GetApiGamesId(w, r, created.Id)
+	srv.GetApiGamesId(w, r, created.Game.Id)
 	if w.Code != http.StatusNotFound {
 		t.Fatalf("expected 404 for draft game, got %d", w.Code)
 	}
@@ -1325,19 +1325,19 @@ func TestGetApiGamesId_DraftHiddenFromNonOrganizer(t *testing.T) {
 		t.Fatalf("failed to insert other user: %v", err)
 	}
 	otherID, _ := res.LastInsertId()
-	r = httptest.NewRequest(http.MethodGet, "/api/games/"+created.Id, nil)
+	r = httptest.NewRequest(http.MethodGet, "/api/games/"+created.Game.Id, nil)
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(otherID)}))
 	w = httptest.NewRecorder()
-	srv.GetApiGamesId(w, r, created.Id)
+	srv.GetApiGamesId(w, r, created.Game.Id)
 	if w.Code != http.StatusNotFound {
 		t.Fatalf("expected 404 for draft game to other user, got %d", w.Code)
 	}
 
 	// Organizer can see draft
-	r = httptest.NewRequest(http.MethodGet, "/api/games/"+created.Id, nil)
+	r = httptest.NewRequest(http.MethodGet, "/api/games/"+created.Game.Id, nil)
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
 	w = httptest.NewRecorder()
-	srv.GetApiGamesId(w, r, created.Id)
+	srv.GetApiGamesId(w, r, created.Game.Id)
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200 for organizer viewing draft, got %d", w.Code)
 	}
@@ -1359,16 +1359,16 @@ func TestGetApiGamesId_ScheduledHiddenUntilPublished(t *testing.T) {
 	w := httptest.NewRecorder()
 	srv.PostApiGames(w, r)
 
-	var created api.Game
+	var created api.GameDetail
 	json.NewDecoder(w.Body).Decode(&created)
 
 	future := staticClock.Now().Add(1 * time.Hour)
 	updateReq := api.UpdateGameRequest{PublishedAt: nullable.NewNullableWithValue(future)}
 	body, _ = json.Marshal(updateReq)
-	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Id, bytes.NewReader(body))
+	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Game.Id, bytes.NewReader(body))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
 	w = httptest.NewRecorder()
-	srv.PatchApiGamesId(w, r, created.Id)
+	srv.PatchApiGamesId(w, r, created.Game.Id)
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200 when scheduling publish, got %d", w.Code)
 	}
@@ -1379,19 +1379,19 @@ func TestGetApiGamesId_ScheduledHiddenUntilPublished(t *testing.T) {
 		t.Fatalf("failed to insert viewer user: %v", err)
 	}
 	viewerID, _ := res.LastInsertId()
-	r = httptest.NewRequest(http.MethodGet, "/api/games/"+created.Id, nil)
+	r = httptest.NewRequest(http.MethodGet, "/api/games/"+created.Game.Id, nil)
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(viewerID)}))
 	w = httptest.NewRecorder()
-	srv.GetApiGamesId(w, r, created.Id)
+	srv.GetApiGamesId(w, r, created.Game.Id)
 	if w.Code != http.StatusNotFound {
 		t.Fatalf("expected 404 for scheduled game before publish time, got %d", w.Code)
 	}
 
 	// Organizer can still view
-	r = httptest.NewRequest(http.MethodGet, "/api/games/"+created.Id, nil)
+	r = httptest.NewRequest(http.MethodGet, "/api/games/"+created.Game.Id, nil)
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
 	w = httptest.NewRecorder()
-	srv.GetApiGamesId(w, r, created.Id)
+	srv.GetApiGamesId(w, r, created.Game.Id)
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200 for organizer viewing scheduled game, got %d", w.Code)
 	}
@@ -1413,27 +1413,27 @@ func TestPatchApiGamesId_PublishPastBecomesNow(t *testing.T) {
 	w := httptest.NewRecorder()
 	srv.PostApiGames(w, r)
 
-	var created api.Game
+	var created api.GameDetail
 	json.NewDecoder(w.Body).Decode(&created)
 	start := staticClock.Now()
 	past := start.Add(-1 * time.Hour)
 	updateReq := api.UpdateGameRequest{PublishedAt: nullable.NewNullableWithValue(past)}
 	body, _ = json.Marshal(updateReq)
-	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Id, bytes.NewReader(body))
+	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Game.Id, bytes.NewReader(body))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
 	w = httptest.NewRecorder()
-	srv.PatchApiGamesId(w, r, created.Id)
+	srv.PatchApiGamesId(w, r, created.Game.Id)
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200 when publishing with past timestamp, got %d", w.Code)
 	}
 
-	var updated api.Game
+	var updated api.GameDetail
 	json.NewDecoder(w.Body).Decode(&updated)
-	if updated.PublishedAt == nil {
+	if updated.Game.PublishedAt == nil {
 		t.Fatalf("expected publishedAt to be set")
 	}
-	if updated.PublishedAt.Before(start) {
-		t.Fatalf("expected publishedAt to be >= request time, got %v", updated.PublishedAt)
+	if updated.Game.PublishedAt.Before(start) {
+		t.Fatalf("expected publishedAt to be >= request time, got %v", updated.Game.PublishedAt)
 	}
 }
 
@@ -1453,15 +1453,15 @@ func TestPatchApiGamesId_CannotPublishTwice(t *testing.T) {
 	w := httptest.NewRecorder()
 	srv.PostApiGames(w, r)
 
-	var created api.Game
+	var created api.GameDetail
 	json.NewDecoder(w.Body).Decode(&created)
 	first := staticClock.Now()
 	updateReq := api.UpdateGameRequest{PublishedAt: nullable.NewNullableWithValue(first)}
 	body, _ = json.Marshal(updateReq)
-	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Id, bytes.NewReader(body))
+	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Game.Id, bytes.NewReader(body))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
 	w = httptest.NewRecorder()
-	srv.PatchApiGamesId(w, r, created.Id)
+	srv.PatchApiGamesId(w, r, created.Game.Id)
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected first publish to succeed, got %d", w.Code)
 	}
@@ -1469,10 +1469,10 @@ func TestPatchApiGamesId_CannotPublishTwice(t *testing.T) {
 	second := staticClock.Now().Add(2 * time.Hour)
 	updateReq = api.UpdateGameRequest{PublishedAt: nullable.NewNullableWithValue(second)}
 	body, _ = json.Marshal(updateReq)
-	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Id, bytes.NewReader(body))
+	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Game.Id, bytes.NewReader(body))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
 	w = httptest.NewRecorder()
-	srv.PatchApiGamesId(w, r, created.Id)
+	srv.PatchApiGamesId(w, r, created.Game.Id)
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("expected second publish attempt to be rejected with 400, got %d", w.Code)
 	}
@@ -1494,16 +1494,16 @@ func TestPatchApiGamesId_CanRescheduleFuturePublish(t *testing.T) {
 	w := httptest.NewRecorder()
 	srv.PostApiGames(w, r)
 
-	var created api.Game
+	var created api.GameDetail
 	json.NewDecoder(w.Body).Decode(&created)
 
 	future1 := staticClock.Now().Add(2 * time.Hour)
 	updateReq := api.UpdateGameRequest{PublishedAt: nullable.NewNullableWithValue(future1)}
 	body, _ = json.Marshal(updateReq)
-	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Id, bytes.NewReader(body))
+	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Game.Id, bytes.NewReader(body))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
 	w = httptest.NewRecorder()
-	srv.PatchApiGamesId(w, r, created.Id)
+	srv.PatchApiGamesId(w, r, created.Game.Id)
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected scheduling publish to succeed, got %d", w.Code)
 	}
@@ -1511,20 +1511,20 @@ func TestPatchApiGamesId_CanRescheduleFuturePublish(t *testing.T) {
 	future2 := staticClock.Now().Add(4 * time.Hour)
 	updateReq = api.UpdateGameRequest{PublishedAt: nullable.NewNullableWithValue(future2)}
 	body, _ = json.Marshal(updateReq)
-	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Id, bytes.NewReader(body))
+	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Game.Id, bytes.NewReader(body))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
 	w = httptest.NewRecorder()
-	srv.PatchApiGamesId(w, r, created.Id)
+	srv.PatchApiGamesId(w, r, created.Game.Id)
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected rescheduling publish to succeed, got %d", w.Code)
 	}
 
-	var updated api.Game
+	var updated api.GameDetail
 	json.NewDecoder(w.Body).Decode(&updated)
-	if updated.PublishedAt == nil {
+	if updated.Game.PublishedAt == nil {
 		t.Fatalf("expected publishedAt to remain set after reschedule")
 	}
-	if !updated.PublishedAt.After(future1) {
+	if !updated.Game.PublishedAt.After(future1) {
 		t.Fatalf("expected publishedAt to move later than original schedule")
 	}
 }
@@ -1545,33 +1545,33 @@ func TestPatchApiGamesId_CanClearFuturePublish(t *testing.T) {
 	w := httptest.NewRecorder()
 	srv.PostApiGames(w, r)
 
-	var created api.Game
+	var created api.GameDetail
 	json.NewDecoder(w.Body).Decode(&created)
 
 	future := staticClock.Now().Add(2 * time.Hour)
 	updateReq := api.UpdateGameRequest{PublishedAt: nullable.NewNullableWithValue(future)}
 	body, _ = json.Marshal(updateReq)
-	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Id, bytes.NewReader(body))
+	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Game.Id, bytes.NewReader(body))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
 	w = httptest.NewRecorder()
-	srv.PatchApiGamesId(w, r, created.Id)
+	srv.PatchApiGamesId(w, r, created.Game.Id)
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected scheduling publish to succeed, got %d", w.Code)
 	}
 
 	updateReq = api.UpdateGameRequest{PublishedAt: nullable.NewNullNullable[time.Time]()}
 	body, _ = json.Marshal(updateReq)
-	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Id, bytes.NewReader(body))
+	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Game.Id, bytes.NewReader(body))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
 	w = httptest.NewRecorder()
-	srv.PatchApiGamesId(w, r, created.Id)
+	srv.PatchApiGamesId(w, r, created.Game.Id)
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected clearing scheduled publish to succeed, got %d", w.Code)
 	}
 
-	var updated api.Game
+	var updated api.GameDetail
 	json.NewDecoder(w.Body).Decode(&updated)
-	if updated.PublishedAt != nil {
+	if updated.Game.PublishedAt != nil {
 		t.Fatalf("expected publishedAt to be cleared")
 	}
 }
@@ -1592,26 +1592,26 @@ func TestPatchApiGamesId_CannotClearAfterPublished(t *testing.T) {
 	w := httptest.NewRecorder()
 	srv.PostApiGames(w, r)
 
-	var created api.Game
+	var created api.GameDetail
 	json.NewDecoder(w.Body).Decode(&created)
 
 	past := staticClock.Now().Add(-1 * time.Hour)
 	updateReq := api.UpdateGameRequest{PublishedAt: nullable.NewNullableWithValue(past)}
 	body, _ = json.Marshal(updateReq)
-	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Id, bytes.NewReader(body))
+	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Game.Id, bytes.NewReader(body))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
 	w = httptest.NewRecorder()
-	srv.PatchApiGamesId(w, r, created.Id)
+	srv.PatchApiGamesId(w, r, created.Game.Id)
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected publishing to succeed, got %d", w.Code)
 	}
 
 	updateReq = api.UpdateGameRequest{PublishedAt: nullable.NewNullNullable[time.Time]()}
 	body, _ = json.Marshal(updateReq)
-	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Id, bytes.NewReader(body))
+	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Game.Id, bytes.NewReader(body))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
 	w = httptest.NewRecorder()
-	srv.PatchApiGamesId(w, r, created.Id)
+	srv.PatchApiGamesId(w, r, created.Game.Id)
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("expected clearing after publish to be rejected with 400, got %d", w.Code)
 	}
@@ -1634,7 +1634,7 @@ func TestPatchApiGamesId_NameValidation(t *testing.T) {
 	w := httptest.NewRecorder()
 	srv.PostApiGames(w, r)
 
-	var created api.Game
+	var created api.GameDetail
 	json.NewDecoder(w.Body).Decode(&created)
 
 	testCases := []struct {
@@ -1674,11 +1674,11 @@ func TestPatchApiGamesId_NameValidation(t *testing.T) {
 			}
 
 			body, _ := json.Marshal(updateReq)
-			r := httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Id, bytes.NewReader(body))
+			r := httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Game.Id, bytes.NewReader(body))
 			r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
 			w := httptest.NewRecorder()
 
-			srv.PatchApiGamesId(w, r, created.Id)
+			srv.PatchApiGamesId(w, r, created.Game.Id)
 
 			if w.Code != tc.expectedStatus {
 				t.Errorf("Expected status %d, got %d. Body: %s", tc.expectedStatus, w.Code, w.Body.String())
@@ -1708,7 +1708,7 @@ func TestPatchApiGamesId_DescriptionValidation(t *testing.T) {
 	w := httptest.NewRecorder()
 	srv.PostApiGames(w, r)
 
-	var created api.Game
+	var created api.GameDetail
 	json.NewDecoder(w.Body).Decode(&created)
 
 	testCases := []struct {
@@ -1747,11 +1747,11 @@ func TestPatchApiGamesId_DescriptionValidation(t *testing.T) {
 			}
 
 			body, _ := json.Marshal(updateReq)
-			r := httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Id, bytes.NewReader(body))
+			r := httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Game.Id, bytes.NewReader(body))
 			r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
 			w := httptest.NewRecorder()
 
-			srv.PatchApiGamesId(w, r, created.Id)
+			srv.PatchApiGamesId(w, r, created.Game.Id)
 
 			if w.Code != tc.expectedStatus {
 				t.Errorf("Expected status %d, got %d. Body: %s", tc.expectedStatus, w.Code, w.Body.String())

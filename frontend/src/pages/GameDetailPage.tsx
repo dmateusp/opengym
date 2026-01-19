@@ -568,7 +568,8 @@ export default function GameDetailPage() {
         throw new Error(txt || t("game.failedToSave"));
       }
       const updated = await resp.json();
-      setGame(updated);
+      setGame(updated.game);
+      setOrganizer(updated.organizer);
       setEditingField(null);
     } catch (e) {
       console.error("Failed to save field:", field, e);

@@ -57,7 +57,7 @@ export default function CreateGameModal({ isOpen, onClose }: CreateGameModalProp
         throw new Error(errorText || 'Failed to create game')
       }
 
-      const game = await response.json()
+      const gameDetail = await response.json()
       
       // Reset and close modal
       setGameName('')
@@ -65,7 +65,7 @@ export default function CreateGameModal({ isOpen, onClose }: CreateGameModalProp
       onClose()
       
       // Navigate to game detail page
-      navigate(`/games/${game.id}`)
+      navigate(`/games/${gameDetail.game.id}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : t('errors.somethingWentWrong'))
     } finally {

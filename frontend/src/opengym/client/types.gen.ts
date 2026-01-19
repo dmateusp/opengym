@@ -465,7 +465,7 @@ export type PostApiGamesResponses = {
     /**
      * Game created successfully
      */
-    200: Game;
+    200: GameDetail;
 };
 
 export type PostApiGamesResponse = PostApiGamesResponses[keyof PostApiGamesResponses];
@@ -537,7 +537,7 @@ export type PatchApiGamesByIdResponses = {
     /**
      * Game updated successfully
      */
-    200: Game;
+    200: GameDetail;
 };
 
 export type PatchApiGamesByIdResponse = PatchApiGamesByIdResponses[keyof PatchApiGamesByIdResponses];
