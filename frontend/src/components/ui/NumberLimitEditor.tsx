@@ -2,7 +2,7 @@ import { Input } from "./input"
 import { useTranslation } from 'react-i18next'
 import React from "react"
 
-export type LimitMode = 'disabled' | 'limited' | 'unlimited'
+export type LimitMode = 'disabled' | 'limited'
 
 export interface NumberLimitEditorProps {
   value: number | undefined
@@ -13,7 +13,6 @@ export interface NumberLimitEditorProps {
   label?: {
     disabled?: string
     limited?: string
-    unlimited?: string
   }
 }
 
@@ -29,14 +28,12 @@ export function NumberLimitEditor({
   
   const defaultLabel = {
     disabled: t('numberLimitEditor.disabled'),
-    limited: t('numberLimitEditor.limited'),
-    unlimited: t('numberLimitEditor.unlimited')
+    limited: t('numberLimitEditor.limited')
   }
   
   const finalLabel = { ...defaultLabel, ...label }
   const [mode, setMode] = React.useState<LimitMode>(() => {
     if (value === 0) return 'disabled'
-    if (value === -1) return 'unlimited'
     return 'limited'
   })
   
@@ -61,8 +58,6 @@ export function NumberLimitEditor({
       
       if (mode === 'disabled') {
         valueToSave = 0
-      } else if (mode === 'unlimited') {
-        valueToSave = -1
       } else {
         const num = Number(limitValue)
         valueToSave = isNaN(num) || num < 1 ? undefined : num
@@ -120,18 +115,6 @@ export function NumberLimitEditor({
           />
         </div>
       )}
-      
-      <label className="flex items-center gap-2 cursor-pointer">
-        <input
-          type="radio"
-          name="limitMode"
-          value="unlimited"
-          checked={mode === 'unlimited'}
-          onChange={(e) => setMode(e.target.value as LimitMode)}
-          className="w-4 h-4 text-primary"
-        />
-        <span className="text-sm font-medium">{finalLabel.unlimited}</span>
-      </label>
     </div>
   )
 }

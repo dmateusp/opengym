@@ -507,29 +507,34 @@ components:
           format: int64
         maxPlayers:
           type: integer
-          description: Maximum number of players (-1 for unlimited)
+          description: Maximum number of players (must be at least 1)
           example: 12
           format: int64
+          minimum: 1
         maxWaitlistSize:
           type: integer
-          description: Maximum waitlist size (0 to disable, -1 for unlimited)
+          description: Maximum waitlist size (0 to disable)
           example: 5
           format: int64
+          minimum: 0
         maxGuestsPerPlayer:
           type: integer
-          description: Maximum guests per player (0 to disable, -1 for unlimited)
+          description: Maximum guests per player (0 to disable)
           example: 2
           format: int64
+          minimum: 0
         gameSpotsLeft:
           type: integer
-          description: Number of spots left in the game, excluding the waitlist (-1 for unlimited)
+          description: Number of spots left in the game, excluding the waitlist
           example: 10
           format: int64
+          minimum: 0
         waitlistSpotsLeft:
           type: integer
-          description: Number of spots left in the waitlist (-1 for unlimited)
+          description: Number of spots left in the waitlist
           example: 5
           format: int64
+          minimum: 0
 
     CreateGameRequest:
       allOf:

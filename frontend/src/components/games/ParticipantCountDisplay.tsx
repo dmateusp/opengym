@@ -20,7 +20,6 @@ export function ParticipantCountDisplay({
   };
 
   const isDisabled = maxCount === 0;
-  const isUnlimited = maxCount === -1;
 
   return (
     <div className="text-center">
@@ -37,7 +36,6 @@ export function ParticipantCountDisplay({
       <div className="text-xs text-gray-600 font-medium">
         {label}
         {showDisabled && isDisabled ? ' (Off)' : ''}
-        {showDisabled && isUnlimited ? ' (∞)' : ''}
       </div>
     </div>
   );

@@ -102,7 +102,6 @@ export default function GameDetailPage() {
 
   const formatSpotsLeft = (value?: number) => {
     if (value === undefined || value === null) return "—";
-    if (value === -1) return t("common.unlimited");
     return value.toString();
   };
 
@@ -340,12 +339,10 @@ export default function GameDetailPage() {
 
     const noGameSpots =
       typeof game.gameSpotsLeft === "number" &&
-      game.gameSpotsLeft !== -1 &&
       game.gameSpotsLeft <= 0;
 
     const noWaitlistSpots =
       typeof game.waitlistSpotsLeft === "number" &&
-      game.waitlistSpotsLeft !== -1 &&
       game.waitlistSpotsLeft <= 0;
 
     return noGameSpots && noWaitlistSpots;
@@ -357,7 +354,6 @@ export default function GameDetailPage() {
     const totalSpotsNeeded = 1 + guestCount;
     
     const availableSpots = game.gameSpotsLeft ?? 0;
-    if (availableSpots === -1) return false; // Unlimited
     
     return availableSpots < totalSpotsNeeded;
   }, [game, isOrganizer, guestCountInput]);
@@ -1032,7 +1028,6 @@ export default function GameDetailPage() {
                     placeholder={t("common.enterMaxPlayers")}
                     label={{
                       limited: t("common.setMaximum"),
-                      unlimited: t("common.noLimit"),
                     }}
                   />
                 ) : (
@@ -1045,9 +1040,7 @@ export default function GameDetailPage() {
                     }`}
                   >
                     {game?.maxPlayers
-                      ? game.maxPlayers === -1
-                        ? t("common.noLimit")
-                        : `${t("common.upTo")} ${game.maxPlayers}`
+                      ? `${t("common.upTo")} ${game.maxPlayers}`
                       : isOrganizer
                       ? t("common.clickToSet")
                       : "—"}
@@ -1088,9 +1081,7 @@ export default function GameDetailPage() {
                     }`}
                   >
                     {typeof game?.maxWaitlistSize === "number"
-                      ? game.maxWaitlistSize === -1
-                        ? t("common.unlimited")
-                        : game.maxWaitlistSize === 0
+                      ? game.maxWaitlistSize === 0
                         ? t("common.disabled")
                         : `${t("common.upTo")} ${game.maxWaitlistSize}`
                       : isOrganizer
@@ -1133,9 +1124,7 @@ export default function GameDetailPage() {
                     }`}
                   >
                     {typeof game?.maxGuestsPerPlayer === "number"
-                      ? game.maxGuestsPerPlayer === -1
-                        ? t("common.unlimited")
-                        : game.maxGuestsPerPlayer === 0
+                      ? game.maxGuestsPerPlayer === 0
                         ? t("common.disabled")
                         : `${t("common.upTo")} ${game.maxGuestsPerPlayer}`
                       : isOrganizer
@@ -1559,9 +1548,7 @@ export default function GameDetailPage() {
                           type="number"
                           min="0"
                           max={
-                            game?.maxGuestsPerPlayer === -1
-                              ? undefined
-                              : game?.maxGuestsPerPlayer
+                            game?.maxGuestsPerPlayer
                           }
                           value={guestCountInput}
                           onChange={(e) => setGuestCountInput(e.target.value)}
@@ -1586,7 +1573,6 @@ export default function GameDetailPage() {
                       }
                       if (
                         !isNaN(count) &&
-                        maxGuests !== -1 &&
                         count > maxGuests
                       ) {
                         return (
@@ -1594,13 +1580,6 @@ export default function GameDetailPage() {
                             {t("participants.exceedsMaxGuests", {
                               max: maxGuests,
                             })}
-                          </p>
-                        );
-                      }
-                      if (game?.maxGuestsPerPlayer === -1) {
-                        return (
-                          <p className="text-xs text-gray-500">
-                            {t("participants.unlimitedGuests")}
                           </p>
                         );
                       }

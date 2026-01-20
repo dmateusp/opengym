@@ -275,10 +275,10 @@ func createGame(t *testing.T, querier *db.Queries, id string, organizerID int64,
 		Location:           sql.NullString{},
 		StartsAt:           sql.NullTime{},
 		DurationMinutes:    60,
-		MaxPlayers:         -1,
+		MaxPlayers:         50,
 		MaxWaitlistSize:    0,
-		MaxGuestsPerPlayer: -1,
-		GameSpotsLeft:      -1,
+		MaxGuestsPerPlayer: 5,
+		GameSpotsLeft:      50,
 		WaitlistSpotsLeft:  0,
 	})
 	if err != nil {
@@ -384,10 +384,10 @@ func TestGetApiGamesIdParticipants_StatusComputation(t *testing.T) {
 		StartsAt:           sql.NullTime{},
 		DurationMinutes:    60,
 		MaxPlayers:         2,
-		MaxWaitlistSize:    -1,
-		MaxGuestsPerPlayer: -1,
+		MaxWaitlistSize:    10,
+		MaxGuestsPerPlayer: 5,
 		GameSpotsLeft:      2,
-		WaitlistSpotsLeft:  -1,
+		WaitlistSpotsLeft:  10,
 	})
 	if err != nil {
 		t.Fatalf("failed to create game: %v", err)
@@ -514,10 +514,10 @@ func TestGetApiGamesIdParticipants_OrganizerPriorityEvenWhenLate(t *testing.T) {
 		StartsAt:           sql.NullTime{},
 		DurationMinutes:    60,
 		MaxPlayers:         2,
-		MaxWaitlistSize:    -1,
-		MaxGuestsPerPlayer: -1,
+		MaxWaitlistSize:    10,
+		MaxGuestsPerPlayer: 5,
 		GameSpotsLeft:      2,
-		WaitlistSpotsLeft:  -1,
+		WaitlistSpotsLeft:  10,
 	})
 	if err != nil {
 		t.Fatalf("failed to create game: %v", err)
@@ -618,10 +618,10 @@ func TestGetApiGamesIdParticipants_NonGoingDoesNotConsumeSlot(t *testing.T) {
 		StartsAt:           sql.NullTime{},
 		DurationMinutes:    60,
 		MaxPlayers:         2,
-		MaxWaitlistSize:    -1,
-		MaxGuestsPerPlayer: -1,
+		MaxWaitlistSize:    10,
+		MaxGuestsPerPlayer: 5,
 		GameSpotsLeft:      2,
-		WaitlistSpotsLeft:  -1,
+		WaitlistSpotsLeft:  10,
 	})
 	if err != nil {
 		t.Fatalf("failed to create game: %v", err)
@@ -707,8 +707,10 @@ func TestGetApiGamesIdParticipants_OrganizerNotGoingDoesNotBlockSlots(t *testing
 		StartsAt:           sql.NullTime{},
 		DurationMinutes:    60,
 		MaxPlayers:         2,
-		MaxWaitlistSize:    -1,
-		MaxGuestsPerPlayer: -1,
+		MaxWaitlistSize:    10,
+		MaxGuestsPerPlayer: 5,
+		GameSpotsLeft:      2,
+		WaitlistSpotsLeft:  10,
 	})
 	if err != nil {
 		t.Fatalf("failed to create game: %v", err)
@@ -800,7 +802,7 @@ func TestGetApiGamesIdParticipants_NoWaitlistCapacityStillReturnsWaitlisted(t *t
 		DurationMinutes:    60,
 		MaxPlayers:         1,
 		MaxWaitlistSize:    0,
-		MaxGuestsPerPlayer: -1,
+		MaxGuestsPerPlayer: 5,
 		GameSpotsLeft:      1,
 		WaitlistSpotsLeft:  0,
 	})
@@ -865,7 +867,7 @@ func TestGetApiGamesIdParticipants_NoWaitlistCapacityStillReturnsWaitlisted(t *t
 	}
 }
 
-func TestGetApiGamesIdParticipants_UnlimitedPlayers(t *testing.T) {
+func TestGetApiGamesIdParticipants_LargeCapacityAllGoing(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 	staticClock := clock.StaticClock{Time: time.Now()}
@@ -874,7 +876,7 @@ func TestGetApiGamesIdParticipants_UnlimitedPlayers(t *testing.T) {
 	querier := db.New(sqlDB)
 	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
 
-	// Create a game with unlimited players
+	// Create a game with high capacity so everyone fits
 	_, err := querier.GameCreate(context.Background(), db.GameCreateParams{
 		ID:                 "g1",
 		OrganizerID:        organizerID,
@@ -885,10 +887,10 @@ func TestGetApiGamesIdParticipants_UnlimitedPlayers(t *testing.T) {
 		Location:           sql.NullString{},
 		StartsAt:           sql.NullTime{},
 		DurationMinutes:    60,
-		MaxPlayers:         -1, // Unlimited
+		MaxPlayers:         100,
 		MaxWaitlistSize:    0,
-		MaxGuestsPerPlayer: -1,
-		GameSpotsLeft:      -1,
+		MaxGuestsPerPlayer: 5,
+		GameSpotsLeft:      100,
 		WaitlistSpotsLeft:  0,
 	})
 	if err != nil {
@@ -964,10 +966,10 @@ func TestGetApiGamesIdParticipants_GuestsCountTowardsMaxPlayers(t *testing.T) {
 		StartsAt:           sql.NullTime{},
 		DurationMinutes:    60,
 		MaxPlayers:         4,
-		MaxWaitlistSize:    -1,
-		MaxGuestsPerPlayer: -1,
+		MaxWaitlistSize:    10,
+		MaxGuestsPerPlayer: 5,
 		GameSpotsLeft:      4,
-		WaitlistSpotsLeft:  -1,
+		WaitlistSpotsLeft:  10,
 	})
 	if err != nil {
 		t.Fatalf("failed to create game: %v", err)
@@ -1074,7 +1076,7 @@ func TestPostApiGamesIdParticipants_GroupTooLargeForGoingListGoesToWaitlist(t *t
 		DurationMinutes:    60,
 		MaxPlayers:         5,
 		MaxWaitlistSize:    3,
-		MaxGuestsPerPlayer: -1,
+		MaxGuestsPerPlayer: 5,
 		GameSpotsLeft:      5,
 		WaitlistSpotsLeft:  3,
 	})
@@ -1207,7 +1209,7 @@ func TestPostApiGamesIdParticipants_WaitlistedGroupGoingNotGoingFreesWaitlistSpo
 		DurationMinutes:    60,
 		MaxPlayers:         5,
 		MaxWaitlistSize:    3,
-		MaxGuestsPerPlayer: -1,
+		MaxGuestsPerPlayer: 5,
 		GameSpotsLeft:      5,
 		WaitlistSpotsLeft:  3,
 	})
@@ -1476,10 +1478,10 @@ func TestPostApiGamesIdParticipants_UpdateGuestsChangesQueueOrder(t *testing.T) 
 		StartsAt:           sql.NullTime{},
 		DurationMinutes:    60,
 		MaxPlayers:         2,
-		MaxWaitlistSize:    -1,
-		MaxGuestsPerPlayer: -1,
+		MaxWaitlistSize:    10,
+		MaxGuestsPerPlayer: 5,
 		GameSpotsLeft:      2,
-		WaitlistSpotsLeft:  -1,
+		WaitlistSpotsLeft:  10,
 	})
 	if err != nil {
 		t.Fatalf("failed to create game: %v", err)
@@ -1840,7 +1842,7 @@ func TestPostApiGamesIdParticipants_NotGoingFreesWaitlistSpotsLeft(t *testing.T)
 	}
 }
 
-func TestPostApiGamesIdParticipants_WaitlistUnlimitedNoWrite(t *testing.T) {
+func TestPostApiGamesIdParticipants_WaitlistMaxCapacityNoWrite(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 	staticClock := clock.StaticClock{Time: time.Now()}
@@ -1851,11 +1853,11 @@ func TestPostApiGamesIdParticipants_WaitlistUnlimitedNoWrite(t *testing.T) {
 	querier := db.New(sqlDB)
 	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
 
-	// Full main list; unlimited waitlist
+	// Full main list; max 10 waitlist spots
 	_, err := querier.GameCreate(context.Background(), db.GameCreateParams{
 		ID:                 "gwl3",
 		OrganizerID:        organizerID,
-		Name:               "Waitlist Unlimited",
+		Name:               "Waitlist Max Capacity",
 		PublishedAt:        sql.NullTime{Time: time.Now().Add(-time.Hour), Valid: true},
 		Description:        sql.NullString{},
 		TotalPriceCents:    0,
@@ -1863,10 +1865,10 @@ func TestPostApiGamesIdParticipants_WaitlistUnlimitedNoWrite(t *testing.T) {
 		StartsAt:           sql.NullTime{},
 		DurationMinutes:    60,
 		MaxPlayers:         1,
-		MaxWaitlistSize:    -1,
+		MaxWaitlistSize:    10,
 		MaxGuestsPerPlayer: 2,
 		GameSpotsLeft:      0,
-		WaitlistSpotsLeft:  -1,
+		WaitlistSpotsLeft:  10,
 	})
 	if err != nil {
 		t.Fatalf("failed to create game: %v", err)
@@ -1887,8 +1889,8 @@ func TestPostApiGamesIdParticipants_WaitlistUnlimitedNoWrite(t *testing.T) {
 	if err := row.Scan(&waitlistSpotsLeft); err != nil {
 		t.Fatalf("failed to load game row: %v", err)
 	}
-	if !waitlistSpotsLeft.Valid || waitlistSpotsLeft.Int64 != -1 {
-		t.Fatalf("expected waitlist_spots_left=-1 (unchanged), got %+v", waitlistSpotsLeft)
+	if !waitlistSpotsLeft.Valid || waitlistSpotsLeft.Int64 != 9 {
+		t.Fatalf("expected waitlist_spots_left=9 (one spot consumed), got %+v", waitlistSpotsLeft)
 	}
 }
 
@@ -1917,7 +1919,7 @@ func TestOrganizerLateJoinFullGamePushesLastToWaitlist(t *testing.T) {
 		DurationMinutes:    60,
 		MaxPlayers:         2,
 		MaxWaitlistSize:    1,
-		MaxGuestsPerPlayer: -1,
+		MaxGuestsPerPlayer: 5,
 		GameSpotsLeft:      0,
 		WaitlistSpotsLeft:  1,
 	})
@@ -2019,7 +2021,7 @@ func TestOrganizerLateJoinZeroWaitlist_AllowedAndDisplacesLastToNotGoing(t *test
 		DurationMinutes:    60,
 		MaxPlayers:         2,
 		MaxWaitlistSize:    0,
-		MaxGuestsPerPlayer: -1,
+		MaxGuestsPerPlayer: 5,
 		GameSpotsLeft:      0,
 		WaitlistSpotsLeft:  0,
 	})

@@ -66,7 +66,7 @@ func (s *server) GetApiGamesIdParticipants(w http.ResponseWriter, r *http.Reques
 				participantCount += row.GameParticipant.Guests.Int64
 			}
 
-			if game.MaxPlayers == -1 || goingCount+participantCount <= game.MaxPlayers {
+			if goingCount+participantCount <= game.MaxPlayers {
 				if err := status.FromParticipationStatusUpdate(api.Going); err != nil {
 					http.Error(w, fmt.Sprintf("failed to encode status: %s", err.Error()), http.StatusInternalServerError)
 					return
@@ -109,8 +109,8 @@ func (s *server) GetApiGamesIdParticipants(w http.ResponseWriter, r *http.Reques
 		})
 	}
 
-	// If organizer is going and capacities are finite, overflow past waitlist becomes not-going for the last overflow group
-	if organizerPresentGoing && game.MaxPlayers != -1 && game.MaxWaitlistSize != -1 {
+	// If organizer is going, overflow past waitlist becomes not-going for the last overflow group
+	if organizerPresentGoing {
 		maxTotal := game.MaxPlayers + game.MaxWaitlistSize
 		totalCount := int64(0)
 		for i := range participants {
@@ -205,7 +205,7 @@ func (s *server) PostApiGamesIdParticipants(w http.ResponseWriter, r *http.Reque
 			http.Error(w, "invalid number of guests", http.StatusBadRequest)
 			return
 		}
-		if game.MaxGuestsPerPlayer == -1 || int64(*req.Guests) <= game.MaxGuestsPerPlayer {
+		if int64(*req.Guests) <= game.MaxGuestsPerPlayer {
 			guests.Int64 = int64(*req.Guests)
 			guests.Valid = true
 		} else {
@@ -223,30 +223,20 @@ func (s *server) PostApiGamesIdParticipants(w http.ResponseWriter, r *http.Reque
 	// Reject if the game doesn't have enough spots left
 	switch req.Status {
 	case api.Going:
-		if game.MaxPlayers == -1 { // Unlimited max players
-			// do nothing
-		} else if participantsGroup <= int(game.GameSpotsLeft) {
+		if participantsGroup <= int(game.GameSpotsLeft) {
 			gameSpotsLeft.Int64 = game.GameSpotsLeft - int64(participantsGroup)
 			gameSpotsLeft.Valid = true
-		} else if game.MaxWaitlistSize == -1 { // Unlimited waitlist size
-			// do nothing
 		} else if participantsGroup <= int(game.WaitlistSpotsLeft) {
 			waitlistSpotsLeft.Int64 = game.WaitlistSpotsLeft - int64(participantsGroup)
 			waitlistSpotsLeft.Valid = true
 		} else {
 			// Organizer can always join even if both are full; no spots counters change
-			if game.OrganizerID == int64(authInfo.UserId) {
-				// allow without updating spots
-			} else {
+			if game.OrganizerID != int64(authInfo.UserId) {
 				http.Error(w, "not enough spots left", http.StatusBadRequest)
 				return
 			}
 		}
 	case api.NotGoing: // We have to figure out if we're freeing spots in the "going" list, waitlist, or if the player was already in the "not going" list
-		if game.MaxPlayers == -1 {
-			break
-		}
-
 		participants, err := querierWithTx.ParticipantsList(r.Context(), db.ParticipantsListParams{
 			OrganizerID: game.OrganizerID,
 			GameID:      id,
@@ -265,7 +255,7 @@ func (s *server) PostApiGamesIdParticipants(w http.ResponseWriter, r *http.Reque
 			}
 
 			if participant.GameParticipant.Going.Valid && participant.GameParticipant.Going.Bool {
-				if game.MaxPlayers == -1 || goingCount+pc <= int(game.MaxPlayers) {
+				if goingCount+pc <= int(game.MaxPlayers) {
 					// main list
 					if participant.User.ID == int64(authInfo.UserId) {
 						gameSpotsLeft.Int64 = game.GameSpotsLeft + int64(pc)
@@ -273,18 +263,14 @@ func (s *server) PostApiGamesIdParticipants(w http.ResponseWriter, r *http.Reque
 						break
 					}
 					goingCount += pc
-				} else if game.MaxWaitlistSize == -1 || waitlistCount+pc <= int(game.MaxWaitlistSize) {
+				} else if waitlistCount+pc <= int(game.MaxWaitlistSize) {
 					// waitlist
 					if participant.User.ID == int64(authInfo.UserId) {
-						if game.MaxWaitlistSize != -1 {
-							waitlistSpotsLeft.Int64 = game.WaitlistSpotsLeft + int64(pc)
-							waitlistSpotsLeft.Valid = true
-						}
+						waitlistSpotsLeft.Int64 = game.WaitlistSpotsLeft + int64(pc)
+						waitlistSpotsLeft.Valid = true
 						break
 					}
-					if game.MaxWaitlistSize != -1 {
-						waitlistCount += pc
-					}
+					waitlistCount += pc
 				} else {
 					// overflow beyond waitlist; considered not-going already
 					if participant.User.ID == int64(authInfo.UserId) {

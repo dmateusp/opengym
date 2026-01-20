@@ -75,19 +75,19 @@ type CreateGameRequest struct {
 	// DurationMinutes Duration of the game in minutes
 	DurationMinutes *int64 `json:"durationMinutes,omitempty"`
 
-	// GameSpotsLeft Number of spots left in the game, excluding the waitlist (-1 for unlimited)
+	// GameSpotsLeft Number of spots left in the game, excluding the waitlist
 	GameSpotsLeft *int64 `json:"gameSpotsLeft,omitempty"`
 
 	// Location Location where the game will be held
 	Location *string `json:"location,omitempty"`
 
-	// MaxGuestsPerPlayer Maximum guests per player (0 to disable, -1 for unlimited)
+	// MaxGuestsPerPlayer Maximum guests per player (0 to disable)
 	MaxGuestsPerPlayer *int64 `json:"maxGuestsPerPlayer,omitempty"`
 
-	// MaxPlayers Maximum number of players (-1 for unlimited)
+	// MaxPlayers Maximum number of players (must be at least 1)
 	MaxPlayers *int64 `json:"maxPlayers,omitempty"`
 
-	// MaxWaitlistSize Maximum waitlist size (0 to disable, -1 for unlimited)
+	// MaxWaitlistSize Maximum waitlist size (0 to disable)
 	MaxWaitlistSize *int64 `json:"maxWaitlistSize,omitempty"`
 
 	// Name Name of the game
@@ -99,7 +99,7 @@ type CreateGameRequest struct {
 	// TotalPriceCents Total price in cents
 	TotalPriceCents *int64 `json:"totalPriceCents,omitempty"`
 
-	// WaitlistSpotsLeft Number of spots left in the waitlist (-1 for unlimited)
+	// WaitlistSpotsLeft Number of spots left in the waitlist
 	WaitlistSpotsLeft *int64 `json:"waitlistSpotsLeft,omitempty"`
 }
 
@@ -117,7 +117,7 @@ type Game struct {
 	// DurationMinutes Duration of the game in minutes
 	DurationMinutes *int64 `json:"durationMinutes,omitempty"`
 
-	// GameSpotsLeft Number of spots left in the game, excluding the waitlist (-1 for unlimited)
+	// GameSpotsLeft Number of spots left in the game, excluding the waitlist
 	GameSpotsLeft *int64 `json:"gameSpotsLeft,omitempty"`
 
 	// Id Unique game identifier
@@ -126,13 +126,13 @@ type Game struct {
 	// Location Location where the game will be held
 	Location *string `json:"location,omitempty"`
 
-	// MaxGuestsPerPlayer Maximum guests per player (0 to disable, -1 for unlimited)
+	// MaxGuestsPerPlayer Maximum guests per player (0 to disable)
 	MaxGuestsPerPlayer *int64 `json:"maxGuestsPerPlayer,omitempty"`
 
-	// MaxPlayers Maximum number of players (-1 for unlimited)
+	// MaxPlayers Maximum number of players (must be at least 1)
 	MaxPlayers *int64 `json:"maxPlayers,omitempty"`
 
-	// MaxWaitlistSize Maximum waitlist size (0 to disable, -1 for unlimited)
+	// MaxWaitlistSize Maximum waitlist size (0 to disable)
 	MaxWaitlistSize *int64 `json:"maxWaitlistSize,omitempty"`
 
 	// Name Name of the game
@@ -153,7 +153,7 @@ type Game struct {
 	// UpdatedAt Timestamp when game was last updated
 	UpdatedAt time.Time `json:"updatedAt"`
 
-	// WaitlistSpotsLeft Number of spots left in the waitlist (-1 for unlimited)
+	// WaitlistSpotsLeft Number of spots left in the waitlist
 	WaitlistSpotsLeft *int64 `json:"waitlistSpotsLeft,omitempty"`
 }
 
@@ -171,19 +171,19 @@ type GameFields struct {
 	// DurationMinutes Duration of the game in minutes
 	DurationMinutes *int64 `json:"durationMinutes,omitempty"`
 
-	// GameSpotsLeft Number of spots left in the game, excluding the waitlist (-1 for unlimited)
+	// GameSpotsLeft Number of spots left in the game, excluding the waitlist
 	GameSpotsLeft *int64 `json:"gameSpotsLeft,omitempty"`
 
 	// Location Location where the game will be held
 	Location *string `json:"location,omitempty"`
 
-	// MaxGuestsPerPlayer Maximum guests per player (0 to disable, -1 for unlimited)
+	// MaxGuestsPerPlayer Maximum guests per player (0 to disable)
 	MaxGuestsPerPlayer *int64 `json:"maxGuestsPerPlayer,omitempty"`
 
-	// MaxPlayers Maximum number of players (-1 for unlimited)
+	// MaxPlayers Maximum number of players (must be at least 1)
 	MaxPlayers *int64 `json:"maxPlayers,omitempty"`
 
-	// MaxWaitlistSize Maximum waitlist size (0 to disable, -1 for unlimited)
+	// MaxWaitlistSize Maximum waitlist size (0 to disable)
 	MaxWaitlistSize *int64 `json:"maxWaitlistSize,omitempty"`
 
 	// Name Name of the game
@@ -195,7 +195,7 @@ type GameFields struct {
 	// TotalPriceCents Total price in cents
 	TotalPriceCents *int64 `json:"totalPriceCents,omitempty"`
 
-	// WaitlistSpotsLeft Number of spots left in the waitlist (-1 for unlimited)
+	// WaitlistSpotsLeft Number of spots left in the waitlist
 	WaitlistSpotsLeft *int64 `json:"waitlistSpotsLeft,omitempty"`
 }
 
@@ -319,19 +319,19 @@ type UpdateGameRequest struct {
 	// DurationMinutes Duration of the game in minutes
 	DurationMinutes *int64 `json:"durationMinutes,omitempty"`
 
-	// GameSpotsLeft Number of spots left in the game, excluding the waitlist (-1 for unlimited)
+	// GameSpotsLeft Number of spots left in the game, excluding the waitlist
 	GameSpotsLeft *int64 `json:"gameSpotsLeft,omitempty"`
 
 	// Location Location where the game will be held
 	Location *string `json:"location,omitempty"`
 
-	// MaxGuestsPerPlayer Maximum guests per player (0 to disable, -1 for unlimited)
+	// MaxGuestsPerPlayer Maximum guests per player (0 to disable)
 	MaxGuestsPerPlayer *int64 `json:"maxGuestsPerPlayer,omitempty"`
 
-	// MaxPlayers Maximum number of players (-1 for unlimited)
+	// MaxPlayers Maximum number of players (must be at least 1)
 	MaxPlayers *int64 `json:"maxPlayers,omitempty"`
 
-	// MaxWaitlistSize Maximum waitlist size (0 to disable, -1 for unlimited)
+	// MaxWaitlistSize Maximum waitlist size (0 to disable)
 	MaxWaitlistSize *int64 `json:"maxWaitlistSize,omitempty"`
 
 	// Name Name of the game
@@ -346,7 +346,7 @@ type UpdateGameRequest struct {
 	// TotalPriceCents Total price in cents
 	TotalPriceCents *int64 `json:"totalPriceCents,omitempty"`
 
-	// WaitlistSpotsLeft Number of spots left in the waitlist (-1 for unlimited)
+	// WaitlistSpotsLeft Number of spots left in the waitlist
 	WaitlistSpotsLeft *int64 `json:"waitlistSpotsLeft,omitempty"`
 }
 
@@ -982,62 +982,62 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
-	"AA==",
+	"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",
+	"/y0h2oY6QgAA",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

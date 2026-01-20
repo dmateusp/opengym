@@ -50,6 +50,26 @@ func (srv *server) PostApiGames(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.DurationMinutes != nil && *req.DurationMinutes <= 0 {
+		http.Error(w, "duration must be positive", http.StatusBadRequest)
+		return
+	}
+
+	if req.MaxPlayers != nil && *req.MaxPlayers < 1 {
+		http.Error(w, "maxPlayers must be at least 1", http.StatusBadRequest)
+		return
+	}
+
+	if req.MaxWaitlistSize != nil && *req.MaxWaitlistSize < 0 {
+		http.Error(w, "maxWaitlistSize cannot be negative", http.StatusBadRequest)
+		return
+	}
+
+	if req.MaxGuestsPerPlayer != nil && *req.MaxGuestsPerPlayer < 0 {
+		http.Error(w, "maxGuestsPerPlayer cannot be negative", http.StatusBadRequest)
+		return
+	}
+
 	var game db.Game
 	var err error
 
@@ -88,8 +108,10 @@ func (srv *server) PostApiGames(w http.ResponseWriter, r *http.Request) {
 
 		if req.MaxPlayers != nil {
 			params.MaxPlayers = int64(*req.MaxPlayers)
-			params.GameSpotsLeft = int64(*req.MaxPlayers)
+		} else {
+			params.MaxPlayers = 100 // Default to 100
 		}
+		params.GameSpotsLeft = params.MaxPlayers
 
 		if req.MaxGuestsPerPlayer != nil {
 			params.MaxGuestsPerPlayer = int64(*req.MaxGuestsPerPlayer)
@@ -381,17 +403,16 @@ func (srv *server) PatchApiGamesId(w http.ResponseWriter, r *http.Request, id st
 	}
 
 	if req.MaxPlayers != nil {
-		params.MaxPlayers = sql.NullInt64{
-			Valid: true,
-			Int64: int64(*req.MaxPlayers),
+		newMaxPlayers := int64(*req.MaxPlayers)
+		params.MaxPlayers = sql.NullInt64{Valid: true, Int64: newMaxPlayers}
+		newGameSpotsLeft := game.GameSpotsLeft + (newMaxPlayers - game.MaxPlayers)
+		if newGameSpotsLeft < 0 {
+			newGameSpotsLeft = 0
 		}
-		if int64(*req.MaxPlayers) == -1 {
-			params.GameSpotsLeft.Int64 = -1
-			params.GameSpotsLeft.Valid = true
-		} else {
-			params.GameSpotsLeft.Int64 += int64(*req.MaxPlayers) - game.MaxPlayers
-			params.GameSpotsLeft.Valid = true
+		if newGameSpotsLeft > newMaxPlayers {
+			newGameSpotsLeft = newMaxPlayers
 		}
+		params.GameSpotsLeft = sql.NullInt64{Valid: true, Int64: newGameSpotsLeft}
 	}
 
 	if req.MaxGuestsPerPlayer != nil {
@@ -402,15 +423,16 @@ func (srv *server) PatchApiGamesId(w http.ResponseWriter, r *http.Request, id st
 	}
 
 	if req.MaxWaitlistSize != nil {
-		params.MaxWaitlistSize.Int64 = int64(*req.MaxWaitlistSize)
-		params.MaxWaitlistSize.Valid = true
-		if int64(*req.MaxWaitlistSize) == -1 {
-			params.WaitlistSpotsLeft.Int64 = -1
-			params.WaitlistSpotsLeft.Valid = true
-		} else {
-			params.WaitlistSpotsLeft.Int64 += int64(*req.MaxWaitlistSize) - game.MaxWaitlistSize
-			params.WaitlistSpotsLeft.Valid = true
+		newMaxWaitlist := int64(*req.MaxWaitlistSize)
+		params.MaxWaitlistSize = sql.NullInt64{Valid: true, Int64: newMaxWaitlist}
+		newWaitlistSpotsLeft := game.WaitlistSpotsLeft + (newMaxWaitlist - game.MaxWaitlistSize)
+		if newWaitlistSpotsLeft < 0 {
+			newWaitlistSpotsLeft = 0
 		}
+		if newWaitlistSpotsLeft > newMaxWaitlist {
+			newWaitlistSpotsLeft = newMaxWaitlist
+		}
+		params.WaitlistSpotsLeft = sql.NullInt64{Valid: true, Int64: newWaitlistSpotsLeft}
 	}
 
 	err = querierWithTx.GameUpdate(r.Context(), params)

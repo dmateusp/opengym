@@ -10,9 +10,9 @@ create table games (
   location text, -- location of the game
   starts_at datetime, -- when it starts
   duration_minutes integer default 60 not null, -- total duration in minutes
-  max_players integer default -1 not null, -- max number of players that can join the game, -1 = unlimited
-  max_waitlist_size integer default 0 not null, -- max number of players that can be on the waitlist, 0 = disabled waitlist, -1 = unlimited
-  max_guests_per_player integer default -1 not null, -- max number of guests a single player can bring along, 0 = disabled, -1 = unlimited
+  max_players integer default 1 not null, -- max number of players that can join the game
+  max_waitlist_size integer default 0 not null, -- max number of players that can be on the waitlist, 0 = disabled waitlist
+  max_guests_per_player integer default 0 not null, -- max number of guests a single player can bring along, 0 = disabled
   game_spots_left integer not null, -- the number of spots left in the game (excluding the waitlist), we calculate this at write time for simplicity
   waitlist_spots_left integer not null,
   created_at datetime default current_timestamp not null,
