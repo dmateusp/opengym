@@ -930,7 +930,7 @@ func TestGetApiGamesIdParticipants_LargeCapacityAllGoing(t *testing.T) {
 		t.Fatalf("expected 3 participants, got %d", len(participants))
 	}
 
-	// All should be "going" with unlimited players
+	// All should be "going"
 	for i, p := range participants {
 		status, err := p.Status.AsParticipationStatusUpdate()
 		if err != nil {

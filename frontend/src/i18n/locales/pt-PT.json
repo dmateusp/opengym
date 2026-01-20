@@ -78,7 +78,6 @@
     "confirmLeaveDescription": "Podes sempre voltar a entrar mais tarde se houver lugares disponíveis.",
     "yesLeave": "Sim, Sair",
     "noStayIn": "Não, Ficar",
-    "unlimited": "Ilimitado",
     "spots": "lugares",
     "spotsLeft": "Lugares disponíveis",
     "waitlistSpotsLeft": "Lugares na lista de espera",
@@ -173,7 +172,6 @@
     "waitlist": "Lista de Espera",
     "notGoing": "Não vou",
     "going": "Vou",
-    "unlimited": "Ilimitado",
     "disabled": "Desativado",
     "noLimit": "Sem limite",
     "upTo": "Até",
@@ -195,8 +193,7 @@
   },
   "numberLimitEditor": {
     "disabled": "Desativado",
-    "limited": "Tamanho limitado",
-    "unlimited": "Ilimitado"
+    "limited": "Tamanho limitado"
   },
   "publish": {
     "readyToShare": "Pronto para partilhar este jogo?",
@@ -229,10 +226,8 @@
     "joinGame": "Entrar no jogo",
     "guests": "Convidados",
     "numberOfGuests": "Número de convidados",
-    "howManyGuestsUnlimited": "Quantos convidados vais trazer? (ilimitado)",
     "howManyGuestsLimited": "Quantos convidados vais trazer? (máx {{max}})",
     "noGuestsAllowed": "Este jogo não permite convidados.",
-    "unlimitedGuests": "Convidados ilimitados permitidos",
     "maxGuestsInfo": "Máx {{max}} convidados por jogador",
     "exceedsMaxGuests": "Não pode exceder {{max}} convidados",
     "organizerPriority": "Prioridade do organizador",

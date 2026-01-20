@@ -77,23 +77,23 @@ export type GameFields = {
      */
     durationMinutes?: number;
     /**
-     * Maximum number of players (-1 for unlimited)
+     * Maximum number of players (must be at least 1)
      */
     maxPlayers?: number;
     /**
-     * Maximum waitlist size (0 to disable, -1 for unlimited)
+     * Maximum waitlist size (0 to disable)
      */
     maxWaitlistSize?: number;
     /**
-     * Maximum guests per player (0 to disable, -1 for unlimited)
+     * Maximum guests per player (0 to disable)
      */
     maxGuestsPerPlayer?: number;
     /**
-     * Number of spots left in the game, excluding the waitlist (-1 for unlimited)
+     * Number of spots left in the game, excluding the waitlist
      */
     gameSpotsLeft?: number;
     /**
-     * Number of spots left in the waitlist (-1 for unlimited)
+     * Number of spots left in the waitlist
      */
     waitlistSpotsLeft?: number;
 };

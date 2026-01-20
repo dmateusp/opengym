@@ -34,16 +34,6 @@ export const WaitlistDisabled: Story = () => (
   />
 )
 
-export const WaitlistUnlimited: Story = () => (
-  <ParticipantCountDisplay
-    count={8}
-    maxCount={-1}
-    label="Waitlist"
-    color="accent"
-    showDisabled={true}
-  />
-)
-
 export const NotGoing: Story = () => (
   <ParticipantCountDisplay count={2} label="Not Going" color="gray" />
 )

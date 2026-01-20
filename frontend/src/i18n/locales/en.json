@@ -78,7 +78,6 @@
     "confirmLeaveDescription": "You can always join again later if spots are available.",
     "yesLeave": "Yes, Leave",
     "noStayIn": "No, Stay In",
-    "unlimited": "Unlimited",
     "spots": "spots",
     "spotsLeft": "Spots left",
     "waitlistSpotsLeft": "Waitlist spots left",
@@ -173,7 +172,6 @@
     "waitlist": "Waitlist",
     "notGoing": "Not going",
     "going": "Going",
-    "unlimited": "Unlimited",
     "disabled": "Disabled",
     "noLimit": "No limit",
     "upTo": "Up to",
@@ -195,8 +193,7 @@
   },
   "numberLimitEditor": {
     "disabled": "Disabled",
-    "limited": "Limited size",
-    "unlimited": "Unlimited"
+    "limited": "Limited size"
   },
   "publish": {
     "readyToShare": "Ready to share this game?",
@@ -229,10 +226,8 @@
     "joinGame": "Join game",
     "guests": "Guests",
     "numberOfGuests": "Number of guests",
-    "howManyGuestsUnlimited": "How many guests are you bringing? (unlimited)",
     "howManyGuestsLimited": "How many guests are you bringing? (max {{max}})",
     "noGuestsAllowed": "This game does not allow guests.",
-    "unlimitedGuests": "Unlimited guests allowed",
     "maxGuestsInfo": "Max {{max}} guests per player",
     "exceedsMaxGuests": "Cannot exceed {{max}} guests",
     "organizerPriority": "Organizer priority",

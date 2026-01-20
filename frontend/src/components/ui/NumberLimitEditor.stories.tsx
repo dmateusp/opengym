@@ -13,7 +13,7 @@ export const Waitlist = () => {
     <div className="p-8 space-y-4">
       <div>
         <p className="text-sm text-gray-600 mb-2">
-          Current value: {value === 0 ? "Disabled" : value === -1 ? "Unlimited" : value}
+          Current value: {value === 0 ? "Disabled" : value}
         </p>
         {isEditing ? (
           <NumberLimitEditor
@@ -46,7 +46,7 @@ export const MaxPlayers = () => {
     <div className="p-8 space-y-4">
       <div>
         <p className="text-sm text-gray-600 mb-2">
-          Current value: {value === -1 ? "Unlimited" : value}
+          Current value: {value}
         </p>
         {isEditing ? (
           <NumberLimitEditor
@@ -59,8 +59,7 @@ export const MaxPlayers = () => {
             showDisabledOption={false}
             placeholder="Enter max players"
             label={{
-              limited: "Set maximum",
-              unlimited: "No limit"
+              limited: "Set maximum"
             }}
           />
         ) : (
@@ -84,7 +83,7 @@ export const GuestsPerPlayer = () => {
     <div className="p-8 space-y-4">
       <div>
         <p className="text-sm text-gray-600 mb-2">
-          Current value: {value === 0 ? "No guests" : value === -1 ? "Unlimited guests" : `Up to ${value} guest${value === 1 ? '' : 's'}`}
+          Current value: {value === 0 ? "No guests" : `Up to ${value} guest${value === 1 ? '' : 's'}`}
         </p>
         {isEditing ? (
           <NumberLimitEditor
@@ -98,7 +97,6 @@ export const GuestsPerPlayer = () => {
             label={{
               disabled: "No guests allowed",
               limited: "Limited guests",
-              unlimited: "Unlimited guests"
             }}
           />
         ) : (
@@ -122,7 +120,7 @@ export const StartDisabled = () => {
     <div className="p-8 space-y-4">
       <div>
         <p className="text-sm text-gray-600 mb-2">
-          Current value: {value === 0 ? "Disabled" : value === -1 ? "Unlimited" : value}
+          Current value: {value === 0 ? "Disabled" : value}
         </p>
         {isEditing ? (
           <NumberLimitEditor
@@ -140,39 +138,6 @@ export const StartDisabled = () => {
             className="px-4 py-2 bg-blue-500 text-white rounded"
           >
             Edit (starts disabled)
-          </button>
-        )}
-      </div>
-    </div>
-  )
-}
-
-export const StartUnlimited = () => {
-  const [value, setValue] = useState<number | undefined>(-1)
-  const [isEditing, setIsEditing] = useState(true)
-
-  return (
-    <div className="p-8 space-y-4">
-      <div>
-        <p className="text-sm text-gray-600 mb-2">
-          Current value: {value === 0 ? "Disabled" : value === -1 ? "Unlimited" : value}
-        </p>
-        {isEditing ? (
-          <NumberLimitEditor
-            value={value}
-            onSave={(newValue) => {
-              setValue(newValue)
-              setIsEditing(false)
-            }}
-            onCancel={() => setIsEditing(false)}
-            placeholder="Enter value"
-          />
-        ) : (
-          <button
-            onClick={() => setIsEditing(true)}
-            className="px-4 py-2 bg-blue-500 text-white rounded"
-          >
-            Edit (starts unlimited)
           </button>
         )}
       </div>
