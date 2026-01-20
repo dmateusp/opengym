@@ -38,9 +38,8 @@ A game has the following configurations:
   - This price is divided among the players. Each player is shown an equal share of the price, unless they are bringing guests, in which case they are responsible for their guests' share too.
   - Note that payment is *not handled by opengym*. But opengym helps organizers keep track of who paid and who did not.
 - **Players:** how many players can join the game before it's full.
-  - This can be unlimited or a specific number.
 - **Waitlist:** how many players can be put in a waitlist if the game is full.
-  - This can be disabled, unlimited, or a specific number.
+  - This can be disabled, or a specific number.
 
 ### Publishing a game
 
