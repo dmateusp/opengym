@@ -106,6 +106,7 @@
     "when": "When",
     "players": "Players",
     "clickToAddLocation": "Click to add location",
+    "locationPlaceholder": "Where are you playing?",
     "clickToSetTime": "Click to set time",
     "clickToSet": "Click to set",
     "clickToAddDescription": "Click to add description",
@@ -177,6 +178,8 @@
     "noLimit": "No limit",
     "upTo": "Up to",
     "clickToSet": "Click to set",
+    "minutesPlaceholder": "Minutes",
+    "selectDate": "Select date",
     "markdownSupported": "Markdown supported",
     "noDescription": "No description",
     "tellPeopleAboutGame": "Tell people about your game...",
@@ -189,6 +192,11 @@
     "pricePlaceholder": "e.g., 15.50",
     "pickTimeToPublish": "Pick a time to publish",
     "by": "by"
+  },
+  "numberLimitEditor": {
+    "disabled": "Disabled",
+    "limited": "Limited size",
+    "unlimited": "Unlimited"
   },
   "publish": {
     "readyToShare": "Ready to share this game?",

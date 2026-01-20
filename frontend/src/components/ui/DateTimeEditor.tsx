@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { Locale } from "date-fns";
 import { ChevronDownIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
@@ -26,6 +27,7 @@ export function DateTimeEditor({
   dateLabel = "Date",
   timeLabel = "Time",
 }: DateTimeEditorProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const selectedDate = parseLocalDateTime(value);
   const timePart = extractTimePart(value) ?? "12:00";
@@ -43,7 +45,7 @@ export function DateTimeEditor({
               id="date-picker"
               className="w-40 justify-between font-normal"
             >
-              {selectedDate ? selectedDate.toLocaleDateString(locale.code) : "Select date"}
+              {selectedDate ? selectedDate.toLocaleDateString(locale.code) : t("common.selectDate")}
               <ChevronDownIcon className="h-4 w-4" />
             </Button>
           </PopoverTrigger>

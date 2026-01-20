@@ -126,12 +126,12 @@ func (srv *server) PostApiGames(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	
+
 	gameWithOrganizer := db.GameGetByIdWithOrganizerRow{
 		Game: game,
 		User: organizerRow.User,
 	}
-	
+
 	var apiGameDetail api.GameDetail
 	apiGameDetail.FromDb(gameWithOrganizer)
 	err = json.NewEncoder(w).Encode(apiGameDetail)
@@ -436,12 +436,12 @@ func (srv *server) PatchApiGamesId(w http.ResponseWriter, r *http.Request, id st
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	
+
 	gameWithOrganizer := db.GameGetByIdWithOrganizerRow{
 		Game: updatedGame,
 		User: organizerRow.User,
 	}
-	
+
 	var apiGameDetail api.GameDetail
 	apiGameDetail.FromDb(gameWithOrganizer)
 	err = json.NewEncoder(w).Encode(apiGameDetail)

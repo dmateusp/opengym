@@ -106,6 +106,7 @@
     "when": "Quando",
     "players": "Jogadores",
     "clickToAddLocation": "Clica para adicionar localização",
+    "locationPlaceholder": "Onde vais jogar?",
     "clickToSetTime": "Clica para definir hora",
     "clickToSet": "Clica para definir",
     "clickToAddDescription": "Clica para adicionar descrição",
@@ -177,6 +178,8 @@
     "noLimit": "Sem limite",
     "upTo": "Até",
     "clickToSet": "Clica para definir",
+    "minutesPlaceholder": "Minutos",
+    "selectDate": "Seleciona data",
     "markdownSupported": "Markdown suportado",
     "noDescription": "Sem descrição",
     "tellPeopleAboutGame": "Conta às pessoas sobre o teu jogo...",
@@ -189,6 +192,11 @@
     "pricePlaceholder": "ex: 15,50",
     "pickTimeToPublish": "Escolhe hora para publicar",
     "by": "por"
+  },
+  "numberLimitEditor": {
+    "disabled": "Desativado",
+    "limited": "Tamanho limitado",
+    "unlimited": "Ilimitado"
   },
   "publish": {
     "readyToShare": "Pronto para partilhar este jogo?",

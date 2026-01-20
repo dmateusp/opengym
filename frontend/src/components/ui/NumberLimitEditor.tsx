@@ -1,4 +1,6 @@
 import { Input } from "./input"
+import { useTranslation } from 'react-i18next'
+import React from "react"
 
 export type LimitMode = 'disabled' | 'limited' | 'unlimited'
 
@@ -21,12 +23,17 @@ export function NumberLimitEditor({
   onCancel,
   showDisabledOption = true,
   placeholder = "Enter max size",
-  label = {
-    disabled: "Disabled",
-    limited: "Limited size",
-    unlimited: "Unlimited"
-  }
+  label
 }: NumberLimitEditorProps) {
+  const { t } = useTranslation()
+  
+  const defaultLabel = {
+    disabled: t('numberLimitEditor.disabled'),
+    limited: t('numberLimitEditor.limited'),
+    unlimited: t('numberLimitEditor.unlimited')
+  }
+  
+  const finalLabel = { ...defaultLabel, ...label }
   const [mode, setMode] = React.useState<LimitMode>(() => {
     if (value === 0) return 'disabled'
     if (value === -1) return 'unlimited'
@@ -84,7 +91,7 @@ export function NumberLimitEditor({
             onChange={(e) => setMode(e.target.value as LimitMode)}
             className="w-4 h-4 text-primary"
           />
-          <span className="text-sm font-medium">{label.disabled}</span>
+          <span className="text-sm font-medium">{finalLabel.disabled}</span>
         </label>
       )}
       
@@ -97,7 +104,7 @@ export function NumberLimitEditor({
           onChange={(e) => setMode(e.target.value as LimitMode)}
           className="w-4 h-4 text-primary"
         />
-        <span className="text-sm font-medium">{label.limited}</span>
+        <span className="text-sm font-medium">{finalLabel.limited}</span>
       </label>
       
       {mode === 'limited' && (
@@ -123,11 +130,8 @@ export function NumberLimitEditor({
           onChange={(e) => setMode(e.target.value as LimitMode)}
           className="w-4 h-4 text-primary"
         />
-        <span className="text-sm font-medium">{label.unlimited}</span>
+        <span className="text-sm font-medium">{finalLabel.unlimited}</span>
       </label>
     </div>
   )
 }
-
-// Need to import React for useState
-import React from "react"

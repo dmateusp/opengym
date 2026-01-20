@@ -406,7 +406,7 @@ export default function GameDetailPage() {
         field: "totalPriceCents",
       },
     ];
-  }, [game]);
+  }, [game, t]);
 
   const canPublish = useMemo(() => {
     return publishRequirements.every((req) => req.met);
@@ -914,7 +914,7 @@ export default function GameDetailPage() {
                       if (e.key === "Enter") handleBlur("location");
                       if (e.key === "Escape") setEditingField(null);
                     }}
-                    placeholder="Where are you playing?"
+                    placeholder={t("game.locationPlaceholder")}
                   />
                 ) : (
                   <div
@@ -1002,7 +1002,7 @@ export default function GameDetailPage() {
                       if (e.key === "Enter") handleBlur("durationMinutes");
                       if (e.key === "Escape") setEditingField(null);
                     }}
-                    placeholder="Minutes"
+                    placeholder={t("common.minutesPlaceholder")}
                   />
                 ) : (
                   <div
