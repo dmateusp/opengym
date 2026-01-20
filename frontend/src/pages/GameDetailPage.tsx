@@ -934,30 +934,14 @@ export default function GameDetailPage() {
               {/* Date & Time */}
               <div>
                 {editingField === "startsAt" && isOrganizer ? (
-                  <div className="space-y-2">
-                    <DateTimeEditor
-                      value={editValue || toLocalInputValue(game?.startsAt || "")}
-                      onChange={setEditValue}
-                      locale={datePickerLocale}
-                      dateLabel={t("game.date", { defaultValue: "Date" })}
-                      timeLabel={t("game.time", { defaultValue: "Time" })}
-                    />
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={cancelEditing}
-                      >
-                        {t("game.cancel")}
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => handleBlur("startsAt")}
-                      >
-                        {t("game.save")}
-                      </Button>
-                    </div>
-                  </div>
+                  <DateTimeEditor
+                    value={editValue || toLocalInputValue(game?.startsAt || "")}
+                    onChange={setEditValue}
+                    locale={datePickerLocale}
+                    dateLabel={t("game.date", { defaultValue: "Date" })}
+                    timeLabel={t("game.time", { defaultValue: "Time" })}
+                    onBlur={() => handleBlur("startsAt")}
+                  />
                 ) : (
                   <div>
                     <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">

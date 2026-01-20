@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Locale } from "date-fns";
 import { ChevronDownIcon } from "lucide-react";
@@ -18,6 +18,7 @@ export type DateTimeEditorProps = {
   locale: Locale;
   dateLabel?: string;
   timeLabel?: string;
+  onBlur?: () => void;
 };
 
 export function DateTimeEditor({
@@ -26,19 +27,60 @@ export function DateTimeEditor({
   locale,
   dateLabel = "Date",
   timeLabel = "Time",
+  onBlur,
 }: DateTimeEditorProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const popoverContentRef = useRef<HTMLDivElement>(null);
+  // Detect clicks anywhere outside the editor and popover to trigger save
+  useEffect(() => {
+    function handlePointerDown(e: PointerEvent) {
+      const target = e.target as Node | null;
+      if (!target) return;
+      const insideMain = containerRef.current?.contains(target) ?? false;
+      const insidePopover = popoverContentRef.current?.contains(target) ?? false;
+      if (!insideMain && !insidePopover) {
+        onBlur?.();
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [onBlur]);
+
+  const triggerBlurCheck = useCallback(() => {
+    requestAnimationFrame(() => {
+      const active = document.activeElement;
+      const insideMain = containerRef.current?.contains(active) ?? false;
+      const insidePopover = popoverContentRef.current?.contains(active) ?? false;
+
+      if (!insideMain && !insidePopover) {
+        onBlur?.();
+      }
+    });
+  }, [onBlur]);
   const selectedDate = parseLocalDateTime(value);
   const timePart = extractTimePart(value) ?? "12:00";
 
   return (
-    <div className="flex gap-4">
+    <div
+      className="flex gap-4"
+      ref={containerRef}
+      onBlurCapture={triggerBlurCheck}
+    >
       <div className="flex flex-col gap-3">
         <Label htmlFor="date-picker" className="px-1">
           {dateLabel}
         </Label>
-        <Popover open={open} onOpenChange={setOpen}>
+        <Popover
+          open={open}
+          onOpenChange={(nextOpen) => {
+            setOpen(nextOpen);
+            if (!nextOpen) triggerBlurCheck();
+          }}
+        >
           <PopoverTrigger asChild>
             <Button
               variant="outline"
@@ -49,7 +91,12 @@ export function DateTimeEditor({
               <ChevronDownIcon className="h-4 w-4" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
+          <PopoverContent
+            className="w-auto p-0"
+            align="start"
+            ref={popoverContentRef}
+            onBlurCapture={triggerBlurCheck}
+          >
             <Calendar
               mode="single"
               selected={selectedDate}
