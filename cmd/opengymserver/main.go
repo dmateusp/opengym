@@ -23,8 +23,9 @@ import (
 )
 
 var (
-	serverAddr = flag.String("server-addr", ":8080", "server address")
-	dbPath     = flag.String("db-path", "./opengym.db", "database path")
+	serverAddr    = flag.String("server-addr", ":8080", "server address")
+	dbPath        = flag.String("db-path", "./opengym.db", "database path")
+	serveFrontend = flag.Bool("serve-frontend", false, "serve frontend from frontend/dist")
 )
 
 func main() {
@@ -93,7 +94,16 @@ func main() {
 	// Wrap entire handler with CORS middleware to handle OPTIONS before routing
 	handler := cors.CORSMiddleware(apiHandler)
 
-	err = http.ListenAndServe(*serverAddr, handler)
+	finalHandler := handler
+	if *serveFrontend {
+		logger.InfoContext(ctx, "Serving frontend from frontend/dist")
+		mux := http.NewServeMux()
+		mux.Handle("/api/", handler)
+		mux.Handle("/", http.FileServer(http.Dir("frontend/dist")))
+		finalHandler = mux
+	}
+
+	err = http.ListenAndServe(*serverAddr, finalHandler)
 	if err != nil {
 		logger.ErrorContext(ctx, "Failed to start server", "error", err)
 		os.Exit(1)

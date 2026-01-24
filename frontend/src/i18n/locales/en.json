@@ -137,7 +137,8 @@
     "waitingForSpot": "Waiting for a spot to open up",
     "wantToGoInstead": "Want to go instead?",
     "notParticipating": "You're not participating",
-    "readyToJoin": "Ready to join?"
+    "readyToJoin": "Ready to join?",
+    "emptySlot": "Open"
   },
   "errors": {
     "somethingWentWrong": "Something went wrong",
