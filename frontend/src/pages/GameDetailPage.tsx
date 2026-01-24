@@ -1284,12 +1284,12 @@ export default function GameDetailPage() {
                   </div>
 
                   {/* Waitlist */}
-                  {participantCounts.waitlisted > 0 && (
+                  {(game.maxWaitlistSize || 0) > 0 && (
                     <div className="mt-6 pt-6 border-t border-gray-200">
                       <p className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
                         <Clock className="h-4 w-4 text-gray-600" />
                         <span>
-                          {t("participants.waitlistCount")}(
+                          {t("participants.waitlistCount")} (
                           {(game?.maxWaitlistSize || 0) > 0
                             ? String(participantCounts.waitlisted) +
                               "/" +

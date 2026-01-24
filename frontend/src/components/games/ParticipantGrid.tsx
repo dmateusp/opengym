@@ -1,5 +1,6 @@
 import { Crown } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 interface User {
   id: string
@@ -57,8 +58,7 @@ export function ParticipantGrid({
   occupiedSlots,
   icon: Icon,
   size = 'md',
-  opacity = 1,
-  emptySlotLabel = 'Open',
+  opacity = 1
 }: ParticipantGridProps) {
   const getInitials = (name?: string, email?: string) => {
     if (name) {
@@ -79,6 +79,7 @@ export function ParticipantGrid({
 
   const config = sizeConfig[size]
   const containerStyle = opacity < 1 ? { opacity } : undefined
+    const { t } = useTranslation();
 
   return (
     <div className="flex flex-wrap gap-4" style={containerStyle}>
@@ -159,7 +160,7 @@ export function ParticipantGrid({
             <span
               className={`${config.text} text-center text-gray-400 font-medium truncate`}
             >
-              {emptySlotLabel}
+              {t('game.emptySlot')}
             </span>
           </div>
         ))}

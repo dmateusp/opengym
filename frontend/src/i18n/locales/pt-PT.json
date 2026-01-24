@@ -137,7 +137,8 @@
     "waitingForSpot": "À espera que um lugar fique disponível",
     "wantToGoInstead": "Queres participar em vez disso?",
     "notParticipating": "Não estás a participar",
-    "readyToJoin": "Pronto para participar?"
+    "readyToJoin": "Pronto para participar?",
+    "emptySlot": "Livre"
   },
   "errors": {
     "somethingWentWrong": "Algo correu mal",
