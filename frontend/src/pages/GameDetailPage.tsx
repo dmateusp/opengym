@@ -259,7 +259,7 @@ export default function GameDetailPage() {
     }
   }, [game?.publishedAt, id]);
 
-  const handleUserChange = (newUser: any) => {
+  const handleUserChange = (newUser: { id: string; name?: string }) => {
     setUser(newUser);
     // Refetch game when user changes
     refreshGame();

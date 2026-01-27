@@ -15,7 +15,7 @@ export default function HomePage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [hasAnyGames, setHasAnyGames] = useState<boolean>(false)
 
-  const handleUserChange = (newUser: any) => {
+  const handleUserChange = (newUser: { id: string; name?: string }) => {
     setUser(newUser)
     // Refetch games when user changes
     checkGames()
