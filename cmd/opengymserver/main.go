@@ -28,7 +28,6 @@ var (
 	serveFrontend = flag.Bool("serve-frontend", false, "serve frontend from frontend/dist")
 )
 
-// trigger test PR
 func main() {
 	ctx := context.Background()
 	w := os.Stderr
