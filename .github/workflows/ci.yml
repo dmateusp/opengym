@@ -127,3 +127,5 @@ jobs:
           context: .
           push: false
           tags: dmateusp/opengym:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
