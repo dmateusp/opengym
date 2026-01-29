@@ -8,6 +8,7 @@ import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { API_BASE_URL } from '@/lib/api'
 import { fetchWithDemoRecovery } from '@/lib/fetchWithDemoRecovery'
+import type { User } from '@/opengym/client'
 
 export default function HomePage() {
   const { t } = useTranslation()
@@ -15,7 +16,7 @@ export default function HomePage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [hasAnyGames, setHasAnyGames] = useState<boolean>(false)
 
-  const handleUserChange = (newUser: { id: string; name?: string }) => {
+  const handleUserChange = (newUser: User) => {
     setUser(newUser)
     // Refetch games when user changes
     checkGames()
