@@ -47,7 +47,15 @@ jobs:
         with:
           node-version: "20"
           cache: "pnpm"
-          cache-dependency-path: frontend/pnpm-lock.yaml
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            frontend/pnpm-lock.yaml
+
+      - name: Install root dependencies
+        run: pnpm install
+
+      - name: Check formatting
+        run: pnpm format:check
 
       - name: Install frontend dependencies
         working-directory: frontend

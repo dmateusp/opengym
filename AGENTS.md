@@ -12,7 +12,6 @@
 
 * If an error is returned by a function, we should always wrap it with more information: `return nil, err // bad`, `return nil, fmt.Errorf("the user could not be created: %w", err) // good`.
 * We have a generic function `ptr.Ptr` to return a pointer from a value.
-* Code must pass `go vet ./...`.
 
 ## Front-end development
 
@@ -23,7 +22,9 @@
 * We use Ladle for component development (`pnpm ladle serve`).
 * We use react-i18next for internationalization, the locales are located in [frontend/src/i18n/locales](./frontend/src/i18n/locales).
 
-##  Front-end code style
+## Formatting and linting
 
-* Code must be formatted with prettier.
-* Code must pass `pnpm lint`.
+* We format go code with `go fmt ./...`.
+* We lint go code with `go vet ./...`.
+* We format front-end code, as well as JSON, YAML and Markdown with eslint through `pnpm format`.
+* We lint front-end code with `pnpm lint`.

@@ -1,0 +1,22 @@
+{
+  "name": "opengym-lint",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "format": "eslint . --fix",
+    "format:check": "eslint ."
+  },
+  "devDependencies": {
+    "@eslint/css": "^0.14.1",
+    "@eslint/js": "^9.39.2",
+    "@eslint/json": "^0.14.0",
+    "@eslint/markdown": "^7.5.1",
+    "@typescript-eslint/eslint-plugin": "^8.54.0",
+    "@typescript-eslint/parser": "^8.54.0",
+    "eslint": "^9.39.2",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "globals": "^17.2.0",
+    "typescript-eslint": "^8.54.0"
+  }
+}

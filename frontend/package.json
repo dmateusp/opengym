@@ -7,7 +7,6 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "format": "eslint . --ext ts,tsx,json,md,css --fix",
     "preview": "vite preview",
     "ladle": "ladle serve",
     "openapi-ts": "openapi-ts"
