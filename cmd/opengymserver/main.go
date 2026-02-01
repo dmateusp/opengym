@@ -4,9 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"flag"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/dmateusp/opengym/api"
@@ -40,6 +42,20 @@ func main() {
 			TimeFormat: time.Kitchen,
 		}),
 	))
+
+	// Customize help output to show environment variable overrides
+	flag.Usage = func() {
+		replacer := strings.NewReplacer(".", "__", "-", "_")
+		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
+		fmt.Fprintf(flag.CommandLine.Output(), "\nFlags can be overridden by environment variables with the prefix OPENGYM_\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "Example: -server-addr can be set via OPENGYM_SERVER_ADDR\n\n")
+		flag.VisitAll(func(f *flag.Flag) {
+			envVar := "OPENGYM_" + replacer.Replace(strings.ToUpper(f.Name))
+			fmt.Fprintf(flag.CommandLine.Output(), "  -%s\n", f.Name)
+			fmt.Fprintf(flag.CommandLine.Output(), "    \t%s (default: %q)\n", f.Usage, f.DefValue)
+			fmt.Fprintf(flag.CommandLine.Output(), "    \tEnvironment: %s\n", envVar)
+		})
+	}
 
 	flag.Parse()
 
