@@ -74,6 +74,18 @@ Not all contributions are code—we also welcome documentation, translations, an
 
 The [AGENTS.md](AGENTS.md) file describes the tooling we use for development; it should contain everything you need to know to start contributing code.
 
+##  Configuration
+
+opengym can be configured using command-line flags or/and environment variables. Environment variables overwrite flags.
+
+For example the `-auth.google.client-secret` flag can be configured through the environment variable `OPENGYM_AUTH__GOOGLE__CLIENT_SECRET`.
+
+The full mapping is printed out with `-help`.
+
+```bash
+go run cmd/opengymserver/main.go -help
+```
+
 ## Deployment
 
 ⚠️ Coming soon.
