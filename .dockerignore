@@ -1,3 +1,16 @@
+# Database files
 *.db
-frontend/
-!frontend/dist
+
+
+# Node modules
+node_modules/
+frontend/node_modules/
+
+# Development and documentation
+*.md
+LICENSE
+.git/
+.gitignore
+
+# Docker files
+docker-compose.yaml
