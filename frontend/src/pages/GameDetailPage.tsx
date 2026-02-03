@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   Dialog,
   DialogContent,
@@ -847,19 +848,15 @@ export default function GameDetailPage() {
                   {/* Organizer Info */}
                   {organizer && (
                     <div className="flex items-center gap-3 mt-2">
-                      <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
-                        {organizer.picture ? (
-                          <img
-                            src={organizer.picture}
-                            alt={organizer.name || organizer.email}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-primary text-white text-xs flex items-center justify-center font-bold">
-                            {getInitials(organizer.name, organizer.email)}
-                          </div>
-                        )}
-                      </div>
+                      <Avatar className="h-8 w-8 flex-shrink-0">
+                        <AvatarImage
+                          src={organizer.picture || undefined}
+                          alt={organizer.name || organizer.email}
+                        />
+                        <AvatarFallback className="text-xs">
+                          {getInitials(organizer.name, organizer.email)}
+                        </AvatarFallback>
+                      </Avatar>
                       <div>
                         <p className="text-xs text-gray-500 font-medium">
                           {t("game.organizer")}
