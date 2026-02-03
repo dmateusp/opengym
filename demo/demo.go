@@ -8,7 +8,6 @@ import (
 
 	"github.com/dmateusp/opengym/db"
 	"github.com/dmateusp/opengym/log"
-	"github.com/pressly/goose/v3"
 )
 
 var (
@@ -35,15 +34,6 @@ func GetDemoMode() bool {
 }
 
 func SetUpDemoDatabase(ctx context.Context, dbConn *sql.DB, querier db.QuerierWithTxSupport) error {
-	if err := goose.SetDialect("sqlite3"); err != nil {
-		return fmt.Errorf("failed to set goose dialect: %w", err)
-	}
-
-	err := goose.UpContext(ctx, dbConn, "db/migrations")
-	if err != nil {
-		return fmt.Errorf("failed to run demo migrations: %w", err)
-	}
-
 	tx, err := dbConn.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)

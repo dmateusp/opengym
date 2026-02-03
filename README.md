@@ -9,7 +9,7 @@ The name comes from the term "open gym" used in volleyball to refer to a casual 
 You can start running a "demo" version of opengym locally by running the following command:
 
 ```bash
-go run cmd/opengymserver/main.go -demo.enabled=true -demo.auth.signing-secret=$(openssl rand -hex 32)
+go run cmd/opengymserver/main.go -db.run-migrations=true -demo.enabled=true -demo.auth.signing-secret=$(openssl rand -hex 32)
 ```
 
 Then, start the front-end:
