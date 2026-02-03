@@ -20,6 +20,7 @@ import (
 	"github.com/dmateusp/opengym/demo"
 	"github.com/dmateusp/opengym/flagfromenv"
 	"github.com/dmateusp/opengym/log"
+	"github.com/dmateusp/opengym/panics"
 
 	"github.com/lmittmann/tint"
 )
@@ -102,6 +103,7 @@ func main() {
 	apiHandler := api.HandlerWithOptions(server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), clock.RealClock{}, dbConn), api.StdHTTPServerOptions{
 		Middlewares: []api.MiddlewareFunc{ // Middleware is executed last to first
 			auth.AuthMiddleware,
+			panics.PanicsCatcherMiddleware,
 			log.LogRequestsAndResponsesMiddleware,
 			log.AddLoggerToContextMiddleware(logger), // runs first
 		},
