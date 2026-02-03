@@ -30,7 +30,9 @@ RUN pnpm build
 
 FROM gcr.io/distroless/static:nonroot
 
+WORKDIR /home/nonroot
+
 COPY --from=build --chmod=755 /go/bin/app /app
-COPY --from=frontend-build /app/dist /frontend/dist
-COPY --from=build /go/src/app/db/migrations /db/migrations
+COPY --from=frontend-build /app/dist  /home/nonroot/frontend/dist
+COPY --from=build /go/src/app/db/migrations /home/nonroot/db/migrations
 CMD ["/app"]
