@@ -8,11 +8,10 @@ import (
 
 	"github.com/dmateusp/opengym/db"
 	"github.com/dmateusp/opengym/log"
-	"github.com/pressly/goose/v3"
 )
 
 var (
-	dbPath        = flag.String("demo.db-path", "./opengym_demo.db", "Database path for the demo instance")
+	dbPath        = flag.String("demo.db.path", "./opengym_demo.db", "Database path for the demo instance")
 	signingSecret = flag.String("demo.auth.signing-secret", "", "Secret used to sign JWTs, keep this secret different from the non-demo equivalent")
 	demoMode      = flag.Bool("demo.enabled", false, "Run in demo mode")
 )
@@ -35,15 +34,6 @@ func GetDemoMode() bool {
 }
 
 func SetUpDemoDatabase(ctx context.Context, dbConn *sql.DB, querier db.QuerierWithTxSupport) error {
-	if err := goose.SetDialect("sqlite3"); err != nil {
-		return fmt.Errorf("failed to set goose dialect: %w", err)
-	}
-
-	err := goose.UpContext(ctx, dbConn, "db/migrations")
-	if err != nil {
-		return fmt.Errorf("failed to run demo migrations: %w", err)
-	}
-
 	tx, err := dbConn.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)

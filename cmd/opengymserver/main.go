@@ -21,14 +21,17 @@ import (
 	"github.com/dmateusp/opengym/flagfromenv"
 	"github.com/dmateusp/opengym/log"
 	"github.com/dmateusp/opengym/panics"
+	"github.com/pressly/goose/v3"
 
 	"github.com/lmittmann/tint"
 )
 
 var (
 	serverAddr    = flag.String("server-addr", ":8080", "server address")
-	dbPath        = flag.String("db-path", "./opengym.db", "database path")
 	serveFrontend = flag.Bool("serve-frontend", false, "serve frontend from frontend/dist")
+
+	dbPath          = flag.String("db.path", "./opengym.db", "database path")
+	dbRunMigrations = flag.Bool("db.run-migrations", false, "whether to run the database migrations on start")
 )
 
 func main() {
@@ -89,6 +92,20 @@ func main() {
 		os.Exit(1)
 	}
 	defer dbConn.Close()
+
+	if *dbRunMigrations {
+		if err := goose.SetDialect("sqlite3"); err != nil {
+			logger.ErrorContext(ctx, "Failed to set goose dialect", "error", err)
+			os.Exit(1)
+		}
+
+		goose.SetLogger(log.NewGooseLogger(logger))
+		err = goose.UpContext(ctx, dbConn, "db/migrations")
+		if err != nil {
+			logger.ErrorContext(ctx, "Failed to run database migrations", "error", err)
+			os.Exit(1)
+		}
+	}
 
 	querier := db.New(dbConn)
 	if demo.GetDemoMode() {
