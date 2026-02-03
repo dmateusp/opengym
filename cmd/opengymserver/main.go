@@ -134,7 +134,24 @@ func main() {
 		logger.InfoContext(ctx, "Serving frontend from frontend/dist")
 		mux := http.NewServeMux()
 		mux.Handle("/api/", handler)
-		mux.Handle("/", http.FileServer(http.Dir("frontend/dist")))
+		mux.HandleFunc("/config.js", func(w http.ResponseWriter, r *http.Request) {
+			// Configures the base URL of the back-end at run-time so different instances of opengym can
+			// use the same docker image, but be hosted in different places.
+			fmt.Fprintf(w, `window.OPENGYM_CONFIG = {
+				API_BASE_URL: "%s",
+			};
+			`, server.GetBaseUrl())
+		})
+		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			path := r.URL.Path
+			// Serve static files directly, otherwise serve index.html for SPA routing
+			if strings.HasSuffix(path, ".js") || strings.HasSuffix(path, ".html") || strings.HasSuffix(path, ".css") || path == "/" {
+				fs := http.FileServer(http.Dir("frontend/dist"))
+				fs.ServeHTTP(w, r)
+			} else {
+				http.ServeFile(w, r, "frontend/dist/index.html")
+			}
+		})
 		finalHandler = mux
 	}
 

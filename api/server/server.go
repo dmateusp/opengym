@@ -14,6 +14,10 @@ var (
 	frontendBaseUrl = flag.String("frontend.base-url", "http://localhost:5173", "base url of the frontend")
 )
 
+func GetBaseUrl() string {
+	return *baseUrl
+}
+
 type server struct {
 	querier                     db.QuerierWithTxSupport
 	randomAlphanumericGenerator RandomAlphanumericGenerator
