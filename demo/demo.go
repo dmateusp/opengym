@@ -8,6 +8,7 @@ import (
 
 	"github.com/dmateusp/opengym/db"
 	"github.com/dmateusp/opengym/log"
+	"github.com/google/uuid"
 )
 
 var (
@@ -46,42 +47,52 @@ func SetUpDemoDatabase(ctx context.Context, dbConn *sql.DB, querier db.QuerierWi
 		{
 			Name:  sql.NullString{String: "John Doe", Valid: true},
 			Email: "john.doe@example.com",
+			Photo: sql.NullString{String: "https://api.images.cat/300/300/" + uuid.NewString(), Valid: true},
 		},
 		{
 			Name:  sql.NullString{String: "Jane Doe", Valid: true},
 			Email: "jane.doe@example.com",
+			Photo: sql.NullString{String: "https://api.images.cat/300/300/" + uuid.NewString(), Valid: true},
 		},
 		{
 			Name:  sql.NullString{String: "Jim Beam", Valid: true},
 			Email: "jim.beam@example.com",
+			Photo: sql.NullString{String: "https://api.images.cat/300/300/" + uuid.NewString(), Valid: true},
 		},
 		{
 			Name:  sql.NullString{String: "Alice Smith", Valid: true},
 			Email: "alice.smith@example.com",
+			Photo: sql.NullString{String: "https://api.images.cat/300/300/" + uuid.NewString(), Valid: true},
 		},
 		{
 			Name:  sql.NullString{String: "Bob Johnson", Valid: true},
 			Email: "bob.johnson@example.com",
+			Photo: sql.NullString{String: "https://api.images.cat/300/300/" + uuid.NewString(), Valid: true},
 		},
 		{
 			Name:  sql.NullString{String: "Charlie Brown", Valid: true},
 			Email: "charlie.brown@example.com",
+			Photo: sql.NullString{String: "https://api.images.cat/300/300/" + uuid.NewString(), Valid: true},
 		},
 		{
 			Name:  sql.NullString{String: "Dana White", Valid: true},
 			Email: "dana.white@example.com",
+			Photo: sql.NullString{String: "https://api.images.cat/300/300/" + uuid.NewString(), Valid: true},
 		},
 		{
 			Name:  sql.NullString{String: "Evan Green", Valid: true},
 			Email: "evan.green@example.com",
+			Photo: sql.NullString{String: "https://api.images.cat/300/300/" + uuid.NewString(), Valid: true},
 		},
 		{
 			Name:  sql.NullString{String: "Fiona Black", Valid: true},
 			Email: "fiona.black@example.com",
+			Photo: sql.NullString{String: "https://api.images.cat/300/300/" + uuid.NewString(), Valid: true},
 		},
 		{
 			Name:  sql.NullString{String: "George Miller", Valid: true},
 			Email: "george.miller@example.com",
+			Photo: sql.NullString{String: "https://api.images.cat/300/300/" + uuid.NewString(), Valid: true},
 		},
 	}
 

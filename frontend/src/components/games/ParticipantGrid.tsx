@@ -1,6 +1,7 @@
 import { Crown } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 
 interface User {
   id: string
@@ -94,21 +95,17 @@ export function ParticipantGrid({
             className="flex flex-col items-center gap-2"
           >
             <div className={`relative ${config.avatar}`}>
-              <div
-                className={`${config.avatar} rounded-full overflow-hidden ring-4 ring-success/30 shadow-md`}
+              <Avatar
+                className={`${config.avatar} ring-4 ring-success/30 shadow-md`}
               >
-                {participant.picture ? (
-                  <img
-                    src={participant.picture}
-                    alt={participant.name || participant.email}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-primary text-white flex items-center justify-center font-bold">
-                    {getInitials(participant.name, participant.email)}
-                  </div>
-                )}
-              </div>
+                <AvatarImage
+                  src={participant.picture}
+                  alt={participant.name || participant.email}
+                />
+                <AvatarFallback className="bg-primary text-white font-bold">
+                  {getInitials(participant.name, participant.email)}
+                </AvatarFallback>
+              </Avatar>
               {isOrganizerParticipating && Icon && (
                 <div
                   className={`absolute -bottom-1 -right-1 bg-primary rounded-full ${config.crownPadding} shadow-lg border-2 border-white`}
