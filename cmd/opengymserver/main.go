@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -134,7 +135,24 @@ func main() {
 		logger.InfoContext(ctx, "Serving frontend from frontend/dist")
 		mux := http.NewServeMux()
 		mux.Handle("/api/", handler)
-		mux.Handle("/", http.FileServer(http.Dir("frontend/dist")))
+		mux.HandleFunc("/config.js", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/javascript")
+			config := map[string]string{"API_BASE_URL": server.GetBaseUrl()}
+			jsonData, _ := json.Marshal(config)
+			fmt.Fprintf(w, "window.OPENGYM_CONFIG = %s;\n", jsonData)
+		})
+		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			path := r.URL.Path
+			// Serve static files directly (whitelisted suffixes), otherwise serve index.html for SPA routing
+			if path == "/" || strings.HasSuffix(path, ".js") || strings.HasSuffix(path, ".html") || strings.HasSuffix(path, ".css") ||
+				strings.HasSuffix(path, ".png") || strings.HasSuffix(path, ".jpg") || strings.HasSuffix(path, ".jpeg") ||
+				strings.HasSuffix(path, ".svg") || strings.HasSuffix(path, ".ico") {
+				fs := http.FileServer(http.Dir("frontend/dist"))
+				fs.ServeHTTP(w, r)
+			} else {
+				http.ServeFile(w, r, "frontend/dist/index.html")
+			}
+		})
 		finalHandler = mux
 	}
 

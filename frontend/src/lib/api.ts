@@ -1,4 +1,7 @@
+// Runtime configuration - can be set via window.OPENGYM_CONFIG
+// Falls back to Vite env var for development, then localhost
 export const API_BASE_URL =
+  (typeof window !== 'undefined' && window.OPENGYM_CONFIG?.API_BASE_URL) ||
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
   'http://localhost:8080';
 
