@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -135,12 +136,10 @@ func main() {
 		mux := http.NewServeMux()
 		mux.Handle("/api/", handler)
 		mux.HandleFunc("/config.js", func(w http.ResponseWriter, r *http.Request) {
-			// Configures the base URL of the back-end at run-time so different instances of opengym can
-			// use the same docker image, but be hosted in different places.
-			fmt.Fprintf(w, `window.OPENGYM_CONFIG = {
-				API_BASE_URL: "%s",
-			};
-			`, server.GetBaseUrl())
+			w.Header().Set("Content-Type", "application/javascript")
+			config := map[string]string{"API_BASE_URL": server.GetBaseUrl()}
+			jsonData, _ := json.Marshal(config)
+			fmt.Fprintf(w, "window.OPENGYM_CONFIG = %s;\n", jsonData)
 		})
 		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			path := r.URL.Path
