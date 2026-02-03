@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	dbPath        = flag.String("demo.db-path", "./opengym_demo.db", "Database path for the demo instance")
+	dbPath        = flag.String("demo.db.path", "./opengym_demo.db", "Database path for the demo instance")
 	signingSecret = flag.String("demo.auth.signing-secret", "", "Secret used to sign JWTs, keep this secret different from the non-demo equivalent")
 	demoMode      = flag.Bool("demo.enabled", false, "Run in demo mode")
 )
