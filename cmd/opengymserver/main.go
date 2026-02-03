@@ -143,8 +143,10 @@ func main() {
 		})
 		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			path := r.URL.Path
-			// Serve static files directly, otherwise serve index.html for SPA routing
-			if strings.HasSuffix(path, ".js") || strings.HasSuffix(path, ".html") || strings.HasSuffix(path, ".css") || path == "/" {
+			// Serve static files directly (whitelisted suffixes), otherwise serve index.html for SPA routing
+			if path == "/" || strings.HasSuffix(path, ".js") || strings.HasSuffix(path, ".html") || strings.HasSuffix(path, ".css") ||
+				strings.HasSuffix(path, ".png") || strings.HasSuffix(path, ".jpg") || strings.HasSuffix(path, ".jpeg") ||
+				strings.HasSuffix(path, ".svg") || strings.HasSuffix(path, ".ico") {
 				fs := http.FileServer(http.Dir("frontend/dist"))
 				fs.ServeHTTP(w, r)
 			} else {
