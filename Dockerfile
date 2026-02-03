@@ -32,4 +32,5 @@ FROM gcr.io/distroless/static:nonroot
 
 COPY --from=build --chmod=755 /go/bin/app /app
 COPY --from=frontend-build /app/dist /frontend/dist
+COPY --from=build /go/src/app/db/migrations /db/migrations
 CMD ["/app"]
