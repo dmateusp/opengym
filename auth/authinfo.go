@@ -3,6 +3,8 @@ package auth
 import (
 	"context"
 	"flag"
+
+	"github.com/dmateusp/opengym/flagsecret"
 )
 
 const (
@@ -10,10 +12,14 @@ const (
 	Issuer    = "opengym"
 )
 
-var signingSecret = flag.String("auth.signing-secret", "", "Secret used to sign OAuth2 state and JWTs")
+var signingSecret flagsecret.Secret
+
+func init() {
+	flag.Var(&signingSecret, "auth.signing-secret", "Secret used to sign OAuth2 state and JWTs (if set as a flag, supports file://<path to file>)")
+}
 
 func GetSigningSecret() string {
-	return *signingSecret
+	return signingSecret.Value()
 }
 
 type AuthInfo struct {

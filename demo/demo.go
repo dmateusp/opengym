@@ -7,15 +7,21 @@ import (
 	"fmt"
 
 	"github.com/dmateusp/opengym/db"
+	"github.com/dmateusp/opengym/flagsecret"
 	"github.com/dmateusp/opengym/log"
 	"github.com/google/uuid"
 )
 
 var (
-	dbPath        = flag.String("demo.db.path", "./opengym_demo.db", "Database path for the demo instance")
-	signingSecret = flag.String("demo.auth.signing-secret", "", "Secret used to sign JWTs, keep this secret different from the non-demo equivalent")
-	demoMode      = flag.Bool("demo.enabled", false, "Run in demo mode")
+	dbPath   = flag.String("demo.db.path", "./opengym_demo.db", "Database path for the demo instance")
+	demoMode = flag.Bool("demo.enabled", false, "Run in demo mode")
 )
+
+var signingSecret flagsecret.Secret
+
+func init() {
+	flag.Var(&signingSecret, "demo.auth.signing-secret", "Secret used to sign JWTs, keep this secret different from the non-demo equivalent (if set as a flag, supports file://<path to file>)")
+}
 
 const (
 	DemoIssuer    = "opengym-demo"
@@ -27,7 +33,7 @@ func GetDemoDbPath() string {
 }
 
 func GetDemoSigningSecret() string {
-	return *signingSecret
+	return signingSecret.Value()
 }
 
 func GetDemoMode() bool {
