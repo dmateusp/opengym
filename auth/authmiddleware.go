@@ -30,7 +30,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		var (
 			jwtCookieName    = JWTCookie
 			issuer           = Issuer
-			jwtSigningSecret = *signingSecret
+			jwtSigningSecret = signingSecret.Value()
 		)
 
 		if demo.GetDemoMode() {

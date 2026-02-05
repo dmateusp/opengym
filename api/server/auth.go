@@ -17,6 +17,7 @@ import (
 	"github.com/dmateusp/opengym/api"
 	"github.com/dmateusp/opengym/auth"
 	"github.com/dmateusp/opengym/db"
+	"github.com/dmateusp/opengym/flagsecret"
 	"github.com/dmateusp/opengym/log"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -29,9 +30,13 @@ import (
 )
 
 var (
-	googleClientId     = flag.String("auth.google.client-id", "", "Google client ID")
-	googleClientSecret = flag.String("auth.google.client-secret", "", "Google client secret")
+	googleClientId, googleClientSecret flagsecret.Secret
 )
+
+func init() {
+	flag.Var(&googleClientId, "auth.google.client-id", "Google client ID (if set as a flag, supports file://<path to file>)")
+	flag.Var(&googleClientSecret, "auth.google.client-secret", "Google client secret (if set as a flag, supports file://<path to file>)")
+}
 
 const (
 	cookieOAuthState    = "oauth2_state"
@@ -229,8 +234,8 @@ func (srv *server) GetApiAuthProviderCallback(w http.ResponseWriter, r *http.Req
 	case api.GetApiAuthProviderCallbackParamsProviderGoogle:
 		oauthConfig := &oauth2.Config{
 			Endpoint:     google.Endpoint,
-			ClientID:     *googleClientId,
-			ClientSecret: *googleClientSecret,
+			ClientID:     googleClientId.Value(),
+			ClientSecret: googleClientSecret.Value(),
 			RedirectURL:  redirectUrl,
 		}
 
@@ -337,14 +342,14 @@ func (srv *server) GetApiAuthProviderLogin(w http.ResponseWriter, r *http.Reques
 	var oauthConfig *oauth2.Config
 	switch provider {
 	case api.GetApiAuthProviderLoginParamsProviderGoogle:
-		if *googleClientId == "" || *googleClientSecret == "" {
+		if googleClientId.Value() == "" || googleClientSecret.Value() == "" {
 			log.FromCtx(r.Context()).ErrorContext(r.Context(), "Google client ID or client secret not set")
 			http.Error(w, "the back-end is not configured to handle Google auth", http.StatusBadRequest)
 			return
 		}
 		oauthConfig = &oauth2.Config{
-			ClientID:     *googleClientId,
-			ClientSecret: *googleClientSecret,
+			ClientID:     googleClientId.Value(),
+			ClientSecret: googleClientSecret.Value(),
 			RedirectURL:  redirectUrl,
 			Scopes: []string{
 				"https://www.googleapis.com/auth/userinfo.profile",
