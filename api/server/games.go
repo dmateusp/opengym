@@ -60,11 +60,6 @@ func (srv *server) PostApiGames(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.MaxWaitlistSize != nil && *req.MaxWaitlistSize < 0 {
-		http.Error(w, "maxWaitlistSize cannot be negative", http.StatusBadRequest)
-		return
-	}
-
 	if req.MaxGuestsPerPlayer != nil && *req.MaxGuestsPerPlayer < 0 {
 		http.Error(w, "maxGuestsPerPlayer cannot be negative", http.StatusBadRequest)
 		return

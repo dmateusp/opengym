@@ -43,7 +43,6 @@ func TestPostApiGames_Success(t *testing.T) {
 		StartsAt:           ptr.Ptr(staticClock.Now()),
 		DurationMinutes:    ptr.Ptr(int64(120)),
 		MaxPlayers:         ptr.Ptr(int64(12)),
-		MaxWaitlistSize:    ptr.Ptr(int64(5)),
 		MaxGuestsPerPlayer: ptr.Ptr(int64(2)),
 	}
 
