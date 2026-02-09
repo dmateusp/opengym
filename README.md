@@ -88,4 +88,9 @@ go run cmd/opengymserver/main.go -help
 
 ## Deployment
 
-⚠️ Coming soon.
+There is an example [docker-compose.yaml](docker-compose.yaml) you can use as a starting point.
+
+You will also need the following:
+
+- A reverse proxy that can handle certificates for HTTPS. I use [traefik](https://doc.traefik.io/traefik/).
+- A registered [Google OAuth web application](https://developers.google.com/identity/protocols/oauth2) for log-in (this is free).

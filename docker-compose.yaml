@@ -1,0 +1,32 @@
+services:
+  opengym:
+    image: ghcr.io/dmateusp/opengym:latest
+    build: .
+    ports:
+      - 8080:8080
+    command:
+      - /app
+      - -base-url=https://your.domain.com # change this to your domain
+      - -cors.allowed-origin-prefix=https://your.domain.com # change this to your domain
+      - -frontend.base-url=https://your.domain.com # change this to your domain
+      - -serve-frontend=true # serves the front-end from the same http server
+      - -db.run-migrations=true # runs the database migrations on start-up
+      - -db.path=./databases/opengym.db
+      - -auth.signing-secret=file:///run/secrets/opengym_auth_signing_secret
+      - -auth.google.client-id=file:///run/secrets/google_client_id
+      - -auth.google.client-secret=file:///run/secrets/google_client_secret
+    volumes:
+      - ${PWD}/databases:/home/nonroot/databases:rw
+
+    secrets:
+      - google_client_id
+      - google_client_secret
+      - opengym_auth_signing_secret
+
+secrets:
+  google_client_id:
+    file: ./secrets/google_client_id.txt
+  google_client_secret:
+    file: ./secrets/google_client_secret.txt
+  opengym_auth_signing_secret:
+    file: ./secrets/opengym_auth_signing_secret.txt
