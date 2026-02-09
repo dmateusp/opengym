@@ -37,9 +37,7 @@ func (game *Game) FromDb(dbGame db.Game) {
 
 	game.DurationMinutes = ptr.Ptr(dbGame.DurationMinutes)
 	game.MaxPlayers = ptr.Ptr(dbGame.MaxPlayers)
-	game.MaxWaitlistSize = ptr.Ptr(dbGame.MaxWaitlistSize)
 	game.MaxGuestsPerPlayer = ptr.Ptr(dbGame.MaxGuestsPerPlayer)
-	game.WaitlistSpotsLeft = ptr.Ptr(dbGame.WaitlistSpotsLeft)
 	game.GameSpotsLeft = ptr.Ptr(dbGame.GameSpotsLeft)
 
 	game.CreatedAt = dbGame.CreatedAt

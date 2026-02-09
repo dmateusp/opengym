@@ -109,34 +109,6 @@ func (s *server) GetApiGamesIdParticipants(w http.ResponseWriter, r *http.Reques
 		})
 	}
 
-	// If organizer is going, overflow past waitlist becomes not-going for the last overflow group
-	if organizerPresentGoing {
-		maxTotal := game.MaxPlayers + game.MaxWaitlistSize
-		totalCount := int64(0)
-		for i := range participants {
-			// Recompute group size from participants[i].Guests
-			pc := int64(1)
-			if participants[i].Guests > 0 {
-				pc += int64(participants[i].Guests)
-			}
-			status, _ := participants[i].Status.AsParticipationStatusUpdate()
-			if status == api.Going {
-				totalCount += pc
-			} else {
-				// treat waitlisted as going for capacity tally
-				if _, err := participants[i].Status.AsParticipationStatus1(); err == nil {
-					totalCount += pc
-				}
-			}
-			if totalCount > maxTotal {
-				var s api.ParticipationStatus
-				_ = s.FromParticipationStatusUpdate(api.NotGoing)
-				participants[i].Status = s
-				break
-			}
-		}
-	}
-
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(participants); err != nil {
@@ -220,22 +192,9 @@ func (s *server) PostApiGamesIdParticipants(w http.ResponseWriter, r *http.Reque
 		gameSpotsLeft,
 		waitlistSpotsLeft sql.NullInt64
 	)
-	// Reject if the game doesn't have enough spots left
 	switch req.Status {
 	case api.Going:
-		if participantsGroup <= int(game.GameSpotsLeft) {
-			gameSpotsLeft.Int64 = game.GameSpotsLeft - int64(participantsGroup)
-			gameSpotsLeft.Valid = true
-		} else if participantsGroup <= int(game.WaitlistSpotsLeft) {
-			waitlistSpotsLeft.Int64 = game.WaitlistSpotsLeft - int64(participantsGroup)
-			waitlistSpotsLeft.Valid = true
-		} else {
-			// Organizer can always join even if both are full; no spots counters change
-			if game.OrganizerID != int64(authInfo.UserId) {
-				http.Error(w, "not enough spots left", http.StatusBadRequest)
-				return
-			}
-		}
+		// can always join the waitlist
 	case api.NotGoing: // We have to figure out if we're freeing spots in the "going" list, waitlist, or if the player was already in the "not going" list
 		participants, err := querierWithTx.ParticipantsList(r.Context(), db.ParticipantsListParams{
 			OrganizerID: game.OrganizerID,
@@ -298,9 +257,8 @@ func (s *server) PostApiGamesIdParticipants(w http.ResponseWriter, r *http.Reque
 
 	if gameSpotsLeft.Valid || waitlistSpotsLeft.Valid {
 		if err := querierWithTx.GameUpdate(r.Context(), db.GameUpdateParams{
-			ID:                id,
-			GameSpotsLeft:     gameSpotsLeft,
-			WaitlistSpotsLeft: waitlistSpotsLeft,
+			ID:            id,
+			GameSpotsLeft: gameSpotsLeft,
 		}); err != nil {
 			http.Error(w, fmt.Sprintf("failed to update game spots left: %s", err.Error()), http.StatusInternalServerError)
 			return

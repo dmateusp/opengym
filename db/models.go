@@ -20,10 +20,8 @@ type Game struct {
 	StartsAt           sql.NullTime
 	DurationMinutes    int64
 	MaxPlayers         int64
-	MaxWaitlistSize    int64
 	MaxGuestsPerPlayer int64
 	GameSpotsLeft      int64
-	WaitlistSpotsLeft  int64
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
 }
