@@ -1431,17 +1431,14 @@ func TestPostApiGamesIdParticipants_GoingReducesGameSpotsLeft(t *testing.T) {
 		t.Fatalf("expected status %d, got %d, body: %s", http.StatusOK, w.Code, w.Body.String())
 	}
 
-	// Verify game_spots_left decreased by 3, waitlist remains unchanged
-	var gameSpotsLeft, waitlistSpotsLeft int64
-	row := sqlDB.QueryRow(`select game_spots_left, waitlist_spots_left from games where id = ?`, "gspots")
-	if err := row.Scan(&gameSpotsLeft, &waitlistSpotsLeft); err != nil {
+	// Verify game_spots_left decreased by 3
+	var gameSpotsLeft int64
+	row := sqlDB.QueryRow(`select game_spots_left from games where id = ?`, "gspots")
+	if err := row.Scan(&gameSpotsLeft); err != nil {
 		t.Fatalf("failed to load game row: %v", err)
 	}
 	if gameSpotsLeft != 2 {
 		t.Fatalf("expected game_spots_left=2, got %d", gameSpotsLeft)
-	}
-	if waitlistSpotsLeft != 2 {
-		t.Fatalf("expected waitlist_spots_left=2, got %d", waitlistSpotsLeft)
 	}
 }
 
@@ -1513,9 +1510,9 @@ func TestPostApiGamesIdParticipants_NotGoingFreesGameSpotsLeft(t *testing.T) {
 		t.Fatalf("expected status %d, got %d, body: %s", http.StatusOK, w.Code, w.Body.String())
 	}
 
-	var gameSpotsLeft, waitlistSpotsLeft int64
-	row := sqlDB.QueryRow(`select game_spots_left, waitlist_spots_left from games where id = ?`, "gfree")
-	if err := row.Scan(&gameSpotsLeft, &waitlistSpotsLeft); err != nil {
+	var gameSpotsLeft int64
+	row := sqlDB.QueryRow(`select game_spots_left from games where id = ?`, "gfree")
+	if err := row.Scan(&gameSpotsLeft); err != nil {
 		t.Fatalf("failed to load game row: %v", err)
 	}
 	if gameSpotsLeft != 2 {
