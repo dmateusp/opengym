@@ -201,8 +201,43 @@ func (s *server) PostApiGamesIdParticipants(w http.ResponseWriter, r *http.Reque
 				// Decrement game spots
 				gameSpotsLeft.Int64 = game.GameSpotsLeft - int64(participantsGroup)
 				gameSpotsLeft.Valid = true
+			} else if isOrganizer {
+				// Organizer joining without space: recalculate GameSpotsLeft
+				// because the organizer takes spots and may push others to waitlist
+				participants, err := querierWithTx.ParticipantsList(r.Context(), db.ParticipantsListParams{
+					OrganizerID: game.OrganizerID,
+					GameID:      id,
+				})
+				if err != nil {
+					http.Error(w, fmt.Sprintf("failed to list participants: %s", err.Error()), http.StatusInternalServerError)
+					return
+				}
+
+				// Calculate how many of the existing going participants fit in the main list
+				// with the organizer now having priority and taking spots
+				mainListCount := int64(participantsGroup) // Start with the organizer's group size
+
+				for _, participant := range participants {
+					if !participant.GameParticipant.Going.Valid || !participant.GameParticipant.Going.Bool {
+						continue
+					}
+
+					pc := int64(1)
+					if participant.GameParticipant.Guests.Valid {
+						pc += participant.GameParticipant.Guests.Int64
+					}
+
+					// Check if this participant fits in the main list with the organizer
+					if mainListCount+pc <= int64(game.MaxPlayers) {
+						mainListCount += pc
+					}
+					// Otherwise they stay/go to waitlist
+				}
+
+				// GameSpotsLeft = total capacity minus those who fit in the main list
+				gameSpotsLeft.Int64 = int64(game.MaxPlayers) - mainListCount
+				gameSpotsLeft.Valid = true
 			}
-			// Organizer joining without space: they go but spots aren't decremented (they'll push others to waitlist)
 		} else {
 			// Non-organizer, not enough space: they're waitlisted
 			if err := computedStatus.FromParticipationStatus1(api.Waitlisted); err != nil {
@@ -227,6 +262,7 @@ func (s *server) PostApiGamesIdParticipants(w http.ResponseWriter, r *http.Reque
 		}
 		// Determine current participant segment by simulating read-time status
 		goingCount := 0
+		spotsFreed := int64(0)
 		for _, participant := range participants {
 			pc := 1
 			if participant.GameParticipant.Guests.Valid {
@@ -237,8 +273,7 @@ func (s *server) PostApiGamesIdParticipants(w http.ResponseWriter, r *http.Reque
 				if goingCount+pc <= int(game.MaxPlayers) {
 					// main list - free up spots when this user leaves
 					if participant.User.ID == int64(authInfo.UserId) {
-						gameSpotsLeft.Int64 = game.GameSpotsLeft + int64(pc)
-						gameSpotsLeft.Valid = true
+						spotsFreed = int64(pc)
 						break
 					}
 					goingCount += pc
@@ -255,6 +290,37 @@ func (s *server) PostApiGamesIdParticipants(w http.ResponseWriter, r *http.Reque
 					break
 				}
 			}
+		}
+
+		// If spots were freed, calculate how the remaining participants reorder
+		if spotsFreed > 0 {
+			// Calculate how many of the remaining going participants fit in the main list
+			mainListCount := int64(0)
+			for _, participant := range participants {
+				// Skip the user who is leaving
+				if participant.User.ID == int64(authInfo.UserId) {
+					continue
+				}
+
+				if !participant.GameParticipant.Going.Valid || !participant.GameParticipant.Going.Bool {
+					continue
+				}
+
+				pc := int64(1)
+				if participant.GameParticipant.Guests.Valid {
+					pc += participant.GameParticipant.Guests.Int64
+				}
+
+				// Count how many people fit in the main list
+				if mainListCount+pc <= int64(game.MaxPlayers) {
+					mainListCount += pc
+				}
+				// Note: we don't count waitlisted people towards spots available
+			}
+
+			// GameSpotsLeft = total capacity minus those who fit in the main list
+			gameSpotsLeft.Int64 = int64(game.MaxPlayers) - mainListCount
+			gameSpotsLeft.Valid = true
 		}
 
 		// Clear guests when someone is not going
