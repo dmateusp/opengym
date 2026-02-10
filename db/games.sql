@@ -10,11 +10,9 @@ insert into games(
   starts_at,
   duration_minutes,
   max_players,
-  max_waitlist_size,
   max_guests_per_player,
-  game_spots_left,
-  waitlist_spots_left
-) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  game_spots_left
+) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 returning *;
 
 -- name: GameGetByIdWithOrganizer :one
@@ -45,10 +43,8 @@ set
   starts_at = coalesce(sqlc.arg(starts_at), starts_at),
   duration_minutes = coalesce(nullif(cast(sqlc.arg(duration_minutes) as integer), 0), duration_minutes),
   max_players = coalesce(nullif(cast(sqlc.narg(max_players) as integer), 0), max_players),
-  max_waitlist_size = coalesce(sqlc.narg(max_waitlist_size), max_waitlist_size),
   max_guests_per_player = coalesce(sqlc.narg(max_guests_per_player), max_guests_per_player),
   game_spots_left = coalesce(sqlc.narg(game_spots_left), game_spots_left),
-  waitlist_spots_left = coalesce(sqlc.narg(waitlist_spots_left), waitlist_spots_left),
   updated_at = current_timestamp
 where id = sqlc.arg(id);
 

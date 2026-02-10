@@ -38,12 +38,10 @@ insert into games(
   starts_at,
   duration_minutes,
   max_players,
-  max_waitlist_size,
   max_guests_per_player,
-  game_spots_left,
-  waitlist_spots_left
-) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-returning id, organizer_id, name, description, published_at, total_price_cents, location, starts_at, duration_minutes, max_players, max_waitlist_size, max_guests_per_player, game_spots_left, waitlist_spots_left, created_at, updated_at
+  game_spots_left
+) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+returning id, organizer_id, name, description, published_at, total_price_cents, location, starts_at, duration_minutes, max_players, max_guests_per_player, game_spots_left, created_at, updated_at
 `
 
 type GameCreateParams struct {
@@ -57,10 +55,8 @@ type GameCreateParams struct {
 	StartsAt           sql.NullTime
 	DurationMinutes    int64
 	MaxPlayers         int64
-	MaxWaitlistSize    int64
 	MaxGuestsPerPlayer int64
 	GameSpotsLeft      int64
-	WaitlistSpotsLeft  int64
 }
 
 func (q *Queries) GameCreate(ctx context.Context, arg GameCreateParams) (Game, error) {
@@ -75,10 +71,8 @@ func (q *Queries) GameCreate(ctx context.Context, arg GameCreateParams) (Game, e
 		arg.StartsAt,
 		arg.DurationMinutes,
 		arg.MaxPlayers,
-		arg.MaxWaitlistSize,
 		arg.MaxGuestsPerPlayer,
 		arg.GameSpotsLeft,
-		arg.WaitlistSpotsLeft,
 	)
 	var i Game
 	err := row.Scan(
@@ -92,10 +86,8 @@ func (q *Queries) GameCreate(ctx context.Context, arg GameCreateParams) (Game, e
 		&i.StartsAt,
 		&i.DurationMinutes,
 		&i.MaxPlayers,
-		&i.MaxWaitlistSize,
 		&i.MaxGuestsPerPlayer,
 		&i.GameSpotsLeft,
-		&i.WaitlistSpotsLeft,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -103,7 +95,7 @@ func (q *Queries) GameCreate(ctx context.Context, arg GameCreateParams) (Game, e
 }
 
 const gameGetById = `-- name: GameGetById :one
-select id, organizer_id, name, description, published_at, total_price_cents, location, starts_at, duration_minutes, max_players, max_waitlist_size, max_guests_per_player, game_spots_left, waitlist_spots_left, created_at, updated_at
+select id, organizer_id, name, description, published_at, total_price_cents, location, starts_at, duration_minutes, max_players, max_guests_per_player, game_spots_left, created_at, updated_at
 from games
 where games.id = ?
 `
@@ -122,10 +114,8 @@ func (q *Queries) GameGetById(ctx context.Context, id string) (Game, error) {
 		&i.StartsAt,
 		&i.DurationMinutes,
 		&i.MaxPlayers,
-		&i.MaxWaitlistSize,
 		&i.MaxGuestsPerPlayer,
 		&i.GameSpotsLeft,
-		&i.WaitlistSpotsLeft,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -134,7 +124,7 @@ func (q *Queries) GameGetById(ctx context.Context, id string) (Game, error) {
 
 const gameGetByIdWithOrganizer = `-- name: GameGetByIdWithOrganizer :one
 select
-  games.id, games.organizer_id, games.name, games.description, games.published_at, games.total_price_cents, games.location, games.starts_at, games.duration_minutes, games.max_players, games.max_waitlist_size, games.max_guests_per_player, games.game_spots_left, games.waitlist_spots_left, games.created_at, games.updated_at,
+  games.id, games.organizer_id, games.name, games.description, games.published_at, games.total_price_cents, games.location, games.starts_at, games.duration_minutes, games.max_players, games.max_guests_per_player, games.game_spots_left, games.created_at, games.updated_at,
   users.id, users.name, users.email, users.photo, users.created_at, users.updated_at, users.is_demo
 from games
 join users
@@ -161,10 +151,8 @@ func (q *Queries) GameGetByIdWithOrganizer(ctx context.Context, id string) (Game
 		&i.Game.StartsAt,
 		&i.Game.DurationMinutes,
 		&i.Game.MaxPlayers,
-		&i.Game.MaxWaitlistSize,
 		&i.Game.MaxGuestsPerPlayer,
 		&i.Game.GameSpotsLeft,
-		&i.Game.WaitlistSpotsLeft,
 		&i.Game.CreatedAt,
 		&i.Game.UpdatedAt,
 		&i.User.ID,
@@ -267,12 +255,10 @@ set
   starts_at = coalesce(?7, starts_at),
   duration_minutes = coalesce(nullif(cast(?8 as integer), 0), duration_minutes),
   max_players = coalesce(nullif(cast(?9 as integer), 0), max_players),
-  max_waitlist_size = coalesce(?10, max_waitlist_size),
-  max_guests_per_player = coalesce(?11, max_guests_per_player),
-  game_spots_left = coalesce(?12, game_spots_left),
-  waitlist_spots_left = coalesce(?13, waitlist_spots_left),
+  max_guests_per_player = coalesce(?10, max_guests_per_player),
+  game_spots_left = coalesce(?11, game_spots_left),
   updated_at = current_timestamp
-where id = ?14
+where id = ?12
 `
 
 type GameUpdateParams struct {
@@ -285,10 +271,8 @@ type GameUpdateParams struct {
 	StartsAt           sql.NullTime
 	DurationMinutes    int64
 	MaxPlayers         sql.NullInt64
-	MaxWaitlistSize    sql.NullInt64
 	MaxGuestsPerPlayer sql.NullInt64
 	GameSpotsLeft      sql.NullInt64
-	WaitlistSpotsLeft  sql.NullInt64
 	ID                 string
 }
 
@@ -303,10 +287,8 @@ func (q *Queries) GameUpdate(ctx context.Context, arg GameUpdateParams) error {
 		arg.StartsAt,
 		arg.DurationMinutes,
 		arg.MaxPlayers,
-		arg.MaxWaitlistSize,
 		arg.MaxGuestsPerPlayer,
 		arg.GameSpotsLeft,
-		arg.WaitlistSpotsLeft,
 		arg.ID,
 	)
 	return err

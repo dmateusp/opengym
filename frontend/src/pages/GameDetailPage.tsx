@@ -52,11 +52,9 @@ interface Game {
   startsAt?: string;
   durationMinutes?: number;
   maxPlayers?: number;
-  maxWaitlistSize?: number;
   maxGuestsPerPlayer?: number;
   totalPriceCents?: number;
   gameSpotsLeft?: number;
-  waitlistSpotsLeft?: number;
   createdAt: string;
   updatedAt: string;
   publishedAt?: string | null;
@@ -335,20 +333,6 @@ export default function GameDetailPage() {
     return { going, waitlisted, notGoing };
   }, [participants]);
 
-  const isGameFull = useMemo(() => {
-    if (!game) return false;
-
-    const noGameSpots =
-      typeof game.gameSpotsLeft === "number" &&
-      game.gameSpotsLeft <= 0;
-
-    const noWaitlistSpots =
-      typeof game.waitlistSpotsLeft === "number" &&
-      game.waitlistSpotsLeft <= 0;
-
-    return noGameSpots && noWaitlistSpots;
-  }, [game]);
-
   const organizerJoiningWouldDisplace = useMemo(() => {
     if (!game || !isOrganizer) return false;
     const guestCount = parseInt(guestCountInput, 10) || 0;
@@ -360,8 +344,8 @@ export default function GameDetailPage() {
   }, [game, isOrganizer, guestCountInput]);
 
   const joinButtonDisabled = useMemo(() => {
-    return isUpdatingParticipation || (!isOrganizer && isGameFull);
-  }, [isUpdatingParticipation, isOrganizer, isGameFull]);
+    return isUpdatingParticipation;
+  }, [isUpdatingParticipation]);
   const publishRequirements = useMemo(() => {
     if (!game) return [];
     return [
@@ -385,11 +369,6 @@ export default function GameDetailPage() {
         label: t("game.maxPlayersSet"),
         met: typeof game.maxPlayers === "number" && (game.maxPlayers > 0 || game.maxPlayers === -1),
         field: "maxPlayers",
-      },
-      {
-        label: t("game.waitlistSizeSet"),
-        met: typeof game.maxWaitlistSize === "number",
-        field: "maxWaitlistSize",
       },
       {
         label: t("game.guestsPerPlayerSet"),
@@ -430,10 +409,8 @@ export default function GameDetailPage() {
 
   // Total slots to display in the participant grids.
   // ParticipantGrid uses this to calculate empty slots: totalSlots - participants.length
-  // This should be the game's capacity (maxPlayers/maxWaitlistSize), not remaining spots.
+  // This should be the game's capacity (maxPlayers), not remaining spots.
   const maxGoingCount = game?.maxPlayers;
-  const maxWaitlistCount = game?.maxWaitlistSize;
-
   useEffect(() => {
     if (game?.publishedAt) {
       setPublishAtInput(toLocalInputValue(game.publishedAt));
@@ -843,7 +820,7 @@ export default function GameDetailPage() {
 
             {/* Quick Stats */}
             {isPublished && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-6 pt-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-4 mt-6 pt-6">
                 <div className="text-center">
                   {/* Organizer Info */}
                   {organizer && (
@@ -874,14 +851,6 @@ export default function GameDetailPage() {
                   </div>
                   <div className="text-xs text-gray-600 font-medium">
                     {t("game.spotsLeft")}
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-accent mb-1">
-                    {formatSpotsLeft(game?.waitlistSpotsLeft)}
-                  </div>
-                  <div className="text-xs text-gray-600 font-medium">
-                    {t("game.waitlistSpotsLeft")}
                   </div>
                 </div>
               </div>
@@ -1038,49 +1007,6 @@ export default function GameDetailPage() {
                   >
                     {game?.maxPlayers
                       ? `${t("common.upTo")} ${game.maxPlayers}`
-                      : isOrganizer
-                      ? t("common.clickToSet")
-                      : "—"}
-                  </div>
-                )}
-              </div>
-
-              {/* Waitlist Size */}
-              <div>
-                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
-                  {t("common.waitlist")}
-                </label>
-                {editingField === "maxWaitlistSize" && isOrganizer ? (
-                  <NumberLimitEditor
-                    value={game?.maxWaitlistSize}
-                    onSave={(value) => {
-                      if (value !== undefined) {
-                        saveField("maxWaitlistSize", value);
-                      } else {
-                        cancelEditing();
-                      }
-                    }}
-                    onCancel={cancelEditing}
-                    placeholder={t("common.enterMaxWaitlistSize")}
-                  />
-                ) : (
-                  <div
-                    onClick={() =>
-                      startEditing(
-                        "maxWaitlistSize",
-                        game?.maxWaitlistSize ?? ""
-                      )
-                    }
-                    className={`text-lg font-semibold cursor-text transition ${
-                      typeof game?.maxWaitlistSize === "number"
-                        ? "text-gray-900"
-                        : "text-gray-400"
-                    }`}
-                  >
-                    {typeof game?.maxWaitlistSize === "number"
-                      ? game.maxWaitlistSize === 0
-                        ? t("common.disabled")
-                        : `${t("common.upTo")} ${game.maxWaitlistSize}`
                       : isOrganizer
                       ? t("common.clickToSet")
                       : "—"}
@@ -1281,18 +1207,13 @@ export default function GameDetailPage() {
                   </div>
 
                   {/* Waitlist */}
-                  {(game.maxWaitlistSize || 0) > 0 && (
+                  {participantCounts.waitlisted > 0 && (
                     <div className="mt-6 pt-6 border-t border-gray-200">
                       <p className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
                         <Clock className="h-4 w-4 text-gray-600" />
                         <span>
                           {t("participants.waitlistCount")} (
-                          {(game?.maxWaitlistSize || 0) > 0
-                            ? String(participantCounts.waitlisted) +
-                              "/" +
-                              String(game?.maxWaitlistSize || "?")
-                            : String(participantCounts.waitlisted)}
-                          )
+                          {participantCounts.waitlisted})
                         </span>
                       </p>
                       <ParticipantGrid
@@ -1300,12 +1221,10 @@ export default function GameDetailPage() {
                           (p) => p.status === "waitlisted"
                         )}
                         organizerId={game?.organizerId}
-                        totalSlots={maxWaitlistCount}
                         occupiedSlots={participantCounts.waitlisted}
                         icon={Clock}
                         size="sm"
                         opacity={0.7}
-                        emptySlotLabel={t("common.available")}
                       />
                     </div>
                   )}
@@ -1594,11 +1513,6 @@ export default function GameDetailPage() {
                       }
                       return null;
                     })()}
-                    {!isOrganizer && isGameFull && (
-                      <p className="text-xs text-gray-500">
-                        {t("participants.gameIsFull")}
-                      </p>
-                    )}
                   </div>
                 )}
               </div>

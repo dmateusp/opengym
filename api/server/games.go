@@ -60,11 +60,6 @@ func (srv *server) PostApiGames(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.MaxWaitlistSize != nil && *req.MaxWaitlistSize < 0 {
-		http.Error(w, "maxWaitlistSize cannot be negative", http.StatusBadRequest)
-		return
-	}
-
 	if req.MaxGuestsPerPlayer != nil && *req.MaxGuestsPerPlayer < 0 {
 		http.Error(w, "maxGuestsPerPlayer cannot be negative", http.StatusBadRequest)
 		return
@@ -115,11 +110,6 @@ func (srv *server) PostApiGames(w http.ResponseWriter, r *http.Request) {
 
 		if req.MaxGuestsPerPlayer != nil {
 			params.MaxGuestsPerPlayer = int64(*req.MaxGuestsPerPlayer)
-		}
-
-		if req.MaxWaitlistSize != nil {
-			params.MaxWaitlistSize = int64(*req.MaxWaitlistSize)
-			params.WaitlistSpotsLeft = int64(*req.MaxWaitlistSize)
 		}
 
 		game, err = srv.querier.GameCreate(r.Context(), params)
@@ -420,19 +410,6 @@ func (srv *server) PatchApiGamesId(w http.ResponseWriter, r *http.Request, id st
 			Valid: true,
 			Int64: int64(*req.MaxGuestsPerPlayer),
 		}
-	}
-
-	if req.MaxWaitlistSize != nil {
-		newMaxWaitlist := int64(*req.MaxWaitlistSize)
-		params.MaxWaitlistSize = sql.NullInt64{Valid: true, Int64: newMaxWaitlist}
-		newWaitlistSpotsLeft := game.WaitlistSpotsLeft + (newMaxWaitlist - game.MaxWaitlistSize)
-		if newWaitlistSpotsLeft < 0 {
-			newWaitlistSpotsLeft = 0
-		}
-		if newWaitlistSpotsLeft > newMaxWaitlist {
-			newWaitlistSpotsLeft = newMaxWaitlist
-		}
-		params.WaitlistSpotsLeft = sql.NullInt64{Valid: true, Int64: newWaitlistSpotsLeft}
 	}
 
 	err = querierWithTx.GameUpdate(r.Context(), params)
