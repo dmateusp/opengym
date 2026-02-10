@@ -185,16 +185,38 @@ func (s *server) PostApiGamesIdParticipants(w http.ResponseWriter, r *http.Reque
 	}
 
 	var gameSpotsLeft sql.NullInt64
+	var computedStatus api.ParticipationStatus
+
 	switch req.Status {
 	case api.Going:
-		// Check if there's space in the main list, otherwise they go to waitlist (which is unlimited)
-		if participantsGroup <= int(game.GameSpotsLeft) {
-			// Joining the main list - decrement game spots
-			gameSpotsLeft.Int64 = game.GameSpotsLeft - int64(participantsGroup)
-			gameSpotsLeft.Valid = true
+		// Determine if organizer or if there's space in the main list
+		isOrganizer := game.OrganizerID == int64(authInfo.UserId)
+		if isOrganizer || participantsGroup <= int(game.GameSpotsLeft) {
+			// Organizer has priority, or user fits in main list - they're going
+			if err := computedStatus.FromParticipationStatusUpdate(api.Going); err != nil {
+				http.Error(w, fmt.Sprintf("failed to encode status: %s", err.Error()), http.StatusInternalServerError)
+				return
+			}
+			if participantsGroup <= int(game.GameSpotsLeft) {
+				// Decrement game spots
+				gameSpotsLeft.Int64 = game.GameSpotsLeft - int64(participantsGroup)
+				gameSpotsLeft.Valid = true
+			}
+			// Organizer joining without space: they go but spots aren't decremented (they'll push others to waitlist)
+		} else {
+			// Non-organizer, not enough space: they're waitlisted
+			if err := computedStatus.FromParticipationStatus1(api.Waitlisted); err != nil {
+				http.Error(w, fmt.Sprintf("failed to encode status: %s", err.Error()), http.StatusInternalServerError)
+				return
+			}
 		}
-		// If participantsGroup > GameSpotsLeft, they go to waitlist and we don't update any counter
-	case api.NotGoing: // We have to figure out if we're freeing spots in the "going" list, waitlist, or if the player was already in the "not going" list
+
+	case api.NotGoing:
+		if err := computedStatus.FromParticipationStatusUpdate(api.NotGoing); err != nil {
+			http.Error(w, fmt.Sprintf("failed to encode status: %s", err.Error()), http.StatusInternalServerError)
+			return
+		}
+		// We need to determine if they were in the main list to free up spots
 		participants, err := querierWithTx.ParticipantsList(r.Context(), db.ParticipantsListParams{
 			OrganizerID: game.OrganizerID,
 			GameID:      id,
@@ -272,16 +294,10 @@ func (s *server) PostApiGamesIdParticipants(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	var status api.ParticipationStatus
-	if err := status.FromParticipationStatusUpdate(req.Status); err != nil {
-		http.Error(w, fmt.Sprintf("failed to encode status: %s", err.Error()), http.StatusInternalServerError)
-		return
-	}
-
 	resp := api.GameParticipation{
 		GameId: id,
 		UserId: strconv.FormatInt(int64(authInfo.UserId), 10),
-		Status: status,
+		Status: computedStatus,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
