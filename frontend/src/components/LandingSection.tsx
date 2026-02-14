@@ -18,11 +18,13 @@ export default function LandingSection() {
       icon: '🏐',
       label: 'landing.createGames',
       descLabel: 'landing.createGamesDesc',
+      href: undefined,
     },
     {
       icon: '👥',
       label: 'landing.manageParticipants',
       descLabel: 'landing.manageParticipantsDesc',
+      href: undefined,
     },
     {
       icon: '🔓',
@@ -30,7 +32,7 @@ export default function LandingSection() {
       descLabel: 'landing.openSourceDesc',
       href: 'https://github.com/dmateusp/opengym',
     },
-  ]
+  ] as const
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-blue-50">
