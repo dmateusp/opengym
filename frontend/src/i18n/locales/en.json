@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "OpenGym"
+    "title": "opengym"
   },
   "auth": {
     "login": "Login",
@@ -14,6 +14,20 @@
     "noGamesYet": "No games yet",
     "noGamesDescription": "Be the one who starts it. Organize your first game and get people together.",
     "welcome": "Welcome"
+  },
+  "landing": {
+    "title": "opengym",
+    "subtitle": "The easiest way to organize and manage your games with friends",
+    "getStarted": "Get Started",
+    "createGames": "Create Games",
+    "createGamesDesc": "Organize and schedule games with a few clicks",
+    "manageParticipants": "Manage Participants",
+    "manageParticipantsDesc": "Easily track who is joining and manage waitlists",
+    "openSource": "Open Source",
+    "openSourceDesc": "Built in the open on GitHub.",
+    "cta": "Ready to organize your next game?",
+    "ctaDescription": "Sign in with Google to create games, invite friends, and manage participants effortlessly.",
+    "signIn": "Sign In"
   },
   "game": {
     "name": "Game Name",

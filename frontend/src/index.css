@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    /* OpenGym Brand Colors - Bold, flat, saturated like sports gear */
+    /* opengym Brand Colors - Bold, flat, saturated like sports gear */
     --background: 50 100% 97.5%;
     --foreground: 0 0% 13%;
     --card: 0 0% 100%;

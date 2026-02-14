@@ -5,6 +5,7 @@ import CreateGameModal from '@/components/games/CreateGameModal'
 import GamesList from '@/components/games/GamesList'
 import UserProfileMenu from '@/components/auth/UserProfileMenu'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
+import LandingSection from '@/components/LandingSection'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { API_BASE_URL } from '@/lib/api'
 import { fetchWithDemoRecovery } from '@/lib/fetchWithDemoRecovery'
@@ -45,7 +46,12 @@ export default function HomePage() {
     // Quick check to decide whether to show empty state or list
     checkGames()
   }, [])
+// Show landing page if user is not authenticated
+  if (!user) {
+    return <LandingSection />
+  }
 
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-blue-50">
       <div className="container mx-auto px-4 py-8 max-w-5xl">
