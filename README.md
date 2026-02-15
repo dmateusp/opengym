@@ -4,6 +4,10 @@ opengym is a web-app to organize and participate in group sports.
 
 The name comes from the term "open gym" used in volleyball to refer to a casual practice session which isn't coach-led.
 
+Screenshot in demo mode:
+
+ <img src="./docs/images/opengym_demo_screenshot.png" alt="App screenshot" width="700">
+
 ## Getting Started
 
 You can start running a "demo" version of opengym locally by running the following command:
