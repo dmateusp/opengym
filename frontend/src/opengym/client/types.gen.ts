@@ -593,7 +593,7 @@ export type GetApiGamesByIdParticipantsResponses = {
 
 export type GetApiGamesByIdParticipantsResponse = GetApiGamesByIdParticipantsResponses[keyof GetApiGamesByIdParticipantsResponses];
 
-export type PostApiGamesByIdParticipantsData = {
+export type PutApiGamesByIdParticipantsData = {
     body: UpdateGameParticipationRequest;
     path: {
         /**
@@ -605,7 +605,7 @@ export type PostApiGamesByIdParticipantsData = {
     url: '/api/games/{id}/participants';
 };
 
-export type PostApiGamesByIdParticipantsErrors = {
+export type PutApiGamesByIdParticipantsErrors = {
     /**
      * Invalid request data
      */
@@ -620,13 +620,13 @@ export type PostApiGamesByIdParticipantsErrors = {
     404: Error;
 };
 
-export type PostApiGamesByIdParticipantsError = PostApiGamesByIdParticipantsErrors[keyof PostApiGamesByIdParticipantsErrors];
+export type PutApiGamesByIdParticipantsError = PutApiGamesByIdParticipantsErrors[keyof PutApiGamesByIdParticipantsErrors];
 
-export type PostApiGamesByIdParticipantsResponses = {
+export type PutApiGamesByIdParticipantsResponses = {
     /**
      * Participation status updated successfully
      */
     200: GameParticipation;
 };
 
-export type PostApiGamesByIdParticipantsResponse = PostApiGamesByIdParticipantsResponses[keyof PostApiGamesByIdParticipantsResponses];
+export type PutApiGamesByIdParticipantsResponse = PutApiGamesByIdParticipantsResponses[keyof PutApiGamesByIdParticipantsResponses];

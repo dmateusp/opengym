@@ -113,7 +113,7 @@ func (s *server) GetApiGamesIdParticipants(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func (s *server) PostApiGamesIdParticipants(w http.ResponseWriter, r *http.Request, id string) {
+func (s *server) PutApiGamesIdParticipants(w http.ResponseWriter, r *http.Request, id string) {
 	authInfo, ok := auth.FromCtx(r.Context())
 	if !ok {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)

@@ -21,7 +21,7 @@ import (
 	dbtesting "github.com/dmateusp/opengym/db/testing"
 )
 
-func TestPostApiGamesIdParticipants_Unauthorized(t *testing.T) {
+func TestPutApiGamesIdParticipants_Unauthorized(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 	staticClock := clock.StaticClock{Time: time.Now()}
@@ -30,17 +30,17 @@ func TestPostApiGamesIdParticipants_Unauthorized(t *testing.T) {
 	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
 
 	body, _ := json.Marshal(api.UpdateGameParticipationRequest{Status: api.Going})
-	r := httptest.NewRequest(http.MethodPost, "/api/games/g1/participants", bytes.NewReader(body))
+	r := httptest.NewRequest(http.MethodPut, "/api/games/g1/participants", bytes.NewReader(body))
 	w := httptest.NewRecorder()
 
-	srv.PostApiGamesIdParticipants(w, r, "g1")
+	srv.PutApiGamesIdParticipants(w, r, "g1")
 
 	if w.Code != http.StatusUnauthorized {
 		t.Fatalf("expected status %d, got %d", http.StatusUnauthorized, w.Code)
 	}
 }
 
-func TestPostApiGamesIdParticipants_InvalidBody(t *testing.T) {
+func TestPutApiGamesIdParticipants_InvalidBody(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 	staticClock := clock.StaticClock{Time: time.Now()}
@@ -49,18 +49,18 @@ func TestPostApiGamesIdParticipants_InvalidBody(t *testing.T) {
 	querier := db.New(sqlDB)
 	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
 
-	r := httptest.NewRequest(http.MethodPost, "/api/games/g1/participants", bytes.NewReader([]byte("{invalid")))
+	r := httptest.NewRequest(http.MethodPut, "/api/games/g1/participants", bytes.NewReader([]byte("{invalid")))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(userID)}))
 	w := httptest.NewRecorder()
 
-	srv.PostApiGamesIdParticipants(w, r, "g1")
+	srv.PutApiGamesIdParticipants(w, r, "g1")
 
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, w.Code)
 	}
 }
 
-func TestPostApiGamesIdParticipants_InvalidStatus(t *testing.T) {
+func TestPutApiGamesIdParticipants_InvalidStatus(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 	staticClock := clock.StaticClock{Time: time.Now()}
@@ -72,18 +72,18 @@ func TestPostApiGamesIdParticipants_InvalidStatus(t *testing.T) {
 	createGame(t, querier, "g1", userID, sql.NullTime{Time: time.Now().Add(-time.Hour), Valid: true})
 
 	body := []byte(`{"status":"maybe"}`)
-	r := httptest.NewRequest(http.MethodPost, "/api/games/g1/participants", bytes.NewReader(body))
+	r := httptest.NewRequest(http.MethodPut, "/api/games/g1/participants", bytes.NewReader(body))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(userID)}))
 	w := httptest.NewRecorder()
 
-	srv.PostApiGamesIdParticipants(w, r, "g1")
+	srv.PutApiGamesIdParticipants(w, r, "g1")
 
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, w.Code)
 	}
 }
 
-func TestPostApiGamesIdParticipants_GameNotFound(t *testing.T) {
+func TestPutApiGamesIdParticipants_GameNotFound(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 	staticClock := clock.StaticClock{Time: time.Now()}
@@ -93,18 +93,18 @@ func TestPostApiGamesIdParticipants_GameNotFound(t *testing.T) {
 	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
 
 	body, _ := json.Marshal(api.UpdateGameParticipationRequest{Status: api.Going})
-	r := httptest.NewRequest(http.MethodPost, "/api/games/missing/participants", bytes.NewReader(body))
+	r := httptest.NewRequest(http.MethodPut, "/api/games/missing/participants", bytes.NewReader(body))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(userID)}))
 	w := httptest.NewRecorder()
 
-	srv.PostApiGamesIdParticipants(w, r, "missing")
+	srv.PutApiGamesIdParticipants(w, r, "missing")
 
 	if w.Code != http.StatusNotFound {
 		t.Fatalf("expected status %d, got %d", http.StatusNotFound, w.Code)
 	}
 }
 
-func TestPostApiGamesIdParticipants_NonOrganizerRestrictions(t *testing.T) {
+func TestPutApiGamesIdParticipants_NonOrganizerRestrictions(t *testing.T) {
 	cases := []struct {
 		name        string
 		publishedAt sql.NullTime
@@ -131,11 +131,11 @@ func TestPostApiGamesIdParticipants_NonOrganizerRestrictions(t *testing.T) {
 
 			req := api.UpdateGameParticipationRequest{Status: api.Going}
 			body, _ := json.Marshal(req)
-			r := httptest.NewRequest(http.MethodPost, "/api/games/g1/participants", bytes.NewReader(body))
+			r := httptest.NewRequest(http.MethodPut, "/api/games/g1/participants", bytes.NewReader(body))
 			r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(participantID)}))
 			w := httptest.NewRecorder()
 
-			srv.PostApiGamesIdParticipants(w, r, "g1")
+			srv.PutApiGamesIdParticipants(w, r, "g1")
 
 			if w.Code != tc.expectCode {
 				t.Fatalf("expected status %d, got %d", tc.expectCode, w.Code)
@@ -175,7 +175,7 @@ func TestPostApiGamesIdParticipants_NonOrganizerRestrictions(t *testing.T) {
 	}
 }
 
-func TestPostApiGamesIdParticipants_OrganizerCanUpdateWhenUnpublished(t *testing.T) {
+func TestPutApiGamesIdParticipants_OrganizerCanUpdateWhenUnpublished(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 	staticClock := clock.StaticClock{Time: time.Now()}
@@ -187,11 +187,11 @@ func TestPostApiGamesIdParticipants_OrganizerCanUpdateWhenUnpublished(t *testing
 	createGame(t, querier, "g1", organizerID, sql.NullTime{Valid: false})
 
 	body, _ := json.Marshal(api.UpdateGameParticipationRequest{Status: api.NotGoing})
-	r := httptest.NewRequest(http.MethodPost, "/api/games/g1/participants", bytes.NewReader(body))
+	r := httptest.NewRequest(http.MethodPut, "/api/games/g1/participants", bytes.NewReader(body))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
 	w := httptest.NewRecorder()
 
-	srv.PostApiGamesIdParticipants(w, r, "g1")
+	srv.PutApiGamesIdParticipants(w, r, "g1")
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected status %d, got %d", http.StatusOK, w.Code)
@@ -220,7 +220,7 @@ func TestPostApiGamesIdParticipants_OrganizerCanUpdateWhenUnpublished(t *testing
 	}
 }
 
-func TestPostApiGamesIdParticipants_ConfirmParticipation(t *testing.T) {
+func TestPutApiGamesIdParticipants_ConfirmParticipation(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 	staticClock := clock.StaticClock{Time: time.Now()}
@@ -238,11 +238,11 @@ func TestPostApiGamesIdParticipants_ConfirmParticipation(t *testing.T) {
 	req := api.UpdateGameParticipationRequest{Status: api.Going, Confirmed: &confirm}
 	body, _ := json.Marshal(req)
 
-	r := httptest.NewRequest(http.MethodPost, "/api/games/g1/participants", bytes.NewReader(body))
+	r := httptest.NewRequest(http.MethodPut, "/api/games/g1/participants", bytes.NewReader(body))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(participantID)}))
 	w := httptest.NewRecorder()
 
-	srv.PostApiGamesIdParticipants(w, r, "g1")
+	srv.PutApiGamesIdParticipants(w, r, "g1")
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected status %d, got %d", http.StatusOK, w.Code)
@@ -1035,7 +1035,7 @@ func TestGetApiGamesIdParticipants_GuestsCountTowardsMaxPlayers(t *testing.T) {
 	}
 }
 
-func TestPostApiGamesIdParticipants_GroupTooLargeForGoingListGoesToWaitlist(t *testing.T) {
+func TestPutApiGamesIdParticipants_GroupTooLargeForGoingListGoesToWaitlist(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 	staticClock := clock.StaticClock{Time: time.Now()}
@@ -1071,10 +1071,10 @@ func TestPostApiGamesIdParticipants_GroupTooLargeForGoingListGoesToWaitlist(t *t
 	user1Guests := int(2)
 	req1 := api.UpdateGameParticipationRequest{Status: api.Going, Guests: &user1Guests}
 	body1, _ := json.Marshal(req1)
-	r1 := httptest.NewRequest(http.MethodPost, "/api/games/g1/participants", bytes.NewReader(body1))
+	r1 := httptest.NewRequest(http.MethodPut, "/api/games/g1/participants", bytes.NewReader(body1))
 	r1 = r1.WithContext(auth.WithAuthInfo(r1.Context(), auth.AuthInfo{UserId: int(user1)}))
 	w1 := httptest.NewRecorder()
-	srv.PostApiGamesIdParticipants(w1, r1, "g1")
+	srv.PutApiGamesIdParticipants(w1, r1, "g1")
 	if w1.Code != http.StatusOK {
 		t.Fatalf("failed to add user1: status %d, body: %s", w1.Code, w1.Body.String())
 	}
@@ -1085,11 +1085,11 @@ func TestPostApiGamesIdParticipants_GroupTooLargeForGoingListGoesToWaitlist(t *t
 	req := api.UpdateGameParticipationRequest{Status: api.Going, Guests: &guests}
 	body, _ := json.Marshal(req)
 
-	r := httptest.NewRequest(http.MethodPost, "/api/games/g1/participants", bytes.NewReader(body))
+	r := httptest.NewRequest(http.MethodPut, "/api/games/g1/participants", bytes.NewReader(body))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(participantID)}))
 	w := httptest.NewRecorder()
 
-	srv.PostApiGamesIdParticipants(w, r, "g1")
+	srv.PutApiGamesIdParticipants(w, r, "g1")
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected status %d, got %d, body: %s", http.StatusOK, w.Code, w.Body.String())
@@ -1161,7 +1161,7 @@ func TestPostApiGamesIdParticipants_GroupTooLargeForGoingListGoesToWaitlist(t *t
 	}
 }
 
-func TestPostApiGamesIdParticipants_GuestsExceedsLimit(t *testing.T) {
+func TestPutApiGamesIdParticipants_GuestsExceedsLimit(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 	staticClock := clock.StaticClock{Time: time.Now()}
@@ -1196,11 +1196,11 @@ func TestPostApiGamesIdParticipants_GuestsExceedsLimit(t *testing.T) {
 	req := api.UpdateGameParticipationRequest{Status: api.Going, Guests: &guests}
 	body, _ := json.Marshal(req)
 
-	r := httptest.NewRequest(http.MethodPost, "/api/games/g1/participants", bytes.NewReader(body))
+	r := httptest.NewRequest(http.MethodPut, "/api/games/g1/participants", bytes.NewReader(body))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(participantID)}))
 	w := httptest.NewRecorder()
 
-	srv.PostApiGamesIdParticipants(w, r, "g1")
+	srv.PutApiGamesIdParticipants(w, r, "g1")
 
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, w.Code)
@@ -1214,7 +1214,7 @@ func TestPostApiGamesIdParticipants_GuestsExceedsLimit(t *testing.T) {
 	}
 }
 
-func TestPostApiGamesIdParticipants_GuestsWithinLimit(t *testing.T) {
+func TestPutApiGamesIdParticipants_GuestsWithinLimit(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 	staticClock := clock.StaticClock{Time: time.Now()}
@@ -1249,11 +1249,11 @@ func TestPostApiGamesIdParticipants_GuestsWithinLimit(t *testing.T) {
 	req := api.UpdateGameParticipationRequest{Status: api.Going, Guests: &guests}
 	body, _ := json.Marshal(req)
 
-	r := httptest.NewRequest(http.MethodPost, "/api/games/g1/participants", bytes.NewReader(body))
+	r := httptest.NewRequest(http.MethodPut, "/api/games/g1/participants", bytes.NewReader(body))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(participantID)}))
 	w := httptest.NewRecorder()
 
-	srv.PostApiGamesIdParticipants(w, r, "g1")
+	srv.PutApiGamesIdParticipants(w, r, "g1")
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected status %d, got %d, body: %s", http.StatusOK, w.Code, w.Body.String())
@@ -1284,7 +1284,7 @@ func TestPostApiGamesIdParticipants_GuestsWithinLimit(t *testing.T) {
 	}
 }
 
-func TestPostApiGamesIdParticipants_UpdateGuestsChangesQueueOrder(t *testing.T) {
+func TestPutApiGamesIdParticipants_UpdateGuestsChangesQueueOrder(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 	staticClock := clock.StaticClock{Time: time.Now()}
@@ -1339,11 +1339,11 @@ func TestPostApiGamesIdParticipants_UpdateGuestsChangesQueueOrder(t *testing.T) 
 	req := api.UpdateGameParticipationRequest{Status: api.Going, Guests: &guests}
 	body, _ := json.Marshal(req)
 
-	r := httptest.NewRequest(http.MethodPost, "/api/games/g1/participants", bytes.NewReader(body))
+	r := httptest.NewRequest(http.MethodPut, "/api/games/g1/participants", bytes.NewReader(body))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(user1)}))
 	w := httptest.NewRecorder()
 
-	srv.PostApiGamesIdParticipants(w, r, "g1")
+	srv.PutApiGamesIdParticipants(w, r, "g1")
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected status %d, got %d", http.StatusOK, w.Code)
@@ -1387,7 +1387,7 @@ func TestPostApiGamesIdParticipants_UpdateGuestsChangesQueueOrder(t *testing.T) 
 	}
 }
 
-func TestPostApiGamesIdParticipants_GoingReducesGameSpotsLeft(t *testing.T) {
+func TestPutApiGamesIdParticipants_GoingReducesGameSpotsLeft(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 	staticClock := clock.StaticClock{Time: time.Now()}
@@ -1421,11 +1421,11 @@ func TestPostApiGamesIdParticipants_GoingReducesGameSpotsLeft(t *testing.T) {
 	req := api.UpdateGameParticipationRequest{Status: api.Going, Guests: &guests}
 	body, _ := json.Marshal(req)
 
-	r := httptest.NewRequest(http.MethodPost, "/api/games/gspots/participants", bytes.NewReader(body))
+	r := httptest.NewRequest(http.MethodPut, "/api/games/gspots/participants", bytes.NewReader(body))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(participantID)}))
 	w := httptest.NewRecorder()
 
-	srv.PostApiGamesIdParticipants(w, r, "gspots")
+	srv.PutApiGamesIdParticipants(w, r, "gspots")
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected status %d, got %d, body: %s", http.StatusOK, w.Code, w.Body.String())
@@ -1442,7 +1442,7 @@ func TestPostApiGamesIdParticipants_GoingReducesGameSpotsLeft(t *testing.T) {
 	}
 }
 
-func TestPostApiGamesIdParticipants_NotGoingFreesGameSpotsLeft(t *testing.T) {
+func TestPutApiGamesIdParticipants_NotGoingFreesGameSpotsLeft(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 	staticClock := clock.StaticClock{Time: time.Now()}
@@ -1476,10 +1476,10 @@ func TestPostApiGamesIdParticipants_NotGoingFreesGameSpotsLeft(t *testing.T) {
 	// A joins with no guests (uses 1 spot) via server
 	initReqA := api.UpdateGameParticipationRequest{Status: api.Going}
 	initBodyA, _ := json.Marshal(initReqA)
-	rA := httptest.NewRequest(http.MethodPost, "/api/games/gfree/participants", bytes.NewReader(initBodyA))
+	rA := httptest.NewRequest(http.MethodPut, "/api/games/gfree/participants", bytes.NewReader(initBodyA))
 	rA = rA.WithContext(auth.WithAuthInfo(rA.Context(), auth.AuthInfo{UserId: int(userA)}))
 	wA := httptest.NewRecorder()
-	srv.PostApiGamesIdParticipants(wA, rA, "gfree")
+	srv.PutApiGamesIdParticipants(wA, rA, "gfree")
 	if wA.Code != http.StatusOK {
 		t.Fatalf("expected status %d for A join, got %d", http.StatusOK, wA.Code)
 	}
@@ -1487,10 +1487,10 @@ func TestPostApiGamesIdParticipants_NotGoingFreesGameSpotsLeft(t *testing.T) {
 	// B joins (uses 1 spot) via server
 	initReqB := api.UpdateGameParticipationRequest{Status: api.Going}
 	initBodyB, _ := json.Marshal(initReqB)
-	rB := httptest.NewRequest(http.MethodPost, "/api/games/gfree/participants", bytes.NewReader(initBodyB))
+	rB := httptest.NewRequest(http.MethodPut, "/api/games/gfree/participants", bytes.NewReader(initBodyB))
 	rB = rB.WithContext(auth.WithAuthInfo(rB.Context(), auth.AuthInfo{UserId: int(userB)}))
 	wB := httptest.NewRecorder()
-	srv.PostApiGamesIdParticipants(wB, rB, "gfree")
+	srv.PutApiGamesIdParticipants(wB, rB, "gfree")
 	if wB.Code != http.StatusOK {
 		t.Fatalf("expected status %d for B join, got %d", http.StatusOK, wB.Code)
 	}
@@ -1500,11 +1500,11 @@ func TestPostApiGamesIdParticipants_NotGoingFreesGameSpotsLeft(t *testing.T) {
 	req := api.UpdateGameParticipationRequest{Status: statusReq}
 	body, _ := json.Marshal(req)
 
-	r := httptest.NewRequest(http.MethodPost, "/api/games/gfree/participants", bytes.NewReader(body))
+	r := httptest.NewRequest(http.MethodPut, "/api/games/gfree/participants", bytes.NewReader(body))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(userA)}))
 	w := httptest.NewRecorder()
 
-	srv.PostApiGamesIdParticipants(w, r, "gfree")
+	srv.PutApiGamesIdParticipants(w, r, "gfree")
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected status %d, got %d, body: %s", http.StatusOK, w.Code, w.Body.String())
@@ -1570,10 +1570,10 @@ func TestOrganizerLateJoinFullGamePushesLastToWaitlist(t *testing.T) {
 	// Organizer joins late via POST
 	req := api.UpdateGameParticipationRequest{Status: api.Going}
 	body, _ := json.Marshal(req)
-	r := httptest.NewRequest(http.MethodPost, "/api/games/gorgpush/participants", bytes.NewReader(body))
+	r := httptest.NewRequest(http.MethodPut, "/api/games/gorgpush/participants", bytes.NewReader(body))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
 	w := httptest.NewRecorder()
-	srv.PostApiGamesIdParticipants(w, r, "gorgpush")
+	srv.PutApiGamesIdParticipants(w, r, "gorgpush")
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected status %d, got %d", http.StatusOK, w.Code)
 	}
@@ -1610,7 +1610,7 @@ func TestOrganizerLateJoinFullGamePushesLastToWaitlist(t *testing.T) {
 	}
 }
 
-func TestPostApiGamesIdParticipants_NotGoingClearsGuests(t *testing.T) {
+func TestPutApiGamesIdParticipants_NotGoingClearsGuests(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 	staticClock := clock.StaticClock{Time: time.Now()}
@@ -1645,11 +1645,11 @@ func TestPostApiGamesIdParticipants_NotGoingClearsGuests(t *testing.T) {
 	req := api.UpdateGameParticipationRequest{Status: api.Going, Guests: &guests}
 	body, _ := json.Marshal(req)
 
-	r := httptest.NewRequest(http.MethodPost, "/api/games/g1/participants", bytes.NewReader(body))
+	r := httptest.NewRequest(http.MethodPut, "/api/games/g1/participants", bytes.NewReader(body))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(participantID)}))
 	w := httptest.NewRecorder()
 
-	srv.PostApiGamesIdParticipants(w, r, "g1")
+	srv.PutApiGamesIdParticipants(w, r, "g1")
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected status %d, got %d", http.StatusOK, w.Code)
@@ -1670,11 +1670,11 @@ func TestPostApiGamesIdParticipants_NotGoingClearsGuests(t *testing.T) {
 	req = api.UpdateGameParticipationRequest{Status: api.NotGoing, Guests: &guestsInRequest}
 	body, _ = json.Marshal(req)
 
-	r = httptest.NewRequest(http.MethodPost, "/api/games/g1/participants", bytes.NewReader(body))
+	r = httptest.NewRequest(http.MethodPut, "/api/games/g1/participants", bytes.NewReader(body))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(participantID)}))
 	w = httptest.NewRecorder()
 
-	srv.PostApiGamesIdParticipants(w, r, "g1")
+	srv.PutApiGamesIdParticipants(w, r, "g1")
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected status %d, got %d", http.StatusOK, w.Code)
@@ -1703,7 +1703,7 @@ func TestPostApiGamesIdParticipants_NotGoingClearsGuests(t *testing.T) {
 	}
 }
 
-func TestPostApiGamesIdParticipants_NonOrganizerFitsInMainList(t *testing.T) {
+func TestPutApiGamesIdParticipants_NonOrganizerFitsInMainList(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 	staticClock := clock.StaticClock{Time: time.Now()}
@@ -1738,11 +1738,11 @@ func TestPostApiGamesIdParticipants_NonOrganizerFitsInMainList(t *testing.T) {
 	req := api.UpdateGameParticipationRequest{Status: api.Going, Guests: &guests}
 	body, _ := json.Marshal(req)
 
-	r := httptest.NewRequest(http.MethodPost, "/api/games/gmainlist/participants", bytes.NewReader(body))
+	r := httptest.NewRequest(http.MethodPut, "/api/games/gmainlist/participants", bytes.NewReader(body))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(participantID)}))
 	w := httptest.NewRecorder()
 
-	srv.PostApiGamesIdParticipants(w, r, "gmainlist")
+	srv.PutApiGamesIdParticipants(w, r, "gmainlist")
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected status %d, got %d, body: %s", http.StatusOK, w.Code, w.Body.String())
@@ -1772,7 +1772,7 @@ func TestPostApiGamesIdParticipants_NonOrganizerFitsInMainList(t *testing.T) {
 	}
 }
 
-func TestPostApiGamesIdParticipants_NonOrganizerWaitlistedWhenFull(t *testing.T) {
+func TestPutApiGamesIdParticipants_NonOrganizerWaitlistedWhenFull(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 	staticClock := clock.StaticClock{Time: time.Now()}
@@ -1816,11 +1816,11 @@ func TestPostApiGamesIdParticipants_NonOrganizerWaitlistedWhenFull(t *testing.T)
 	req := api.UpdateGameParticipationRequest{Status: api.Going}
 	body, _ := json.Marshal(req)
 
-	r := httptest.NewRequest(http.MethodPost, "/api/games/gfull/participants", bytes.NewReader(body))
+	r := httptest.NewRequest(http.MethodPut, "/api/games/gfull/participants", bytes.NewReader(body))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(participantID)}))
 	w := httptest.NewRecorder()
 
-	srv.PostApiGamesIdParticipants(w, r, "gfull")
+	srv.PutApiGamesIdParticipants(w, r, "gfull")
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected status %d, got %d, body: %s", http.StatusOK, w.Code, w.Body.String())
@@ -1847,7 +1847,7 @@ func TestPostApiGamesIdParticipants_NonOrganizerWaitlistedWhenFull(t *testing.T)
 	}
 }
 
-func TestPostApiGamesIdParticipants_OrganizerAlwaysGetsGoingStatus(t *testing.T) {
+func TestPutApiGamesIdParticipants_OrganizerAlwaysGetsGoingStatus(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 	staticClock := clock.StaticClock{Time: time.Now()}
@@ -1890,11 +1890,11 @@ func TestPostApiGamesIdParticipants_OrganizerAlwaysGetsGoingStatus(t *testing.T)
 	req := api.UpdateGameParticipationRequest{Status: api.Going}
 	body, _ := json.Marshal(req)
 
-	r := httptest.NewRequest(http.MethodPost, "/api/games/gorgfull/participants", bytes.NewReader(body))
+	r := httptest.NewRequest(http.MethodPut, "/api/games/gorgfull/participants", bytes.NewReader(body))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
 	w := httptest.NewRecorder()
 
-	srv.PostApiGamesIdParticipants(w, r, "gorgfull")
+	srv.PutApiGamesIdParticipants(w, r, "gorgfull")
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected status %d, got %d, body: %s", http.StatusOK, w.Code, w.Body.String())
@@ -1924,7 +1924,7 @@ func TestPostApiGamesIdParticipants_OrganizerAlwaysGetsGoingStatus(t *testing.T)
 	}
 }
 
-func TestPostApiGamesIdParticipants_OrganizerWithGuestsFitsInMainList(t *testing.T) {
+func TestPutApiGamesIdParticipants_OrganizerWithGuestsFitsInMainList(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 	staticClock := clock.StaticClock{Time: time.Now()}
@@ -1958,11 +1958,11 @@ func TestPostApiGamesIdParticipants_OrganizerWithGuestsFitsInMainList(t *testing
 	req := api.UpdateGameParticipationRequest{Status: api.Going, Guests: &guests}
 	body, _ := json.Marshal(req)
 
-	r := httptest.NewRequest(http.MethodPost, "/api/games/gorgmain/participants", bytes.NewReader(body))
+	r := httptest.NewRequest(http.MethodPut, "/api/games/gorgmain/participants", bytes.NewReader(body))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
 	w := httptest.NewRecorder()
 
-	srv.PostApiGamesIdParticipants(w, r, "gorgmain")
+	srv.PutApiGamesIdParticipants(w, r, "gorgmain")
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected status %d, got %d, body: %s", http.StatusOK, w.Code, w.Body.String())
@@ -1991,7 +1991,7 @@ func TestPostApiGamesIdParticipants_OrganizerWithGuestsFitsInMainList(t *testing
 		t.Fatalf("expected game spots left to be 0 (3-3), got %d", game.GameSpotsLeft)
 	}
 }
-func TestPostApiGamesIdParticipants_WaitlistedPromotedWhenMainListLeaves(t *testing.T) {
+func TestPutApiGamesIdParticipants_WaitlistedPromotedWhenMainListLeaves(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 	staticClock := clock.StaticClock{Time: time.Now()}
@@ -2027,10 +2027,10 @@ func TestPostApiGamesIdParticipants_WaitlistedPromotedWhenMainListLeaves(t *test
 	guests1 := int(2)
 	req1 := api.UpdateGameParticipationRequest{Status: api.Going, Guests: &guests1}
 	body1, _ := json.Marshal(req1)
-	r1 := httptest.NewRequest(http.MethodPost, "/api/games/g1/participants", bytes.NewReader(body1))
+	r1 := httptest.NewRequest(http.MethodPut, "/api/games/g1/participants", bytes.NewReader(body1))
 	r1 = r1.WithContext(auth.WithAuthInfo(r1.Context(), auth.AuthInfo{UserId: int(user1)}))
 	w1 := httptest.NewRecorder()
-	srv.PostApiGamesIdParticipants(w1, r1, "g1")
+	srv.PutApiGamesIdParticipants(w1, r1, "g1")
 	if w1.Code != http.StatusOK {
 		t.Fatalf("user1 failed to join: status %d", w1.Code)
 	}
@@ -2047,10 +2047,10 @@ func TestPostApiGamesIdParticipants_WaitlistedPromotedWhenMainListLeaves(t *test
 	// User2 joins (should go to waitlist since no spots left)
 	req2 := api.UpdateGameParticipationRequest{Status: api.Going}
 	body2, _ := json.Marshal(req2)
-	r2 := httptest.NewRequest(http.MethodPost, "/api/games/g1/participants", bytes.NewReader(body2))
+	r2 := httptest.NewRequest(http.MethodPut, "/api/games/g1/participants", bytes.NewReader(body2))
 	r2 = r2.WithContext(auth.WithAuthInfo(r2.Context(), auth.AuthInfo{UserId: int(user2)}))
 	w2 := httptest.NewRecorder()
-	srv.PostApiGamesIdParticipants(w2, r2, "g1")
+	srv.PutApiGamesIdParticipants(w2, r2, "g1")
 	if w2.Code != http.StatusOK {
 		t.Fatalf("user2 failed to join: status %d", w2.Code)
 	}
@@ -2068,10 +2068,10 @@ func TestPostApiGamesIdParticipants_WaitlistedPromotedWhenMainListLeaves(t *test
 	// User3 joins (should also go to waitlist since user2 is already there)
 	req3 := api.UpdateGameParticipationRequest{Status: api.Going}
 	body3, _ := json.Marshal(req3)
-	r3 := httptest.NewRequest(http.MethodPost, "/api/games/g1/participants", bytes.NewReader(body3))
+	r3 := httptest.NewRequest(http.MethodPut, "/api/games/g1/participants", bytes.NewReader(body3))
 	r3 = r3.WithContext(auth.WithAuthInfo(r3.Context(), auth.AuthInfo{UserId: int(user3)}))
 	w3 := httptest.NewRecorder()
-	srv.PostApiGamesIdParticipants(w3, r3, "g1")
+	srv.PutApiGamesIdParticipants(w3, r3, "g1")
 	if w3.Code != http.StatusOK {
 		t.Fatalf("user3 failed to join: status %d", w3.Code)
 	}
@@ -2098,10 +2098,10 @@ func TestPostApiGamesIdParticipants_WaitlistedPromotedWhenMainListLeaves(t *test
 	// Now user1 leaves the main list
 	reqLeave := api.UpdateGameParticipationRequest{Status: api.NotGoing}
 	bodyLeave, _ := json.Marshal(reqLeave)
-	rLeave := httptest.NewRequest(http.MethodPost, "/api/games/g1/participants", bytes.NewReader(bodyLeave))
+	rLeave := httptest.NewRequest(http.MethodPut, "/api/games/g1/participants", bytes.NewReader(bodyLeave))
 	rLeave = rLeave.WithContext(auth.WithAuthInfo(rLeave.Context(), auth.AuthInfo{UserId: int(user1)}))
 	wLeave := httptest.NewRecorder()
-	srv.PostApiGamesIdParticipants(wLeave, rLeave, "g1")
+	srv.PutApiGamesIdParticipants(wLeave, rLeave, "g1")
 	if wLeave.Code != http.StatusOK {
 		t.Fatalf("user1 failed to leave: status %d", wLeave.Code)
 	}
@@ -2172,7 +2172,7 @@ func TestPostApiGamesIdParticipants_WaitlistedPromotedWhenMainListLeaves(t *test
 		t.Fatalf("expected user3 to be promoted to main list (going), got status: %v (err: %v)", user3Status, err)
 	}
 }
-func TestPostApiGamesIdParticipants_OrganizerJoinsLateDemotesNonFittingGroup(t *testing.T) {
+func TestPutApiGamesIdParticipants_OrganizerJoinsLateDemotesNonFittingGroup(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 	staticClock := clock.StaticClock{Time: time.Now()}
@@ -2208,10 +2208,10 @@ func TestPostApiGamesIdParticipants_OrganizerJoinsLateDemotesNonFittingGroup(t *
 	guestsA := int(2)
 	reqA := api.UpdateGameParticipationRequest{Status: api.Going, Guests: &guestsA}
 	bodyA, _ := json.Marshal(reqA)
-	rA := httptest.NewRequest(http.MethodPost, "/api/games/g1/participants", bytes.NewReader(bodyA))
+	rA := httptest.NewRequest(http.MethodPut, "/api/games/g1/participants", bytes.NewReader(bodyA))
 	rA = rA.WithContext(auth.WithAuthInfo(rA.Context(), auth.AuthInfo{UserId: int(userA)}))
 	wA := httptest.NewRecorder()
-	srv.PostApiGamesIdParticipants(wA, rA, "g1")
+	srv.PutApiGamesIdParticipants(wA, rA, "g1")
 	if wA.Code != http.StatusOK {
 		t.Fatalf("userA failed to join: status %d", wA.Code)
 	}
@@ -2225,10 +2225,10 @@ func TestPostApiGamesIdParticipants_OrganizerJoinsLateDemotesNonFittingGroup(t *
 	guestsB := int(1)
 	reqB := api.UpdateGameParticipationRequest{Status: api.Going, Guests: &guestsB}
 	bodyB, _ := json.Marshal(reqB)
-	rB := httptest.NewRequest(http.MethodPost, "/api/games/g1/participants", bytes.NewReader(bodyB))
+	rB := httptest.NewRequest(http.MethodPut, "/api/games/g1/participants", bytes.NewReader(bodyB))
 	rB = rB.WithContext(auth.WithAuthInfo(rB.Context(), auth.AuthInfo{UserId: int(userB)}))
 	wB := httptest.NewRecorder()
-	srv.PostApiGamesIdParticipants(wB, rB, "g1")
+	srv.PutApiGamesIdParticipants(wB, rB, "g1")
 	if wB.Code != http.StatusOK {
 		t.Fatalf("userB failed to join: status %d", wB.Code)
 	}
@@ -2241,10 +2241,10 @@ func TestPostApiGamesIdParticipants_OrganizerJoinsLateDemotesNonFittingGroup(t *
 	// User C joins (1 person, no guests) - goes to waitlist (no space)
 	reqC := api.UpdateGameParticipationRequest{Status: api.Going}
 	bodyC, _ := json.Marshal(reqC)
-	rC := httptest.NewRequest(http.MethodPost, "/api/games/g1/participants", bytes.NewReader(bodyC))
+	rC := httptest.NewRequest(http.MethodPut, "/api/games/g1/participants", bytes.NewReader(bodyC))
 	rC = rC.WithContext(auth.WithAuthInfo(rC.Context(), auth.AuthInfo{UserId: int(userC)}))
 	wC := httptest.NewRecorder()
-	srv.PostApiGamesIdParticipants(wC, rC, "g1")
+	srv.PutApiGamesIdParticipants(wC, rC, "g1")
 	if wC.Code != http.StatusOK {
 		t.Fatalf("userC failed to join: status %d", wC.Code)
 	}
@@ -2263,10 +2263,10 @@ func TestPostApiGamesIdParticipants_OrganizerJoinsLateDemotesNonFittingGroup(t *
 	guestsOrg := int(1)
 	reqOrg := api.UpdateGameParticipationRequest{Status: api.Going, Guests: &guestsOrg}
 	bodyOrg, _ := json.Marshal(reqOrg)
-	rOrg := httptest.NewRequest(http.MethodPost, "/api/games/g1/participants", bytes.NewReader(bodyOrg))
+	rOrg := httptest.NewRequest(http.MethodPut, "/api/games/g1/participants", bytes.NewReader(bodyOrg))
 	rOrg = rOrg.WithContext(auth.WithAuthInfo(rOrg.Context(), auth.AuthInfo{UserId: int(organizerID)}))
 	wOrg := httptest.NewRecorder()
-	srv.PostApiGamesIdParticipants(wOrg, rOrg, "g1")
+	srv.PutApiGamesIdParticipants(wOrg, rOrg, "g1")
 	if wOrg.Code != http.StatusOK {
 		t.Fatalf("organizer failed to join: status %d", wOrg.Code)
 	}
@@ -2327,7 +2327,7 @@ func TestPostApiGamesIdParticipants_OrganizerJoinsLateDemotesNonFittingGroup(t *
 	}
 }
 
-func TestPostApiGamesIdParticipants_OrganizerJoinsLateRecalculatesGameSpots(t *testing.T) {
+func TestPutApiGamesIdParticipants_OrganizerJoinsLateRecalculatesGameSpots(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 	staticClock := clock.StaticClock{Time: time.Now()}
@@ -2360,10 +2360,10 @@ func TestPostApiGamesIdParticipants_OrganizerJoinsLateRecalculatesGameSpots(t *t
 	guestsA := int(2)
 	reqA := api.UpdateGameParticipationRequest{Status: api.Going, Guests: &guestsA}
 	bodyA, _ := json.Marshal(reqA)
-	rA := httptest.NewRequest(http.MethodPost, "/api/games/g1/participants", bytes.NewReader(bodyA))
+	rA := httptest.NewRequest(http.MethodPut, "/api/games/g1/participants", bytes.NewReader(bodyA))
 	rA = rA.WithContext(auth.WithAuthInfo(rA.Context(), auth.AuthInfo{UserId: int(userA)}))
 	wA := httptest.NewRecorder()
-	srv.PostApiGamesIdParticipants(wA, rA, "g1")
+	srv.PutApiGamesIdParticipants(wA, rA, "g1")
 
 	game, _ := querier.GameGetById(context.Background(), "g1")
 	if game.GameSpotsLeft != 2 {
@@ -2375,10 +2375,10 @@ func TestPostApiGamesIdParticipants_OrganizerJoinsLateRecalculatesGameSpots(t *t
 	guestsB := int(2)
 	reqB := api.UpdateGameParticipationRequest{Status: api.Going, Guests: &guestsB}
 	bodyB, _ := json.Marshal(reqB)
-	rB := httptest.NewRequest(http.MethodPost, "/api/games/g1/participants", bytes.NewReader(bodyB))
+	rB := httptest.NewRequest(http.MethodPut, "/api/games/g1/participants", bytes.NewReader(bodyB))
 	rB = rB.WithContext(auth.WithAuthInfo(rB.Context(), auth.AuthInfo{UserId: int(userB)}))
 	wB := httptest.NewRecorder()
-	srv.PostApiGamesIdParticipants(wB, rB, "g1")
+	srv.PutApiGamesIdParticipants(wB, rB, "g1")
 
 	var respB api.GameParticipation
 	json.NewDecoder(wB.Body).Decode(&respB)
@@ -2396,10 +2396,10 @@ func TestPostApiGamesIdParticipants_OrganizerJoinsLateRecalculatesGameSpots(t *t
 	// UserC should fit in main list
 	reqC := api.UpdateGameParticipationRequest{Status: api.Going}
 	bodyC, _ := json.Marshal(reqC)
-	rC := httptest.NewRequest(http.MethodPost, "/api/games/g1/participants", bytes.NewReader(bodyC))
+	rC := httptest.NewRequest(http.MethodPut, "/api/games/g1/participants", bytes.NewReader(bodyC))
 	rC = rC.WithContext(auth.WithAuthInfo(rC.Context(), auth.AuthInfo{UserId: int(userC)}))
 	wC := httptest.NewRecorder()
-	srv.PostApiGamesIdParticipants(wC, rC, "g1")
+	srv.PutApiGamesIdParticipants(wC, rC, "g1")
 
 	var respC api.GameParticipation
 	json.NewDecoder(wC.Body).Decode(&respC)
@@ -2423,10 +2423,10 @@ func TestPostApiGamesIdParticipants_OrganizerJoinsLateRecalculatesGameSpots(t *t
 	guestsOrg := int(1)
 	reqOrg := api.UpdateGameParticipationRequest{Status: api.Going, Guests: &guestsOrg}
 	bodyOrg, _ := json.Marshal(reqOrg)
-	rOrg := httptest.NewRequest(http.MethodPost, "/api/games/g1/participants", bytes.NewReader(bodyOrg))
+	rOrg := httptest.NewRequest(http.MethodPut, "/api/games/g1/participants", bytes.NewReader(bodyOrg))
 	rOrg = rOrg.WithContext(auth.WithAuthInfo(rOrg.Context(), auth.AuthInfo{UserId: int(organizerID)}))
 	wOrg := httptest.NewRecorder()
-	srv.PostApiGamesIdParticipants(wOrg, rOrg, "g1")
+	srv.PutApiGamesIdParticipants(wOrg, rOrg, "g1")
 
 	var respOrg api.GameParticipation
 	json.NewDecoder(wOrg.Body).Decode(&respOrg)

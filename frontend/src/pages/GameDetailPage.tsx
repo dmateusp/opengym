@@ -282,7 +282,7 @@ export default function GameDetailPage() {
       const response = await fetchWithDemoRecovery(
         `${API_BASE_URL}/api/games/${id}/participants`,
         {
-          method: "POST",
+          method: "PUT",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
           body: JSON.stringify(body),
