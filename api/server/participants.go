@@ -100,7 +100,7 @@ func (s *server) GetApiGamesIdParticipants(w http.ResponseWriter, r *http.Reques
 			Status:    status,
 			User:      user,
 			CreatedAt: ptr.Ptr(row.GameParticipant.CreatedAt),
-			UpdatedAt: ptr.Ptr(row.GameParticipant.UpdatedAt),
+			UpdatedAt: ptr.Ptr(row.GameParticipant.GoingUpdatedAt),
 			Guests:    guests,
 		})
 	}
