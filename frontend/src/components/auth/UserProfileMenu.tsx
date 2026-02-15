@@ -85,6 +85,24 @@ export default function UserProfileMenu({ user, onUserChange }: UserProfileMenuP
     return '??'
   }
 
+  const handleLogout = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      })
+
+      if (response.ok) {
+        // Redirect to home page - the backend has invalidated the session cookie
+        window.location.href = '/'
+      } else {
+        console.error('Logout failed:', response.statusText)
+      }
+    } catch (error) {
+      console.error('Logout error:', error)
+    }
+  }
+
   if (isLoadingDemo || !user) {
     return null
   }
@@ -148,6 +166,18 @@ export default function UserProfileMenu({ user, onUserChange }: UserProfileMenuP
                 </div>
               </DropdownMenuItem>
             ))}
+          </>
+        )}
+
+        {!isDemoMode && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={handleLogout}
+              className="cursor-pointer text-red-600"
+            >
+              Logout
+            </DropdownMenuItem>
           </>
         )}
       </DropdownMenuContent>

@@ -81,10 +81,6 @@ export type GameFields = {
      */
     maxPlayers?: number;
     /**
-     * Maximum waitlist size (0 to disable)
-     */
-    maxWaitlistSize?: number;
-    /**
      * Maximum guests per player (0 to disable)
      */
     maxGuestsPerPlayer?: number;
@@ -92,10 +88,6 @@ export type GameFields = {
      * Number of spots left in the game, excluding the waitlist
      */
     gameSpotsLeft?: number;
-    /**
-     * Number of spots left in the waitlist
-     */
-    waitlistSpotsLeft?: number;
 };
 
 export type CreateGameRequest = GameFields & {
@@ -351,6 +343,31 @@ export type GetApiAuthMeResponses = {
 };
 
 export type GetApiAuthMeResponse = GetApiAuthMeResponses[keyof GetApiAuthMeResponses];
+
+export type PostApiAuthLogoutData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/auth/logout';
+};
+
+export type PostApiAuthLogoutErrors = {
+    /**
+     * Unauthorized - invalid or missing token
+     */
+    401: Error;
+};
+
+export type PostApiAuthLogoutError = PostApiAuthLogoutErrors[keyof PostApiAuthLogoutErrors];
+
+export type PostApiAuthLogoutResponses = {
+    /**
+     * Successfully logged out
+     */
+    204: void;
+};
+
+export type PostApiAuthLogoutResponse = PostApiAuthLogoutResponses[keyof PostApiAuthLogoutResponses];
 
 export type PostApiDemoUsersByUserIdImpersonateData = {
     body?: never;

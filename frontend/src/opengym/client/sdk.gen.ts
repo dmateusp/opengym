@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetApiAuthByProviderCallbackData, GetApiAuthByProviderCallbackErrors, GetApiAuthByProviderCallbackResponses, GetApiAuthByProviderLoginData, GetApiAuthByProviderLoginErrors, GetApiAuthMeData, GetApiAuthMeErrors, GetApiAuthMeResponses, GetApiDemoUsersData, GetApiDemoUsersErrors, GetApiDemoUsersResponses, GetApiGamesByIdData, GetApiGamesByIdErrors, GetApiGamesByIdParticipantsData, GetApiGamesByIdParticipantsErrors, GetApiGamesByIdParticipantsResponses, GetApiGamesByIdResponses, GetApiGamesData, GetApiGamesErrors, GetApiGamesResponses, PatchApiGamesByIdData, PatchApiGamesByIdErrors, PatchApiGamesByIdResponses, PostApiDemoUsersByUserIdImpersonateData, PostApiDemoUsersByUserIdImpersonateErrors, PostApiDemoUsersByUserIdImpersonateResponses, PostApiGamesByIdParticipantsData, PostApiGamesByIdParticipantsErrors, PostApiGamesByIdParticipantsResponses, PostApiGamesData, PostApiGamesErrors, PostApiGamesResponses } from './types.gen';
+import type { GetApiAuthByProviderCallbackData, GetApiAuthByProviderCallbackErrors, GetApiAuthByProviderCallbackResponses, GetApiAuthByProviderLoginData, GetApiAuthByProviderLoginErrors, GetApiAuthMeData, GetApiAuthMeErrors, GetApiAuthMeResponses, GetApiDemoUsersData, GetApiDemoUsersErrors, GetApiDemoUsersResponses, GetApiGamesByIdData, GetApiGamesByIdErrors, GetApiGamesByIdParticipantsData, GetApiGamesByIdParticipantsErrors, GetApiGamesByIdParticipantsResponses, GetApiGamesByIdResponses, GetApiGamesData, GetApiGamesErrors, GetApiGamesResponses, PatchApiGamesByIdData, PatchApiGamesByIdErrors, PatchApiGamesByIdResponses, PostApiAuthLogoutData, PostApiAuthLogoutErrors, PostApiAuthLogoutResponses, PostApiDemoUsersByUserIdImpersonateData, PostApiDemoUsersByUserIdImpersonateErrors, PostApiDemoUsersByUserIdImpersonateResponses, PostApiGamesByIdParticipantsData, PostApiGamesByIdParticipantsErrors, PostApiGamesByIdParticipantsResponses, PostApiGamesData, PostApiGamesErrors, PostApiGamesResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -40,6 +40,17 @@ export const getApiAuthByProviderCallback = <ThrowOnError extends boolean = fals
 export const getApiAuthMe = <ThrowOnError extends boolean = false>(options?: Options<GetApiAuthMeData, ThrowOnError>) => (options?.client ?? client).get<GetApiAuthMeResponses, GetApiAuthMeErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/api/auth/me',
+    ...options
+});
+
+/**
+ * Logout the authenticated user
+ *
+ * Clears the authentication token and logs out the user
+ */
+export const postApiAuthLogout = <ThrowOnError extends boolean = false>(options?: Options<PostApiAuthLogoutData, ThrowOnError>) => (options?.client ?? client).post<PostApiAuthLogoutResponses, PostApiAuthLogoutErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/auth/logout',
     ...options
 });
 
