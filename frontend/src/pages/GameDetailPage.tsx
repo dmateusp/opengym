@@ -41,6 +41,7 @@ import { NumberLimitEditor } from "@/components/ui/NumberLimitEditor";
 import { ParticipantGrid } from "@/components/games/ParticipantGrid";
 import { GameStatusBadge } from "@/components/games/GameStatusBadge";
 import { DateTimeEditor } from "@/components/ui/DateTimeEditor";
+import { EditableFieldDisplay } from "@/components/ui/EditableFieldDisplay";
 import { enUS, pt } from "date-fns/locale";
 
 interface Game {
@@ -766,12 +767,15 @@ export default function GameDetailPage() {
                       </div>
                     </div>
                   ) : (
-                    <h1
-                      className="text-4xl font-bold text-gray-900 cursor-text transition"
+                    <EditableFieldDisplay
+                      isEditing={editingField === "name"}
+                      isEditable={isOrganizer}
                       onClick={() => startEditing("name", game?.name || "")}
                     >
-                      {game?.name || t("common.game")}
-                    </h1>
+                      <h1 className="text-4xl font-bold text-gray-900">
+                        {game?.name || t("common.game")}
+                      </h1>
+                    </EditableFieldDisplay>
                   )}
                 </div>
 
@@ -879,17 +883,22 @@ export default function GameDetailPage() {
                     placeholder={t("game.locationPlaceholder")}
                   />
                 ) : (
-                  <div
+                  <EditableFieldDisplay
+                    isEditing={editingField === "location"}
+                    isEditable={isOrganizer}
                     onClick={() =>
                       startEditing("location", game?.location || "")
                     }
-                    className={`text-lg font-semibold cursor-text transition ${
-                      game?.location ? "text-gray-900" : "text-gray-400"
-                    }`}
                   >
-                    {game?.location ||
-                      (isOrganizer ? t("game.clickToAddLocation") : "—")}
-                  </div>
+                    <div
+                      className={`text-lg font-semibold transition ${
+                        game?.location ? "text-gray-900" : "text-gray-400"
+                      }`}
+                    >
+                      {game?.location ||
+                        (isOrganizer ? t("game.clickToAddLocation") : "—")}
+                    </div>
+                  </EditableFieldDisplay>
                 )}
               </div>
 
@@ -909,26 +918,31 @@ export default function GameDetailPage() {
                     <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
                       {t("game.when")}
                     </label>
-                    <div
+                    <EditableFieldDisplay
+                      isEditing={editingField === "startsAt"}
+                      isEditable={isOrganizer}
                       onClick={() =>
                         startEditing("startsAt", game?.startsAt || "")
                       }
-                      className={`text-lg font-semibold cursor-text transition ${
-                        game?.startsAt ? "text-gray-900" : "text-gray-400"
-                      }`}
                     >
-                      {game?.startsAt ? (
-                        <TimeDisplay
-                          timestamp={game.startsAt}
-                          displayFormat="friendly"
-                          className="text-gray-900"
-                        />
-                      ) : isOrganizer ? (
-                        t("game.clickToSetTime")
-                      ) : (
-                        "—"
-                      )}
-                    </div>
+                      <div
+                        className={`text-lg font-semibold transition ${
+                          game?.startsAt ? "text-gray-900" : "text-gray-400"
+                        }`}
+                      >
+                        {game?.startsAt ? (
+                          <TimeDisplay
+                            timestamp={game.startsAt}
+                            displayFormat="friendly"
+                            className="text-gray-900"
+                          />
+                        ) : isOrganizer ? (
+                          t("game.clickToSetTime")
+                        ) : (
+                          "—"
+                        )}
+                      </div>
+                    </EditableFieldDisplay>
                   </div>
                 )}
               </div>
@@ -951,23 +965,28 @@ export default function GameDetailPage() {
                     placeholder={t("common.minutesPlaceholder")}
                   />
                 ) : (
-                  <div
+                  <EditableFieldDisplay
+                    isEditing={editingField === "durationMinutes"}
+                    isEditable={isOrganizer}
                     onClick={() =>
                       startEditing(
                         "durationMinutes",
                         game?.durationMinutes || ""
                       )
                     }
-                    className={`text-lg font-semibold cursor-text transition ${
-                      game?.durationMinutes ? "text-gray-900" : "text-gray-400"
-                    }`}
                   >
-                    {game?.durationMinutes
-                      ? `${game.durationMinutes} min`
-                      : isOrganizer
-                      ? t("game.clickToAddDuration")
-                      : "—"}
-                  </div>
+                    <div
+                      className={`text-lg font-semibold transition ${
+                        game?.durationMinutes ? "text-gray-900" : "text-gray-400"
+                      }`}
+                    >
+                      {game?.durationMinutes
+                        ? `${game.durationMinutes} min`
+                        : isOrganizer
+                        ? t("game.clickToAddDuration")
+                        : "—"}
+                    </div>
+                  </EditableFieldDisplay>
                 )}
               </div>
             </div>
@@ -997,20 +1016,25 @@ export default function GameDetailPage() {
                     }}
                   />
                 ) : (
-                  <div
+                  <EditableFieldDisplay
+                    isEditing={editingField === "maxPlayers"}
+                    isEditable={isOrganizer}
                     onClick={() =>
                       startEditing("maxPlayers", game?.maxPlayers || "")
                     }
-                    className={`text-lg font-semibold cursor-text transition ${
-                      game?.maxPlayers ? "text-gray-900" : "text-gray-400"
-                    }`}
                   >
-                    {game?.maxPlayers
-                      ? `${t("common.upTo")} ${game.maxPlayers}`
-                      : isOrganizer
-                      ? t("common.clickToSet")
-                      : "—"}
-                  </div>
+                    <div
+                      className={`text-lg font-semibold transition ${
+                        game?.maxPlayers ? "text-gray-900" : "text-gray-400"
+                      }`}
+                    >
+                      {game?.maxPlayers
+                        ? `${t("common.upTo")} ${game.maxPlayers}`
+                        : isOrganizer
+                        ? t("common.clickToSet")
+                        : "—"}
+                    </div>
+                  </EditableFieldDisplay>
                 )}
               </div>
 
@@ -1033,27 +1057,32 @@ export default function GameDetailPage() {
                     placeholder={t("common.enterMaxGuests")}
                   />
                 ) : (
-                  <div
+                  <EditableFieldDisplay
+                    isEditing={editingField === "maxGuestsPerPlayer"}
+                    isEditable={isOrganizer}
                     onClick={() =>
                       startEditing(
                         "maxGuestsPerPlayer",
                         game?.maxGuestsPerPlayer ?? ""
                       )
                     }
-                    className={`text-lg font-semibold cursor-text transition ${
-                      typeof game?.maxGuestsPerPlayer === "number"
-                        ? "text-gray-900"
-                        : "text-gray-400"
-                    }`}
                   >
-                    {typeof game?.maxGuestsPerPlayer === "number"
-                      ? game.maxGuestsPerPlayer === 0
-                        ? t("common.disabled")
-                        : `${t("common.upTo")} ${game.maxGuestsPerPlayer}`
-                      : isOrganizer
-                      ? t("common.clickToSet")
-                      : "—"}
-                  </div>
+                    <div
+                      className={`text-lg font-semibold transition ${
+                        typeof game?.maxGuestsPerPlayer === "number"
+                          ? "text-gray-900"
+                          : "text-gray-400"
+                      }`}
+                    >
+                      {typeof game?.maxGuestsPerPlayer === "number"
+                        ? game.maxGuestsPerPlayer === 0
+                          ? t("common.disabled")
+                          : `${t("common.upTo")} ${game.maxGuestsPerPlayer}`
+                        : isOrganizer
+                        ? t("common.clickToSet")
+                        : "—"}
+                    </div>
+                  </EditableFieldDisplay>
                 )}
               </div>
 
@@ -1076,32 +1105,37 @@ export default function GameDetailPage() {
                     placeholder={t("common.pricePlaceholder")}
                   />
                 ) : (
-                  <div
+                  <EditableFieldDisplay
+                    isEditing={editingField === "totalPriceCents"}
+                    isEditable={isOrganizer}
                     onClick={() =>
                       startEditing(
                         "totalPriceCents",
                         game?.totalPriceCents || ""
                       )
                     }
-                    className={`text-lg font-semibold cursor-text transition ${
-                      game?.totalPriceCents !== undefined &&
-                      game.totalPriceCents >= 0
-                        ? "text-gray-900"
-                        : "text-gray-400"
-                    }`}
                   >
-                    {game?.totalPriceCents !== undefined &&
-                    game.totalPriceCents >= 0 ? (
-                      <PriceDisplay
-                        totalPriceCents={game.totalPriceCents}
-                        maxPlayers={game.maxPlayers}
-                      />
-                    ) : isOrganizer ? (
-                      t("game.clickToAddPrice")
-                    ) : (
-                      "—"
-                    )}
-                  </div>
+                    <div
+                      className={`text-lg font-semibold transition ${
+                        game?.totalPriceCents !== undefined &&
+                        game.totalPriceCents >= 0
+                          ? "text-gray-900"
+                          : "text-gray-400"
+                      }`}
+                    >
+                      {game?.totalPriceCents !== undefined &&
+                      game.totalPriceCents >= 0 ? (
+                        <PriceDisplay
+                          totalPriceCents={game.totalPriceCents}
+                          maxPlayers={game.maxPlayers}
+                        />
+                      ) : isOrganizer ? (
+                        t("game.clickToAddPrice")
+                      ) : (
+                        "—"
+                      )}
+                    </div>
+                  </EditableFieldDisplay>
                 )}
               </div>
             </div>
@@ -1149,22 +1183,27 @@ export default function GameDetailPage() {
                   </div>
                 </div>
               ) : (
-                <div
+                <EditableFieldDisplay
+                  isEditing={editingField === "description"}
+                  isEditable={isOrganizer}
                   onClick={() =>
                     startEditing("description", game?.description || "")
                   }
-                  className={`cursor-text transition text-sm leading-relaxed ${
-                    game?.description ? "text-gray-700" : "text-gray-400"
-                  }`}
                 >
-                  {game?.description ? (
-                    <MarkdownRenderer value={game.description} />
-                  ) : isOrganizer ? (
-                    t("game.clickToAddDescription")
-                  ) : (
-                    t("common.noDescription")
-                  )}
-                </div>
+                  <div
+                    className={`transition text-sm leading-relaxed ${
+                      game?.description ? "text-gray-700" : "text-gray-400"
+                    }`}
+                  >
+                    {game?.description ? (
+                      <MarkdownRenderer value={game.description} />
+                    ) : isOrganizer ? (
+                      t("game.clickToAddDescription")
+                    ) : (
+                      t("common.noDescription")
+                    )}
+                  </div>
+                </EditableFieldDisplay>
               )}
             </div>
           )}
