@@ -429,3 +429,31 @@ func (srv *server) GetApiAuthMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
+
+func (srv *server) PostApiAuthLogout(w http.ResponseWriter, r *http.Request) {
+	_, ok := auth.FromCtx(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Get the current cookie to preserve security settings
+	currentCookie, _ := r.Cookie(auth.JWTCookie)
+	isHTTPS := true
+	if currentCookie != nil {
+		isHTTPS = currentCookie.Secure
+	}
+
+	// Clear the JWT cookie by setting MaxAge to -1
+	http.SetCookie(w, &http.Cookie{
+		Name:     auth.JWTCookie,
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   isHTTPS,
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   -1,
+	})
+
+	w.WriteHeader(http.StatusNoContent)
+}
