@@ -380,7 +380,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
     
-    post:
+    put:
       summary: Set participation status
       description: Creates or updates the authenticated user's participation status for the specified game.
       tags:

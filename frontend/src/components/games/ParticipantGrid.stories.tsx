@@ -10,6 +10,7 @@ const mockParticipants = [
       name: 'Alice Johnson',
       picture: 'https://placecats.com/150/150?image=1',
     },
+    updatedAt: new Date(Date.now() - 1000 * 60 * 5).toISOString(), // 5 minutes ago
   },
   {
     user: {
@@ -18,6 +19,7 @@ const mockParticipants = [
       name: 'Bob Smith',
       picture: 'https://placecats.com/150/150?image=2',
     },
+    updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
   },
   {
     user: {
@@ -25,6 +27,7 @@ const mockParticipants = [
       email: 'charlie@example.com',
       name: 'Charlie Brown',
     },
+    updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
   },
   {
     user: {
@@ -33,6 +36,7 @@ const mockParticipants = [
       name: 'Diana Prince',
       picture: 'https://placecats.com/150/150?image=4',
     },
+    updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(), // 3 days ago
   },
 ]
 
@@ -112,6 +116,7 @@ export const Full: Story = () => (
           name: 'Eve Wilson',
           picture: 'https://placecats.com/150/150?image=5',
         },
+        updatedAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 minutes ago
       },
       {
         user: {
@@ -119,6 +124,7 @@ export const Full: Story = () => (
           email: 'frank@example.com',
           name: 'Frank Castle',
         },
+        updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(), // 5 hours ago
       },
       {
         user: {
@@ -127,6 +133,7 @@ export const Full: Story = () => (
           name: 'Grace Lee',
           picture: 'https://placecats.com/150/150?image=7',
         },
+        updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(), // 2 days ago
       },
       {
         user: {
@@ -135,6 +142,7 @@ export const Full: Story = () => (
           name: 'Hank Pym',
           picture: 'https://placecats.com/150/150?image=8',
         },
+        updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString(), // 7 days ago
       },
     ]}
     organizerId={3}

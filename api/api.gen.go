@@ -386,8 +386,8 @@ type PostApiGamesJSONRequestBody = CreateGameRequest
 // PatchApiGamesIdJSONRequestBody defines body for PatchApiGamesId for application/json ContentType.
 type PatchApiGamesIdJSONRequestBody = UpdateGameRequest
 
-// PostApiGamesIdParticipantsJSONRequestBody defines body for PostApiGamesIdParticipants for application/json ContentType.
-type PostApiGamesIdParticipantsJSONRequestBody = UpdateGameParticipationRequest
+// PutApiGamesIdParticipantsJSONRequestBody defines body for PutApiGamesIdParticipants for application/json ContentType.
+type PutApiGamesIdParticipantsJSONRequestBody = UpdateGameParticipationRequest
 
 // AsParticipationStatusUpdate returns the union data inside the ParticipationStatus as a ParticipationStatusUpdate
 func (t ParticipationStatus) AsParticipationStatusUpdate() (ParticipationStatusUpdate, error) {
@@ -487,8 +487,8 @@ type ServerInterface interface {
 	// (GET /api/games/{id}/participants)
 	GetApiGamesIdParticipants(w http.ResponseWriter, r *http.Request, id string)
 	// Set participation status
-	// (POST /api/games/{id}/participants)
-	PostApiGamesIdParticipants(w http.ResponseWriter, r *http.Request, id string)
+	// (PUT /api/games/{id}/participants)
+	PutApiGamesIdParticipants(w http.ResponseWriter, r *http.Request, id string)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -812,8 +812,8 @@ func (siw *ServerInterfaceWrapper) GetApiGamesIdParticipants(w http.ResponseWrit
 	handler.ServeHTTP(w, r)
 }
 
-// PostApiGamesIdParticipants operation middleware
-func (siw *ServerInterfaceWrapper) PostApiGamesIdParticipants(w http.ResponseWriter, r *http.Request) {
+// PutApiGamesIdParticipants operation middleware
+func (siw *ServerInterfaceWrapper) PutApiGamesIdParticipants(w http.ResponseWriter, r *http.Request) {
 
 	var err error
 
@@ -833,7 +833,7 @@ func (siw *ServerInterfaceWrapper) PostApiGamesIdParticipants(w http.ResponseWri
 	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.PostApiGamesIdParticipants(w, r, id)
+		siw.Handler.PutApiGamesIdParticipants(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -974,7 +974,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc("GET "+options.BaseURL+"/api/games/{id}", wrapper.GetApiGamesId)
 	m.HandleFunc("PATCH "+options.BaseURL+"/api/games/{id}", wrapper.PatchApiGamesId)
 	m.HandleFunc("GET "+options.BaseURL+"/api/games/{id}/participants", wrapper.GetApiGamesIdParticipants)
-	m.HandleFunc("POST "+options.BaseURL+"/api/games/{id}/participants", wrapper.PostApiGamesIdParticipants)
+	m.HandleFunc("PUT "+options.BaseURL+"/api/games/{id}/participants", wrapper.PutApiGamesIdParticipants)
 
 	return m
 }
@@ -1035,9 +1035,9 @@ var swaggerSpec = []string{
 	"XxnVpKBaQzIk0zn5rXVC/Ztdont23FUip4vWGTJSsrSaxcArKajJXinsDQRchwFP9hsKd8fbmsB8DrFh",
 	"1xDga7TWN4b5108R/RsGjy9F+NPRv1NEN0U8eDP0UqoZSxIQ5MASTX0npLk7/G1obtfE6MDtiXCnpDhq",
 	"XQTarQFrv1DfVq7HXtXFfZN5esStl2bNRS9Xl/pbbFiZVg/brqq6ACVVAqorV7NUYNNXkD177WvfVrD4",
-	"cE5vf63+/oWznAUK0U72Pm/v/4ll8p1mbqGLpncYwXXM/vh7rEcdntamFkBFF3V37eyk8jli3STkOx2M",
-	"tzXxurlXewQx8pBlQPBK6DeoCbp/bxFAXvDq79+lwtOjgQswwegMJWy7rroOx9qZjCknCVwDl0UOwvjL",
-	"xdEgKhX3N9YmoxHH5zKpzeSH8Q/jaHm1/H8AAAD//y9l5YTjQgAA",
+	"cE5vf63+/oWznAUK0U72Pm/v/4ll8p1mbqGLpncYwXXM/vh7rEcdntamFkBFF3WBUqXc0NhJ5VPEukHI",
+	"dzoYbmvCNZD6y8cUIQ9ZBAQvhH6DiqD71xYB3AUv/v5dKDw9ErgAEwzOULq266rrcKydyZhyksA1cFnk",
+	"IIy/WhwNolJxf19tMhpxfC6T2kx+GP8wjpZXy/8HAAD//5kU9zHhQgAA",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file
