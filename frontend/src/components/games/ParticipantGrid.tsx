@@ -2,6 +2,7 @@ import { Crown } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { TimeDisplay } from '@/components/ui/TimeDisplay'
 
 interface User {
   id: string
@@ -13,6 +14,7 @@ interface User {
 interface ParticipantWithGuests {
   user: User
   guests?: number
+  updatedAt?: string
 }
 
 interface ParticipantGridProps {
@@ -87,6 +89,7 @@ export function ParticipantGrid({
       {participants.map((item) => {
         const participant = 'user' in item ? item.user : item
         const guestCount = 'guests' in item ? item.guests : undefined
+        const updatedAt = 'updatedAt' in item ? item.updatedAt : undefined
         const isOrganizerParticipating =
           organizerId && participant.id === String(organizerId)
         return (
@@ -131,11 +134,20 @@ export function ParticipantGrid({
                 </div>
               )}
             </div>
-            <span
-              className={`${config.text} text-center text-gray-700 font-medium truncate`}
-            >
-              {participant.name || participant.email}
-            </span>
+            <div className="flex flex-col items-center gap-0.5">
+              <span
+                className={`${config.text} text-center text-gray-700 font-medium truncate`}
+              >
+                {participant.name || participant.email}
+              </span>
+              {updatedAt && (
+                <TimeDisplay 
+                  timestamp={updatedAt} 
+                  displayFormat="relative"
+                  className="text-[10px] text-gray-500"
+                />
+              )}
+            </div>
           </div>
         )
       })}
