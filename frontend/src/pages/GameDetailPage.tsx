@@ -25,7 +25,6 @@ import {
   Rocket,
   Copy,
   Check,
-  Pencil,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
