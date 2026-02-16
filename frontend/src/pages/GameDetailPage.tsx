@@ -296,7 +296,7 @@ export default function GameDetailPage() {
     }
   }, [game?.publishedAt, id]);
 
-  const handleUserChange = (newUser: AuthUser | any) => {
+  const handleUserChange = (newUser: AuthUser | null) => {
     setUser(newUser);
     // When user logs in from unauthenticated view, refetch with auth endpoint
     if (isUnauthenticatedView) {
