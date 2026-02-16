@@ -166,6 +166,46 @@ func (q *Queries) GameGetByIdWithOrganizer(ctx context.Context, id string) (Game
 	return i, err
 }
 
+const gameGetPublicInfoById = `-- name: GameGetPublicInfoById :one
+select
+  games.id,
+  games.name,
+  games.published_at,
+  games.starts_at,
+  games.game_spots_left,
+  users.name as organizer_name,
+  users.photo as organizer_photo
+from games
+join users
+  on users.id = games.organizer_id
+where games.id = ?
+`
+
+type GameGetPublicInfoByIdRow struct {
+	ID             string
+	Name           string
+	PublishedAt    sql.NullTime
+	StartsAt       sql.NullTime
+	GameSpotsLeft  int64
+	OrganizerName  sql.NullString
+	OrganizerPhoto sql.NullString
+}
+
+func (q *Queries) GameGetPublicInfoById(ctx context.Context, id string) (GameGetPublicInfoByIdRow, error) {
+	row := q.db.QueryRowContext(ctx, gameGetPublicInfoById, id)
+	var i GameGetPublicInfoByIdRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.PublishedAt,
+		&i.StartsAt,
+		&i.GameSpotsLeft,
+		&i.OrganizerName,
+		&i.OrganizerPhoto,
+	)
+	return i, err
+}
+
 const gameListByUser = `-- name: GameListByUser :many
 select
   games.id,

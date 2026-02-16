@@ -43,6 +43,8 @@ import { GameStatusBadge } from "@/components/games/GameStatusBadge";
 import { DateTimeEditor } from "@/components/ui/DateTimeEditor";
 import { EditableFieldDisplay } from "@/components/ui/EditableFieldDisplay";
 import { enUS, pt } from "date-fns/locale";
+import { PublicGameTeaser } from "@/components/games/PublicGameTeaser";
+import { PublicGamePreview } from "@/components/games/PublicGamePreview";
 
 interface Game {
   id: string;
@@ -59,6 +61,18 @@ interface Game {
   createdAt: string;
   updatedAt: string;
   publishedAt?: string | null;
+}
+
+interface PublicGame {
+  id: string;
+  name: string;
+  organizer: {
+    name?: string;
+    picture?: string;
+  };
+  gameSpotsLeft?: number;
+  startsAt?: string;
+  publishedAt?: string;
 }
 
 interface AuthUser {
@@ -106,10 +120,13 @@ export default function GameDetailPage() {
   };
 
   const [game, setGame] = useState<Game | null>(null);
+  const [publicGame, setPublicGame] = useState<PublicGame | null>(null);
   const [organizer, setOrganizer] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [unauthenticatedUser, setUnauthenticatedUser] = useState<AuthUser | null>(null);
+  const [isUnauthenticatedView, setIsUnauthenticatedView] = useState(false);
   const [organizerHintOpen, setOrganizerHintOpen] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishError, setPublishError] = useState<string | null>(null);
@@ -150,29 +167,8 @@ export default function GameDetailPage() {
         setIsLoading(true);
         setError(null);
 
-        const response = await fetchWithDemoRecovery(
-          `${API_BASE_URL}/api/games/${id}`,
-          {
-            credentials: "include",
-          }
-        );
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            redirectToLogin();
-            return;
-          }
-          if (response.status === 404) {
-            throw new Error(t("game.gameNotFound"));
-          }
-          throw new Error(t("game.errorLoadingGame"));
-        }
-
-        const gameData = await response.json();
-        setGame(gameData.game);
-        setOrganizer(gameData.organizer);
-
-        // Fetch authenticated user (optional if unauthenticated)
+        // First, try to fetch authenticated user
+        let currentUser: AuthUser | null = null;
         try {
           const meResp = await fetchWithDemoRecovery(
             `${API_BASE_URL}/api/auth/me`,
@@ -181,12 +177,53 @@ export default function GameDetailPage() {
             }
           );
           if (meResp.ok) {
-            const me = await meResp.json();
-            setUser(me);
+            currentUser = await meResp.json();
+            setUser(currentUser);
           }
         } catch {
-          // ignore user fetch errors, treat as not logged in
+          // Not authenticated
         }
+
+        // Try to fetch game with authentication (if logged in)
+        const response = await fetchWithDemoRecovery(
+          `${API_BASE_URL}/api/games/${id}`,
+          {
+            credentials: "include",
+          }
+        );
+
+        if (response.ok) {
+          // Successfully fetched with auth
+          const gameData = await response.json();
+          setGame(gameData.game);
+          setOrganizer(gameData.organizer);
+          setIsUnauthenticatedView(false);
+          return;
+        }
+
+        // If 401 or not found, try public endpoint
+        if (response.status === 401 || response.status === 404) {
+          try {
+            const publicResp = await fetch(
+              `${API_BASE_URL}/public/api/games/${id}`
+            );
+            if (publicResp.ok) {
+              const publicData = await publicResp.json();
+              setPublicGame(publicData);
+              setIsUnauthenticatedView(true);
+              setUnauthenticatedUser(currentUser);
+              return;
+            }
+          } catch {
+            // Fall through to error handling
+          }
+        }
+
+        // If we get here, couldn't load game
+        if (response.status === 404) {
+          throw new Error(t("game.gameNotFound"));
+        }
+        throw new Error(t("game.errorLoadingGame"));
       } catch (err) {
         setError(
           err instanceof Error ? err.message : t("errors.somethingWentWrong")
@@ -199,7 +236,7 @@ export default function GameDetailPage() {
     if (id) {
       fetchAll();
     }
-  }, [id]);
+  }, [id, t]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNowTs(Date.now()), 30000);
@@ -259,12 +296,19 @@ export default function GameDetailPage() {
     }
   }, [game?.publishedAt, id]);
 
-  const handleUserChange = (newUser: AuthUser) => {
+  const handleUserChange = (newUser: AuthUser | null) => {
     setUser(newUser);
-    // Refetch game when user changes
-    refreshGame();
-    if (game?.publishedAt) {
-      fetchParticipants();
+    // When user logs in from unauthenticated view, refetch with auth endpoint
+    if (isUnauthenticatedView) {
+      setIsUnauthenticatedView(false);
+      setPublicGame(null);
+      refreshGame();
+    } else {
+      // Otherwise just refetch the game
+      refreshGame();
+      if (game?.publishedAt) {
+        fetchParticipants();
+      }
     }
   };
 
@@ -643,6 +687,37 @@ export default function GameDetailPage() {
     );
   }
 
+  // Handle unauthenticated public views
+  if (isUnauthenticatedView && publicGame) {
+    // Determine if game is unpublished (has publishedAt showing when it will be published)
+    if (publicGame.publishedAt && !publicGame.startsAt) {
+      // Unpublished - show teaser with countdown
+      return (
+        <PublicGameTeaser
+          gameId={publicGame.id}
+          gameName={publicGame.name}
+          organizer={publicGame.organizer}
+          publishedAt={publicGame.publishedAt}
+          currentUser={unauthenticatedUser}
+          onUserChange={handleUserChange}
+        />
+      );
+    } else if (publicGame.startsAt) {
+      // Published - show preview with spots and time
+      return (
+        <PublicGamePreview
+          gameId={publicGame.id}
+          gameName={publicGame.name}
+          organizer={publicGame.organizer}
+          gameSpotsLeft={publicGame.gameSpotsLeft}
+          startsAt={publicGame.startsAt}
+          currentUser={unauthenticatedUser}
+          onUserChange={handleUserChange}
+        />
+      );
+    }
+  }
+
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-orange-50 to-blue-50">
@@ -791,7 +866,7 @@ export default function GameDetailPage() {
                     }
                     publishedAt={publishedAtDate ?? undefined}
                   />
-                  {isPublished && (
+                  {isPublished || isScheduled && (
                     <button
                       onClick={handleCopyShareLink}
                       className="inline-flex items-center gap-2 text-sm font-semibold px-3 py-1.5 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition"

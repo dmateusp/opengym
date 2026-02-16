@@ -13,6 +13,7 @@ type Querier interface {
 	GameCreate(ctx context.Context, arg GameCreateParams) (Game, error)
 	GameGetById(ctx context.Context, id string) (Game, error)
 	GameGetByIdWithOrganizer(ctx context.Context, id string) (GameGetByIdWithOrganizerRow, error)
+	GameGetPublicInfoById(ctx context.Context, id string) (GameGetPublicInfoByIdRow, error)
 	GameListByUser(ctx context.Context, arg GameListByUserParams) ([]GameListByUserRow, error)
 	GameUpdate(ctx context.Context, arg GameUpdateParams) error
 	ListDemoUsers(ctx context.Context) ([]ListDemoUsersRow, error)

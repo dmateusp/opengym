@@ -149,7 +149,21 @@
     "wantToGoInstead": "Queres participar em vez disso?",
     "notParticipating": "Não estás a participar",
     "readyToJoin": "Pronto para participar?",
-    "emptySlot": "Livre"
+    "emptySlot": "Livre",
+    "comingSoon": "Em Breve",
+    "organizedBy": "Organizado por",
+    "getsPublishedIn": "Este jogo estará disponível para participar em",
+    "nowPublished": "Agora publicado!",
+    "loginToJoinWhenPublished": "Inicia sessão para seres notificado quando este jogo for publicado e participa imediatamente!",
+    "spotsAvailable": "Lugares Disponíveis",
+    "scheduled": "Agendado",
+    "today": "Hoje",
+    "tomorrow": "Amanhã",
+    "inDays": "Daqui a {{count}} dias",
+    "gameFull": "Jogo está cheio",
+    "limitedSpots": "Lugares limitados",
+    "readyToJoinGame": "Pronto para participar neste jogo?",
+    "loginToParticipate": "Inicia sessão para veres todos os detalhes e participar no jogo."
   },
   "errors": {
     "somethingWentWrong": "Algo correu mal",
@@ -200,7 +214,8 @@
     "enterMaxGuests": "Introduz máximo de convidados",
     "pricePlaceholder": "ex: 15,50",
     "pickTimeToPublish": "Escolhe hora para publicar",
-    "by": "por"
+    "by": "por",
+    "login": "Iniciar Sessão"
   },
   "numberLimitEditor": {
     "disabled": "Desativado",

@@ -236,6 +236,65 @@ func (srv *server) GetApiGames(w http.ResponseWriter, r *http.Request, params ap
 	}
 }
 
+func (srv *server) GetPublicApiGamesId(w http.ResponseWriter, r *http.Request, id string) {
+	game, err := srv.querier.GameGetPublicInfoById(r.Context(), id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "game not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, fmt.Sprintf("failed to retrieve game: %s", err.Error()), http.StatusInternalServerError)
+		return
+	}
+
+	now := srv.clock.Now()
+	isPublished := game.PublishedAt.Valid && !game.PublishedAt.Time.After(now)
+
+	var resp api.PublicGameDetail
+
+	if isPublished {
+		// Game is published, show spots left and start time
+		detail := api.PublicGameDetail0{
+			Id:            game.ID,
+			Name:          game.Name,
+			GameSpotsLeft: game.GameSpotsLeft,
+		}
+		detail.Organizer.Name = game.OrganizerName.String
+		if game.OrganizerPhoto.Valid {
+			detail.Organizer.Picture = &game.OrganizerPhoto.String
+		}
+		if game.StartsAt.Valid {
+			detail.StartsAt = game.StartsAt.Time
+		}
+		if err := resp.FromPublicGameDetail0(detail); err != nil {
+			http.Error(w, fmt.Sprintf("failed to create response: %s", err.Error()), http.StatusInternalServerError)
+			return
+		}
+	} else if game.PublishedAt.Valid {
+		// Game is not yet published, show when it will be published
+		detail := api.PublicGameDetail1{
+			Id:          game.ID,
+			Name:        game.Name,
+			PublishedAt: game.PublishedAt.Time,
+		}
+		detail.Organizer.Name = game.OrganizerName.String
+		if game.OrganizerPhoto.Valid {
+			detail.Organizer.Picture = &game.OrganizerPhoto.String
+		}
+		if err := resp.FromPublicGameDetail1(detail); err != nil {
+			http.Error(w, fmt.Sprintf("failed to create response: %s", err.Error()), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		http.Error(w, fmt.Sprintf("failed to encode response: %s", err.Error()), http.StatusInternalServerError)
+		return
+	}
+}
+
 func isConstraintError(err error) bool {
 	if err == nil {
 		return false

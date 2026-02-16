@@ -129,6 +129,58 @@ export type GameDetail = {
     organizer: User;
 };
 
+export type PublicGameDetail = {
+    /**
+     * Unique game identifier
+     */
+    id: string;
+    /**
+     * Name of the game
+     */
+    name: string;
+    organizer: {
+        /**
+         * Organizer's full name
+         */
+        name: string;
+        /**
+         * URL to organizer's profile picture
+         */
+        picture?: string;
+    };
+    /**
+     * Number of spots left in the game
+     */
+    gameSpotsLeft: number;
+    /**
+     * When the game starts
+     */
+    startsAt: string;
+} | {
+    /**
+     * Unique game identifier
+     */
+    id: string;
+    /**
+     * Name of the game
+     */
+    name: string;
+    organizer: {
+        /**
+         * Organizer's full name
+         */
+        name: string;
+        /**
+         * URL to organizer's profile picture
+         */
+        picture?: string;
+    };
+    /**
+     * When the game will be published
+     */
+    publishedAt: string;
+};
+
 /**
  * Participation status of the authenticated user
  */
@@ -558,6 +610,36 @@ export type PatchApiGamesByIdResponses = {
 };
 
 export type PatchApiGamesByIdResponse = PatchApiGamesByIdResponses[keyof PatchApiGamesByIdResponses];
+
+export type GetPublicApiGamesByIdData = {
+    body?: never;
+    path: {
+        /**
+         * The game ID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/public/api/games/{id}';
+};
+
+export type GetPublicApiGamesByIdErrors = {
+    /**
+     * Game not found
+     */
+    404: Error;
+};
+
+export type GetPublicApiGamesByIdError = GetPublicApiGamesByIdErrors[keyof GetPublicApiGamesByIdErrors];
+
+export type GetPublicApiGamesByIdResponses = {
+    /**
+     * Public game information retrieved successfully
+     */
+    200: PublicGameDetail;
+};
+
+export type GetPublicApiGamesByIdResponse = GetPublicApiGamesByIdResponses[keyof GetPublicApiGamesByIdResponses];
 
 export type GetApiGamesByIdParticipantsData = {
     body?: never;

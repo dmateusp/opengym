@@ -343,6 +343,33 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /public/api/games/{id}:
+    get:
+      summary: Get public game information
+      description: Retrieves limited public information about a game. If the game is published, returns spots left and start time. If not yet published, returns when it will be published.
+      tags:
+        - Games
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The game ID
+      responses:
+        '200':
+          description: Public game information retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicGameDetail'
+        '404':
+          description: Game not found
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /api/games/{id}/participants:
     get:
       summary: List game participants
@@ -603,6 +630,84 @@ components:
         organizer:
           $ref: '#/components/schemas/User'
           description: User information for the game organizer
+
+    PublicGameDetail:
+      oneOf:
+        - type: object
+          description: Published game with available spots and start time
+          required:
+            - id
+            - name
+            - organizer
+            - gameSpotsLeft
+            - startsAt
+          properties:
+            id:
+              type: string
+              description: Unique game identifier
+              example: "aBc1"
+            name:
+              type: string
+              description: Name of the game
+              example: "Sunday Morning Volleyball"
+            organizer:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  description: Organizer's full name
+                  example: "John Doe"
+                picture:
+                  type: string
+                  format: uri
+                  description: URL to organizer's profile picture
+                  example: "https://example.com/avatar.jpg"
+            gameSpotsLeft:
+              type: integer
+              description: Number of spots left in the game
+              example: 10
+              format: int64
+              minimum: 0
+            startsAt:
+              type: string
+              format: date-time
+              description: When the game starts
+        - type: object
+          description: Unpublished game with scheduled publish time
+          required:
+            - id
+            - name
+            - organizer
+            - publishedAt
+          properties:
+            id:
+              type: string
+              description: Unique game identifier
+              example: "aBc1"
+            name:
+              type: string
+              description: Name of the game
+              example: "Sunday Morning Volleyball"
+            organizer:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  description: Organizer's full name
+                  example: "John Doe"
+                picture:
+                  type: string
+                  format: uri
+                  description: URL to organizer's profile picture
+                  example: "https://example.com/avatar.jpg"
+            publishedAt:
+              type: string
+              format: date-time
+              description: When the game will be published
 
     ParticipationStatus:
       description: Participation status of the authenticated user

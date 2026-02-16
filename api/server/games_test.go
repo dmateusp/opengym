@@ -1762,3 +1762,160 @@ func TestPatchApiGamesId_DescriptionValidation(t *testing.T) {
 		})
 	}
 }
+
+func TestGetPublicApiGames_PublishedGame(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+	staticClock := clock.StaticClock{Time: time.Now()}
+
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "john@example.com")
+	querier := db.New(sqlDB)
+
+	// Create organizer with name and photo
+	_, err := sqlDB.Exec(`UPDATE users SET name = ?, photo = ? WHERE id = ?`, "John Doe", "https://example.com/photo.jpg", organizerID)
+	if err != nil {
+		t.Fatalf("Failed to update organizer: %v", err)
+	}
+
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
+
+	// Create a published game
+	startsAt := staticClock.Now().Add(2 * time.Hour)
+	params := db.GameCreateParams{
+		ID:            "pub123",
+		OrganizerID:   int64(organizerID),
+		Name:          "Published Game",
+		PublishedAt:   sql.NullTime{Time: staticClock.Now().Add(-1 * time.Hour), Valid: true},
+		StartsAt:      sql.NullTime{Time: startsAt, Valid: true},
+		MaxPlayers:    20,
+		GameSpotsLeft: 15,
+	}
+
+	_, err = querier.GameCreate(context.Background(), params)
+	if err != nil {
+		t.Fatalf("Failed to create game: %v", err)
+	}
+
+	// Request public game info (no authentication required)
+	r := httptest.NewRequest(http.MethodGet, "/public/api/games/pub123", nil)
+	w := httptest.NewRecorder()
+
+	srv.GetPublicApiGamesId(w, r, "pub123")
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d. Body: %s", http.StatusOK, w.Code, w.Body.String())
+	}
+
+	var response api.PublicGameDetail
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	// Extract the published game variant
+	publishedGame, err := response.AsPublicGameDetail0()
+	if err != nil {
+		t.Fatalf("Failed to extract published game variant: %v", err)
+	}
+
+	// Verify required fields
+	if publishedGame.Id != "pub123" {
+		t.Errorf("Expected id 'pub123', got %s", publishedGame.Id)
+	}
+	if publishedGame.Name != "Published Game" {
+		t.Errorf("Expected name 'Published Game', got %s", publishedGame.Name)
+	}
+
+	// Verify organizer info
+	if publishedGame.Organizer.Name != "John Doe" {
+		t.Errorf("Expected organizer name 'John Doe', got %s", publishedGame.Organizer.Name)
+	}
+	if publishedGame.Organizer.Picture == nil || *publishedGame.Organizer.Picture != "https://example.com/photo.jpg" {
+		t.Errorf("Expected organizer picture 'https://example.com/photo.jpg', got %v", publishedGame.Organizer.Picture)
+	}
+
+	// Verify published game shows spots and start time
+	if publishedGame.GameSpotsLeft != 15 {
+		t.Errorf("Expected gameSpotsLeft 15, got %d", publishedGame.GameSpotsLeft)
+	}
+
+	if !publishedGame.StartsAt.Equal(startsAt) {
+		t.Errorf("Expected startsAt %v, got %v", startsAt, publishedGame.StartsAt)
+	}
+}
+
+func TestGetPublicApiGames_UnpublishedGame(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+	staticClock := clock.StaticClock{Time: time.Now()}
+
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "jane@example.com")
+	querier := db.New(sqlDB)
+
+	// Create organizer with name (no photo)
+	_, err := sqlDB.Exec(`UPDATE users SET name = ? WHERE id = ?`, "Jane Smith", organizerID)
+	if err != nil {
+		t.Fatalf("Failed to update organizer: %v", err)
+	}
+
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
+
+	// Create a game scheduled to be published in the future
+	futurePublishTime := staticClock.Now().Add(1 * time.Hour)
+	startsAt := staticClock.Now().Add(3 * time.Hour)
+	params := db.GameCreateParams{
+		ID:            "unpub456",
+		OrganizerID:   int64(organizerID),
+		Name:          "Upcoming Game",
+		PublishedAt:   sql.NullTime{Time: futurePublishTime, Valid: true},
+		StartsAt:      sql.NullTime{Time: startsAt, Valid: true},
+		MaxPlayers:    10,
+		GameSpotsLeft: 10,
+	}
+
+	_, err = querier.GameCreate(context.Background(), params)
+	if err != nil {
+		t.Fatalf("Failed to create game: %v", err)
+	}
+
+	// Request public game info (no authentication required)
+	r := httptest.NewRequest(http.MethodGet, "/public/api/games/unpub456", nil)
+	w := httptest.NewRecorder()
+
+	srv.GetPublicApiGamesId(w, r, "unpub456")
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d, got %d. Body: %s", http.StatusOK, w.Code, w.Body.String())
+	}
+
+	var response api.PublicGameDetail
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	// Extract the unpublished game variant
+	unpublishedGame, err := response.AsPublicGameDetail1()
+	if err != nil {
+		t.Fatalf("Failed to extract unpublished game variant: %v", err)
+	}
+
+	// Verify required fields
+	if unpublishedGame.Id != "unpub456" {
+		t.Errorf("Expected id 'unpub456', got %s", unpublishedGame.Id)
+	}
+	if unpublishedGame.Name != "Upcoming Game" {
+		t.Errorf("Expected name 'Upcoming Game', got %s", unpublishedGame.Name)
+	}
+
+	// Verify organizer info
+	if unpublishedGame.Organizer.Name != "Jane Smith" {
+		t.Errorf("Expected organizer name 'Jane Smith', got %s", unpublishedGame.Organizer.Name)
+	}
+	if unpublishedGame.Organizer.Picture != nil {
+		t.Errorf("Expected organizer picture to be nil, got %v", *unpublishedGame.Organizer.Picture)
+	}
+
+	// Verify unpublished game shows publishedAt
+	if !unpublishedGame.PublishedAt.Equal(futurePublishTime) {
+		t.Errorf("Expected publishedAt %v, got %v", futurePublishTime, unpublishedGame.PublishedAt)
+	}
+}
