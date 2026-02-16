@@ -149,7 +149,21 @@
     "wantToGoInstead": "Want to go instead?",
     "notParticipating": "You're not participating",
     "readyToJoin": "Ready to join?",
-    "emptySlot": "Open"
+    "emptySlot": "Open",
+    "comingSoon": "Coming Soon",
+    "organizedBy": "Organized by",
+    "getsPublishedIn": "This game gets published in",
+    "nowPublished": "Now published!",
+    "loginToJoinWhenPublished": "Log in to be notified when this game is published and join right away!",
+    "spotsAvailable": "Spots Available",
+    "scheduled": "Scheduled",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "inDays": "In {{count}} days",
+    "gameFull": "Game is full",
+    "limitedSpots": "Limited spots remaining",
+    "readyToJoinGame": "Ready to join the game?",
+    "loginToParticipate": "Log in to see all details and join the game."
   },
   "errors": {
     "somethingWentWrong": "Something went wrong",
@@ -200,7 +214,8 @@
     "enterMaxGuests": "Enter max guests",
     "pricePlaceholder": "e.g., 15.50",
     "pickTimeToPublish": "Pick a time to publish",
-    "by": "by"
+    "by": "by",
+    "login": "Log In"
   },
   "numberLimitEditor": {
     "disabled": "Disabled",
