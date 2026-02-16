@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Clock, Rocket } from "lucide-react";
+import { ArrowLeft, Rocket } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -132,7 +132,7 @@ export function PublicGameTeaser({
             <div className="mb-8">
               <p className="text-lg text-gray-600 mb-6">
                 {t("game.getsPublishedIn", {
-                  defaultValue: "This game gets published in",
+                  defaultValue: "This game will be available to join in",
                 })}
               </p>
 
@@ -166,25 +166,6 @@ export function PublicGameTeaser({
                 </div>
               )}
             </div>
-
-            {/* Call to Action */}
-            {!currentUser && (
-              <div className="bg-blue-50 rounded-lg p-6 border-2 border-blue-200">
-                <Clock className="h-6 w-6 mx-auto mb-3 text-blue-600" />
-                <p className="text-blue-900 mb-4">
-                  {t("game.loginToJoinWhenPublished", {
-                    defaultValue:
-                      "Log in to be notified when this game is published and join right away!",
-                  })}
-                </p>
-                <Button
-                  onClick={() => navigate("/login")}
-                  className="bg-primary hover:bg-primary/90"
-                >
-                  {t("common.login", { defaultValue: "Login" })}
-                </Button>
-              </div>
-            )}
           </div>
         </Card>
       </div>

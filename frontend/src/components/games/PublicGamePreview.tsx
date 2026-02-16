@@ -198,7 +198,7 @@ export function PublicGamePreview({
                   })}
                 </p>
                 <Button
-                  onClick={() => navigate("/login")}
+                  onClick={() => navigate("/auth/login")}
                   className="bg-primary hover:bg-primary/90"
                 >
                   {t("common.login", { defaultValue: "Login" })}
