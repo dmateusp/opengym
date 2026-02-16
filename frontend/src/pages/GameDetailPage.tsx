@@ -866,7 +866,7 @@ export default function GameDetailPage() {
                     }
                     publishedAt={publishedAtDate ?? undefined}
                   />
-                  {isPublished && (
+                  {isPublished || isScheduled && (
                     <button
                       onClick={handleCopyShareLink}
                       className="inline-flex items-center gap-2 text-sm font-semibold px-3 py-1.5 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition"
