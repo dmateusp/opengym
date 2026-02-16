@@ -29,6 +29,20 @@ select *
 from games
 where games.id = ?;
 
+-- name: GameGetPublicInfoById :one
+select
+  games.id,
+  games.name,
+  games.published_at,
+  games.starts_at,
+  games.game_spots_left,
+  users.name as organizer_name,
+  users.photo as organizer_photo
+from games
+join users
+  on users.id = games.organizer_id
+where games.id = ?;
+
 -- name: GameUpdate :exec
 update games
 set

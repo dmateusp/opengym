@@ -236,6 +236,52 @@ func (srv *server) GetApiGames(w http.ResponseWriter, r *http.Request, params ap
 	}
 }
 
+func (srv *server) GetPublicApiGamesId(w http.ResponseWriter, r *http.Request, id string) {
+	game, err := srv.querier.GameGetPublicInfoById(r.Context(), id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "game not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, fmt.Sprintf("failed to retrieve game: %s", err.Error()), http.StatusInternalServerError)
+		return
+	}
+
+	now := srv.clock.Now()
+	isPublished := game.PublishedAt.Valid && !game.PublishedAt.Time.After(now)
+
+	resp := api.PublicGameDetail{
+		Id:   game.ID,
+		Name: game.Name,
+	}
+
+	// Set organizer information
+	if game.OrganizerName.Valid {
+		resp.Organizer.Name = game.OrganizerName.String
+	}
+	if game.OrganizerPhoto.Valid {
+		resp.Organizer.Picture = &game.OrganizerPhoto.String
+	}
+
+	if isPublished {
+		// Game is published, show spots left and start time
+		resp.GameSpotsLeft = &game.GameSpotsLeft
+		if game.StartsAt.Valid {
+			resp.StartsAt = &game.StartsAt.Time
+		}
+	} else if game.PublishedAt.Valid {
+		// Game is not yet published, show when it will be published
+		resp.PublishedAt = &game.PublishedAt.Time
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		http.Error(w, fmt.Sprintf("failed to encode response: %s", err.Error()), http.StatusInternalServerError)
+		return
+	}
+}
+
 func isConstraintError(err error) bool {
 	if err == nil {
 		return false
