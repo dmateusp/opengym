@@ -250,28 +250,41 @@ func (srv *server) GetPublicApiGamesId(w http.ResponseWriter, r *http.Request, i
 	now := srv.clock.Now()
 	isPublished := game.PublishedAt.Valid && !game.PublishedAt.Time.After(now)
 
-	resp := api.PublicGameDetail{
-		Id:   game.ID,
-		Name: game.Name,
-	}
-
-	// Set organizer information
-	if game.OrganizerName.Valid {
-		resp.Organizer.Name = game.OrganizerName.String
-	}
-	if game.OrganizerPhoto.Valid {
-		resp.Organizer.Picture = &game.OrganizerPhoto.String
-	}
+	var resp api.PublicGameDetail
 
 	if isPublished {
 		// Game is published, show spots left and start time
-		resp.GameSpotsLeft = &game.GameSpotsLeft
+		detail := api.PublicGameDetail0{
+			Id:            game.ID,
+			Name:          game.Name,
+			GameSpotsLeft: game.GameSpotsLeft,
+		}
+		detail.Organizer.Name = game.OrganizerName.String
+		if game.OrganizerPhoto.Valid {
+			detail.Organizer.Picture = &game.OrganizerPhoto.String
+		}
 		if game.StartsAt.Valid {
-			resp.StartsAt = &game.StartsAt.Time
+			detail.StartsAt = game.StartsAt.Time
+		}
+		if err := resp.FromPublicGameDetail0(detail); err != nil {
+			http.Error(w, fmt.Sprintf("failed to create response: %s", err.Error()), http.StatusInternalServerError)
+			return
 		}
 	} else if game.PublishedAt.Valid {
 		// Game is not yet published, show when it will be published
-		resp.PublishedAt = &game.PublishedAt.Time
+		detail := api.PublicGameDetail1{
+			Id:          game.ID,
+			Name:        game.Name,
+			PublishedAt: game.PublishedAt.Time,
+		}
+		detail.Organizer.Name = game.OrganizerName.String
+		if game.OrganizerPhoto.Valid {
+			detail.Organizer.Picture = &game.OrganizerPhoto.String
+		}
+		if err := resp.FromPublicGameDetail1(detail); err != nil {
+			http.Error(w, fmt.Sprintf("failed to create response: %s", err.Error()), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")

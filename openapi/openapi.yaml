@@ -632,48 +632,82 @@ components:
           description: User information for the game organizer
 
     PublicGameDetail:
-      type: object
-      required:
-        - id
-        - name
-        - organizer
-      properties:
-        id:
-          type: string
-          description: Unique game identifier
-          example: "aBc1"
-        name:
-          type: string
-          description: Name of the game
-          example: "Sunday Morning Volleyball"
-        organizer:
-          type: object
+      oneOf:
+        - type: object
+          description: Published game with available spots and start time
           required:
+            - id
             - name
+            - organizer
+            - gameSpotsLeft
+            - startsAt
           properties:
+            id:
+              type: string
+              description: Unique game identifier
+              example: "aBc1"
             name:
               type: string
-              description: Organizer's full name
-              example: "John Doe"
-            picture:
+              description: Name of the game
+              example: "Sunday Morning Volleyball"
+            organizer:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  description: Organizer's full name
+                  example: "John Doe"
+                picture:
+                  type: string
+                  format: uri
+                  description: URL to organizer's profile picture
+                  example: "https://example.com/avatar.jpg"
+            gameSpotsLeft:
+              type: integer
+              description: Number of spots left in the game
+              example: 10
+              format: int64
+              minimum: 0
+            startsAt:
               type: string
-              format: uri
-              description: URL to organizer's profile picture
-              example: "https://example.com/avatar.jpg"
-        gameSpotsLeft:
-          type: integer
-          description: Number of spots left in the game (only present if game is published)
-          example: 10
-          format: int64
-          minimum: 0
-        startsAt:
-          type: string
-          format: date-time
-          description: When the game starts (only present if game is published)
-        publishedAt:
-          type: string
-          format: date-time
-          description: When the game will be published (only present if game is not yet published)
+              format: date-time
+              description: When the game starts
+        - type: object
+          description: Unpublished game with scheduled publish time
+          required:
+            - id
+            - name
+            - organizer
+            - publishedAt
+          properties:
+            id:
+              type: string
+              description: Unique game identifier
+              example: "aBc1"
+            name:
+              type: string
+              description: Name of the game
+              example: "Sunday Morning Volleyball"
+            organizer:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  description: Organizer's full name
+                  example: "John Doe"
+                picture:
+                  type: string
+                  format: uri
+                  description: URL to organizer's profile picture
+                  example: "https://example.com/avatar.jpg"
+            publishedAt:
+              type: string
+              format: date-time
+              description: When the game will be published
 
     ParticipationStatus:
       description: Participation status of the authenticated user

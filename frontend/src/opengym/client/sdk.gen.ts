@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetApiAuthByProviderCallbackData, GetApiAuthByProviderCallbackErrors, GetApiAuthByProviderCallbackResponses, GetApiAuthByProviderLoginData, GetApiAuthByProviderLoginErrors, GetApiAuthMeData, GetApiAuthMeErrors, GetApiAuthMeResponses, GetApiDemoUsersData, GetApiDemoUsersErrors, GetApiDemoUsersResponses, GetApiGamesByIdData, GetApiGamesByIdErrors, GetApiGamesByIdParticipantsData, GetApiGamesByIdParticipantsErrors, GetApiGamesByIdParticipantsResponses, GetApiGamesByIdResponses, GetApiGamesData, GetApiGamesErrors, GetApiGamesResponses, PatchApiGamesByIdData, PatchApiGamesByIdErrors, PatchApiGamesByIdResponses, PostApiAuthLogoutData, PostApiAuthLogoutErrors, PostApiAuthLogoutResponses, PostApiDemoUsersByUserIdImpersonateData, PostApiDemoUsersByUserIdImpersonateErrors, PostApiDemoUsersByUserIdImpersonateResponses, PostApiGamesData, PostApiGamesErrors, PostApiGamesResponses, PutApiGamesByIdParticipantsData, PutApiGamesByIdParticipantsErrors, PutApiGamesByIdParticipantsResponses } from './types.gen';
+import type { GetApiAuthByProviderCallbackData, GetApiAuthByProviderCallbackErrors, GetApiAuthByProviderCallbackResponses, GetApiAuthByProviderLoginData, GetApiAuthByProviderLoginErrors, GetApiAuthMeData, GetApiAuthMeErrors, GetApiAuthMeResponses, GetApiDemoUsersData, GetApiDemoUsersErrors, GetApiDemoUsersResponses, GetApiGamesByIdData, GetApiGamesByIdErrors, GetApiGamesByIdParticipantsData, GetApiGamesByIdParticipantsErrors, GetApiGamesByIdParticipantsResponses, GetApiGamesByIdResponses, GetApiGamesData, GetApiGamesErrors, GetApiGamesResponses, GetPublicApiGamesByIdData, GetPublicApiGamesByIdErrors, GetPublicApiGamesByIdResponses, PatchApiGamesByIdData, PatchApiGamesByIdErrors, PatchApiGamesByIdResponses, PostApiAuthLogoutData, PostApiAuthLogoutErrors, PostApiAuthLogoutResponses, PostApiDemoUsersByUserIdImpersonateData, PostApiDemoUsersByUserIdImpersonateErrors, PostApiDemoUsersByUserIdImpersonateResponses, PostApiGamesData, PostApiGamesErrors, PostApiGamesResponses, PutApiGamesByIdParticipantsData, PutApiGamesByIdParticipantsErrors, PutApiGamesByIdParticipantsResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -115,6 +115,13 @@ export const patchApiGamesById = <ThrowOnError extends boolean = false>(options:
         ...options.headers
     }
 });
+
+/**
+ * Get public game information
+ *
+ * Retrieves limited public information about a game. If the game is published, returns spots left and start time. If not yet published, returns when it will be published.
+ */
+export const getPublicApiGamesById = <ThrowOnError extends boolean = false>(options: Options<GetPublicApiGamesByIdData, ThrowOnError>) => (options.client ?? client).get<GetPublicApiGamesByIdResponses, GetPublicApiGamesByIdErrors, ThrowOnError>({ url: '/public/api/games/{id}', ...options });
 
 /**
  * List game participants

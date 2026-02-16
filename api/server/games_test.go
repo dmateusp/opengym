@@ -1811,38 +1811,35 @@ func TestGetPublicApiGames_PublishedGame(t *testing.T) {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
-	// Verify required fields
-	if response.Id != "pub123" {
-		t.Errorf("Expected id 'pub123', got %s", response.Id)
+	// Extract the published game variant
+	publishedGame, err := response.AsPublicGameDetail0()
+	if err != nil {
+		t.Fatalf("Failed to extract published game variant: %v", err)
 	}
-	if response.Name != "Published Game" {
-		t.Errorf("Expected name 'Published Game', got %s", response.Name)
+
+	// Verify required fields
+	if publishedGame.Id != "pub123" {
+		t.Errorf("Expected id 'pub123', got %s", publishedGame.Id)
+	}
+	if publishedGame.Name != "Published Game" {
+		t.Errorf("Expected name 'Published Game', got %s", publishedGame.Name)
 	}
 
 	// Verify organizer info
-	if response.Organizer.Name != "John Doe" {
-		t.Errorf("Expected organizer name 'John Doe', got %s", response.Organizer.Name)
+	if publishedGame.Organizer.Name != "John Doe" {
+		t.Errorf("Expected organizer name 'John Doe', got %s", publishedGame.Organizer.Name)
 	}
-	if response.Organizer.Picture == nil || *response.Organizer.Picture != "https://example.com/photo.jpg" {
-		t.Errorf("Expected organizer picture 'https://example.com/photo.jpg', got %v", response.Organizer.Picture)
+	if publishedGame.Organizer.Picture == nil || *publishedGame.Organizer.Picture != "https://example.com/photo.jpg" {
+		t.Errorf("Expected organizer picture 'https://example.com/photo.jpg', got %v", publishedGame.Organizer.Picture)
 	}
 
 	// Verify published game shows spots and start time
-	if response.GameSpotsLeft == nil {
-		t.Error("Expected gameSpotsLeft to be set for published game")
-	} else if *response.GameSpotsLeft != 15 {
-		t.Errorf("Expected gameSpotsLeft 15, got %d", *response.GameSpotsLeft)
+	if publishedGame.GameSpotsLeft != 15 {
+		t.Errorf("Expected gameSpotsLeft 15, got %d", publishedGame.GameSpotsLeft)
 	}
 
-	if response.StartsAt == nil {
-		t.Error("Expected startsAt to be set for published game")
-	} else if !response.StartsAt.Equal(startsAt) {
-		t.Errorf("Expected startsAt %v, got %v", startsAt, *response.StartsAt)
-	}
-
-	// Verify publishedAt is not included for already published games
-	if response.PublishedAt != nil {
-		t.Errorf("Expected publishedAt to be nil for published game, got %v", response.PublishedAt)
+	if !publishedGame.StartsAt.Equal(startsAt) {
+		t.Errorf("Expected startsAt %v, got %v", startsAt, publishedGame.StartsAt)
 	}
 }
 
@@ -1895,34 +1892,30 @@ func TestGetPublicApiGames_UnpublishedGame(t *testing.T) {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
-	// Verify required fields
-	if response.Id != "unpub456" {
-		t.Errorf("Expected id 'unpub456', got %s", response.Id)
+	// Extract the unpublished game variant
+	unpublishedGame, err := response.AsPublicGameDetail1()
+	if err != nil {
+		t.Fatalf("Failed to extract unpublished game variant: %v", err)
 	}
-	if response.Name != "Upcoming Game" {
-		t.Errorf("Expected name 'Upcoming Game', got %s", response.Name)
+
+	// Verify required fields
+	if unpublishedGame.Id != "unpub456" {
+		t.Errorf("Expected id 'unpub456', got %s", unpublishedGame.Id)
+	}
+	if unpublishedGame.Name != "Upcoming Game" {
+		t.Errorf("Expected name 'Upcoming Game', got %s", unpublishedGame.Name)
 	}
 
 	// Verify organizer info
-	if response.Organizer.Name != "Jane Smith" {
-		t.Errorf("Expected organizer name 'Jane Smith', got %s", response.Organizer.Name)
+	if unpublishedGame.Organizer.Name != "Jane Smith" {
+		t.Errorf("Expected organizer name 'Jane Smith', got %s", unpublishedGame.Organizer.Name)
 	}
-	if response.Organizer.Picture != nil {
-		t.Errorf("Expected organizer picture to be nil, got %v", *response.Organizer.Picture)
+	if unpublishedGame.Organizer.Picture != nil {
+		t.Errorf("Expected organizer picture to be nil, got %v", *unpublishedGame.Organizer.Picture)
 	}
 
 	// Verify unpublished game shows publishedAt
-	if response.PublishedAt == nil {
-		t.Error("Expected publishedAt to be set for unpublished game")
-	} else if !response.PublishedAt.Equal(futurePublishTime) {
-		t.Errorf("Expected publishedAt %v, got %v", futurePublishTime, *response.PublishedAt)
-	}
-
-	// Verify gameSpotsLeft and startsAt are not included for unpublished games
-	if response.GameSpotsLeft != nil {
-		t.Errorf("Expected gameSpotsLeft to be nil for unpublished game, got %v", *response.GameSpotsLeft)
-	}
-	if response.StartsAt != nil {
-		t.Errorf("Expected startsAt to be nil for unpublished game, got %v", *response.StartsAt)
+	if !unpublishedGame.PublishedAt.Equal(futurePublishTime) {
+		t.Errorf("Expected publishedAt %v, got %v", futurePublishTime, unpublishedGame.PublishedAt)
 	}
 }
