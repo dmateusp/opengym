@@ -8,7 +8,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { API_BASE_URL } from '@/lib/api'
+import { API_BASE_URL, IS_DEMO_MODE } from '@/lib/api'
 import type { User } from '@/opengym/client'
 
 interface UserProfileMenuProps {
@@ -22,8 +22,11 @@ export default function UserProfileMenu({ user, onUserChange }: UserProfileMenuP
   const [isLoadingDemo, setIsLoadingDemo] = useState(true)
 
   useEffect(() => {
-    // Check if demo mode is available
-    const checkDemoMode = async () => {
+    // Check if demo mode is enabled from config
+    setIsDemoMode(IS_DEMO_MODE)
+
+    // Fetch demo users if demo mode is enabled
+    const fetchDemoUsers = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/api/demo/users`, {
           credentials: 'include',
@@ -32,7 +35,6 @@ export default function UserProfileMenu({ user, onUserChange }: UserProfileMenuP
         if (response.ok) {
           const users = await response.json()
           setDemoUsers(users)
-          setIsDemoMode(true)
           
           // Auto-impersonate first user if not already logged in and haven't already tried
           if (!user && users.length > 0 && !sessionStorage.getItem('demo_auto_impersonate_attempted')) {
@@ -41,15 +43,14 @@ export default function UserProfileMenu({ user, onUserChange }: UserProfileMenuP
           }
         }
       } catch (error) {
-        // Demo mode not available or error occurred
-        console.debug('Demo mode not available:', error)
+        console.error('Failed to fetch demo users:', error)
       } finally {
         setIsLoadingDemo(false)
       }
     }
 
-    checkDemoMode()
-  }, [])
+    fetchDemoUsers()
+  }, [user])
 
   const impersonateUser = async (userId: string) => {
     try {

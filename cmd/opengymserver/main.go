@@ -138,7 +138,10 @@ func main() {
 		mux.Handle("/public/", handler)
 		mux.HandleFunc("/config.js", func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/javascript")
-			config := map[string]string{"API_BASE_URL": server.GetBaseUrl()}
+			config := map[string]interface{}{
+				"API_BASE_URL": server.GetBaseUrl(),
+				"IS_DEMO_MODE": demo.GetDemoMode(),
+			}
 			jsonData, _ := json.Marshal(config)
 			fmt.Fprintf(w, "window.OPENGYM_CONFIG = %s;\n", jsonData)
 		})

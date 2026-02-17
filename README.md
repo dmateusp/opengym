@@ -20,7 +20,7 @@ Then, start the front-end:
 
 ```bash
 cd frontend
-pnpm run dev
+VITE_IS_DEMO_MODE=true pnpm run dev
 ```
 
 The demo version allows you to try out the various features of opengym both as a participant and as an organizer.

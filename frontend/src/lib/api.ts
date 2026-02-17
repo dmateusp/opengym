@@ -1,9 +1,17 @@
 // Runtime configuration - can be set via window.OPENGYM_CONFIG
+
 // Falls back to Vite env var for development, then localhost
 export const API_BASE_URL =
   (typeof window !== 'undefined' && window.OPENGYM_CONFIG?.API_BASE_URL) ||
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
   'http://localhost:8080';
+
+// When serving through backend, IS_DEMO_MODE comes from /config.js
+// During development with pnpm run dev, set VITE_IS_DEMO_MODE=true if backend has demo mode enabled
+export const IS_DEMO_MODE =
+  (typeof window !== 'undefined' && window.OPENGYM_CONFIG?.IS_DEMO_MODE) ||
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_IS_DEMO_MODE === 'true') ||
+  false;
 
 export const oauthLoginUrl = (provider: 'google', redirectPage?: string) => {
   let targetPage = redirectPage;
