@@ -135,7 +135,7 @@ func main() {
 		logger.InfoContext(ctx, "Serving frontend from frontend/dist")
 		mux := http.NewServeMux()
 		mux.Handle("/api/", handler)
-		mux.Handle("/public/", handler)
+		mux.Handle("/public/api/", handler)
 		mux.HandleFunc("/config.js", func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/javascript")
 			config := map[string]string{"API_BASE_URL": server.GetBaseUrl()}
