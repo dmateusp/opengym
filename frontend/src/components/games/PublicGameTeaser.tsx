@@ -137,25 +137,41 @@ export function PublicGameTeaser({
               </p>
 
               {timeRemaining ? (
-                <div className="grid grid-cols-4 gap-3 mb-4">
-                  {[
-                    { value: timeRemaining.days, label: "Days" },
-                    { value: timeRemaining.hours, label: "Hours" },
-                    { value: timeRemaining.minutes, label: "Minutes" },
-                    { value: timeRemaining.seconds, label: "Seconds" },
-                  ].map((item, idx) => (
-                    <div
-                      key={idx}
-                      className="bg-white rounded-lg border-2 border-gray-200 p-4"
-                    >
-                      <div className="text-3xl font-bold text-primary">
-                        {String(item.value).padStart(2, "0")}
-                      </div>
-                      <div className="text-xs text-gray-600 uppercase tracking-wide mt-2">
-                        {item.label}
+                <div className="space-y-3 mb-4">
+                  {/* Days */}
+                  {timeRemaining.days > 0 && (
+                    <div className="flex justify-center">
+                      <div className="bg-white rounded-lg border-2 border-gray-200 p-3 sm:p-4 w-24 sm:w-28">
+                        <div className="text-2xl sm:text-3xl font-bold text-primary text-center">
+                          {String(timeRemaining.days).padStart(2, "0")}
+                        </div>
+                        <div className="text-xs text-gray-600 uppercase tracking-wide mt-2 text-center">
+                          {t("game.days")}
+                        </div>
                       </div>
                     </div>
-                  ))}
+                  )}
+
+                  {/* Hours, Minutes, Seconds */}
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                    {[
+                      { value: timeRemaining.hours, label: t("game.hours") },
+                      { value: timeRemaining.minutes, label: t("game.minutes") },
+                      { value: timeRemaining.seconds, label: t("game.seconds") },
+                    ].map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="bg-white rounded-lg border-2 border-gray-200 p-2 sm:p-3"
+                      >
+                        <div className="text-lg sm:text-2xl font-bold text-primary">
+                          {String(item.value).padStart(2, "0")}
+                        </div>
+                        <div className="text-[0.5rem] sm:text-[0.625rem] text-gray-600 uppercase tracking-wide mt-1">
+                          {item.label}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ) : (
                 <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-6 border-2 border-green-200">
