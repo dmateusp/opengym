@@ -104,7 +104,7 @@ export const getApiGamesById = <ThrowOnError extends boolean = false>(options: O
 /**
  * Update a game
  *
- * Updates an existing game. Only the organizer can update their game. Publishing is irreversible once the publish time has passed. If `publishedAt` is in the future, the organizer may reschedule it or cancel publishing (unset the field) until it becomes effective.
+ * Updates an existing game. Only the organizer can update their game. Publishing is irreversible once its effective time has passed. Locking can be scheduled, rescheduled, or cleared.
  */
 export const patchApiGamesById = <ThrowOnError extends boolean = false>(options: Options<PatchApiGamesByIdData, ThrowOnError>) => (options.client ?? client).patch<PatchApiGamesByIdResponses, PatchApiGamesByIdErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],

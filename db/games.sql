@@ -52,6 +52,10 @@ set
     when cast(sqlc.arg(clear_published_at) as boolean) then null
     else coalesce(sqlc.arg(published_at), published_at)
   end,
+  locked_at = case
+    when cast(sqlc.arg(clear_locked_at) as boolean) then null
+    else coalesce(sqlc.arg(locked_at), locked_at)
+  end,
   total_price_cents = coalesce(sqlc.arg(total_price_cents), total_price_cents),
   location = coalesce(sqlc.arg(location), location),
   starts_at = coalesce(sqlc.arg(starts_at), starts_at),

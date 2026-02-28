@@ -293,7 +293,7 @@ paths:
 
     patch:
       summary: Update a game
-      description: Updates an existing game. Only the organizer can update their game. Publishing is irreversible once the publish time has passed. If `publishedAt` is in the future, the organizer may reschedule it or cancel publishing (unset the field) until it becomes effective.
+      description: Updates an existing game. Only the organizer can update their game. Publishing is irreversible once its effective time has passed. Locking can be scheduled, rescheduled, or cleared.
       tags:
         - Games
       security:
@@ -586,6 +586,11 @@ components:
               format: date-time
               description: When the game should become publicly visible. Past timestamps publish immediately. While in the future, it can be rescheduled or cleared.
               nullable: true
+            lockedAt:
+              type: string
+              format: date-time
+              description: When the game should become locked. Past timestamps lock immediately. It can be rescheduled or cleared.
+              nullable: true
     Game:
       allOf:
         - $ref: '#/components/schemas/GameFields'
@@ -609,6 +614,10 @@ components:
               type: string
               format: date-time
               description: When the game is published (visible to others)
+            lockedAt:
+              type: string
+              format: date-time
+              description: When the game is locked
             createdAt:
               type: string
               format: date-time

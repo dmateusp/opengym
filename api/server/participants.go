@@ -157,6 +157,11 @@ func (s *server) PutApiGamesIdParticipants(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
+	if game.LockedAt.Valid && !game.LockedAt.Time.After(s.clock.Now()) {
+		http.Error(w, "game is locked", http.StatusBadRequest)
+		return
+	}
+
 	going := sql.NullBool{Bool: req.Status == api.Going, Valid: true}
 
 	confirmedAt := sql.NullTime{

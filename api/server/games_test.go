@@ -1616,6 +1616,132 @@ func TestPatchApiGamesId_CannotClearAfterPublished(t *testing.T) {
 	}
 }
 
+func TestPatchApiGamesId_LockCanBeRescheduledAndCleared(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+	staticClock := clock.StaticClock{Time: time.Now()}
+
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "john@example.com")
+	querier := db.New(sqlDB)
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
+
+	createReq := api.CreateGameRequest{Name: "Lockable"}
+	body, _ := json.Marshal(createReq)
+	r := httptest.NewRequest(http.MethodPost, "/api/games", bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w := httptest.NewRecorder()
+	srv.PostApiGames(w, r)
+
+	var created api.GameDetail
+	json.NewDecoder(w.Body).Decode(&created)
+
+	past := staticClock.Now().Add(-1 * time.Hour)
+	updateReq := api.UpdateGameRequest{LockedAt: nullable.NewNullableWithValue(past)}
+	body, _ = json.Marshal(updateReq)
+	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Game.Id, bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w = httptest.NewRecorder()
+	srv.PatchApiGamesId(w, r, created.Game.Id)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected locking with past timestamp to succeed, got %d", w.Code)
+	}
+
+	future := staticClock.Now().Add(2 * time.Hour)
+	updateReq = api.UpdateGameRequest{LockedAt: nullable.NewNullableWithValue(future)}
+	body, _ = json.Marshal(updateReq)
+	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Game.Id, bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w = httptest.NewRecorder()
+	srv.PatchApiGamesId(w, r, created.Game.Id)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected rescheduling lock to future to succeed, got %d", w.Code)
+	}
+
+	var rescheduled api.GameDetail
+	json.NewDecoder(w.Body).Decode(&rescheduled)
+	if rescheduled.Game.LockedAt == nil {
+		t.Fatalf("expected lockedAt to remain set after reschedule")
+	}
+	if !rescheduled.Game.LockedAt.After(staticClock.Now()) {
+		t.Fatalf("expected lockedAt to be in the future after reschedule, got %v", rescheduled.Game.LockedAt)
+	}
+
+	updateReq = api.UpdateGameRequest{LockedAt: nullable.NewNullNullable[time.Time]()}
+	body, _ = json.Marshal(updateReq)
+	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Game.Id, bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w = httptest.NewRecorder()
+	srv.PatchApiGamesId(w, r, created.Game.Id)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected clearing lock to succeed, got %d", w.Code)
+	}
+
+	var cleared api.GameDetail
+	json.NewDecoder(w.Body).Decode(&cleared)
+	if cleared.Game.LockedAt != nil {
+		t.Fatalf("expected lockedAt to be cleared")
+	}
+}
+
+func TestPatchApiGamesId_WhenLockedOnlyDescriptionAndLockedAtCanChange(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+	staticClock := clock.StaticClock{Time: time.Now()}
+
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "john@example.com")
+	querier := db.New(sqlDB)
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
+
+	createReq := api.CreateGameRequest{Name: "Locked Edit Rules"}
+	body, _ := json.Marshal(createReq)
+	r := httptest.NewRequest(http.MethodPost, "/api/games", bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w := httptest.NewRecorder()
+	srv.PostApiGames(w, r)
+
+	var created api.GameDetail
+	json.NewDecoder(w.Body).Decode(&created)
+
+	past := staticClock.Now().Add(-1 * time.Hour)
+	lockReq := api.UpdateGameRequest{LockedAt: nullable.NewNullableWithValue(past)}
+	body, _ = json.Marshal(lockReq)
+	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Game.Id, bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w = httptest.NewRecorder()
+	srv.PatchApiGamesId(w, r, created.Game.Id)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected locking to succeed, got %d", w.Code)
+	}
+
+	newName := "Should Fail"
+	updateReq := api.UpdateGameRequest{Name: &newName}
+	body, _ = json.Marshal(updateReq)
+	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Game.Id, bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w = httptest.NewRecorder()
+	srv.PatchApiGamesId(w, r, created.Game.Id)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected locked game name update to fail with 400, got %d", w.Code)
+	}
+
+	newDescription := "Allowed change"
+	updateReq = api.UpdateGameRequest{Description: &newDescription}
+	body, _ = json.Marshal(updateReq)
+	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Game.Id, bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w = httptest.NewRecorder()
+	srv.PatchApiGamesId(w, r, created.Game.Id)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected locked game description update to succeed, got %d", w.Code)
+	}
+
+	var updated api.GameDetail
+	json.NewDecoder(w.Body).Decode(&updated)
+	if updated.Game.Description == nil || *updated.Game.Description != newDescription {
+		t.Fatalf("expected description to be updated on locked game")
+	}
+}
+
 func TestPatchApiGamesId_NameValidation(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()

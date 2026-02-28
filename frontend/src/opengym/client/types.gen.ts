@@ -99,6 +99,10 @@ export type UpdateGameRequest = GameFields & {
      * When the game should become publicly visible. Past timestamps publish immediately. While in the future, it can be rescheduled or cleared.
      */
     publishedAt?: string | null;
+    /**
+     * When the game should become locked. Past timestamps lock immediately. It can be rescheduled or cleared.
+     */
+    lockedAt?: string | null;
 };
 
 export type Game = GameFields & {
@@ -114,6 +118,10 @@ export type Game = GameFields & {
      * When the game is published (visible to others)
      */
     publishedAt?: string;
+    /**
+     * When the game is locked
+     */
+    lockedAt?: string;
     /**
      * Timestamp when game was created
      */

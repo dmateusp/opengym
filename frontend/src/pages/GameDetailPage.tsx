@@ -25,6 +25,7 @@ import {
   Rocket,
   Copy,
   Check,
+  Lock,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
@@ -61,6 +62,7 @@ interface Game {
   createdAt: string;
   updatedAt: string;
   publishedAt?: string | null;
+  lockedAt?: string | null;
 }
 
 interface PublicGame {
@@ -133,6 +135,15 @@ export default function GameDetailPage() {
   const [publishAtInput, setPublishAtInput] = useState("");
   const [nowTs, setNowTs] = useState(() => Date.now());
   const [isEditingSchedule, setIsEditingSchedule] = useState(false);
+
+  // Lock state
+  const [isLocking, setIsLocking] = useState(false);
+  const [lockError, setLockError] = useState<string | null>(null);
+  const [lockAtInput, setLockAtInput] = useState("");
+  const [isEditingLockSchedule, setIsEditingLockSchedule] = useState(false);
+  const [showLockNowWarning, setShowLockNowWarning] = useState(false);
+  const [showLockScheduleWarning, setShowLockScheduleWarning] = useState(false);
+  const [showLockClearWarning, setShowLockClearWarning] = useState(false);
 
   // Participants state
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -440,6 +451,13 @@ export default function GameDetailPage() {
     return d;
   }, [game?.publishedAt]);
 
+  const lockedAtDate = useMemo(() => {
+    if (!game?.lockedAt) return null;
+    const d = new Date(game.lockedAt);
+    if (Number.isNaN(d.getTime())) return null;
+    return d;
+  }, [game?.lockedAt]);
+
   const isScheduled = useMemo(() => {
     if (!publishedAtDate) return false;
     return publishedAtDate.getTime() > nowTs;
@@ -452,6 +470,17 @@ export default function GameDetailPage() {
     return publishedAtDate.getTime() <= nowTs + 60000;
   }, [publishedAtDate, nowTs]);
 
+  const isLockScheduled = useMemo(() => {
+    if (!lockedAtDate) return false;
+    return lockedAtDate.getTime() > nowTs;
+  }, [lockedAtDate, nowTs]);
+
+  const isLocked = useMemo(() => {
+    if (!lockedAtDate) return false;
+    // Treat as locked if the timestamp is in the past, or within 60 seconds of now
+    return lockedAtDate.getTime() <= nowTs + 60000;
+  }, [lockedAtDate, nowTs]);
+
   // Total slots to display in the participant grids.
   // ParticipantGrid uses this to calculate empty slots: totalSlots - participants.length
   // This should be the game's capacity (maxPlayers), not remaining spots.
@@ -463,7 +492,13 @@ export default function GameDetailPage() {
     } else {
       setPublishAtInput("");
     }
-  }, [game?.publishedAt]);
+    if (game?.lockedAt) {
+      setLockAtInput(toLocalInputValue(game.lockedAt));
+      setIsEditingLockSchedule(false);
+    } else {
+      setLockAtInput("");
+    }
+  }, [game?.publishedAt, game?.lockedAt]);
 
   // Focus input when editing starts
   useEffect(() => {
@@ -474,6 +509,8 @@ export default function GameDetailPage() {
 
   function startEditing(field: string, currentValue: unknown) {
     if (!isOrganizer) return;
+    // Prevent editing of non-description fields when game is locked
+    if (isLocked && field !== "description") return;
     setEditingField(field);
     if (field === "totalPriceCents" && typeof currentValue === "number") {
       setEditValue(formatCentsAsDollars(currentValue));
@@ -569,6 +606,77 @@ export default function GameDetailPage() {
     if (ok) setIsEditingSchedule(false);
   }
 
+  async function updateLockTime(
+    lockedAtValue: string | null
+  ) {
+    if (!isOrganizer || !id) return false;
+
+    setIsLocking(true);
+    setLockError(null);
+
+    try {
+      const resp = await fetch(`${API_BASE_URL}/api/games/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ lockedAt: lockedAtValue }),
+      });
+
+      if (!resp.ok) {
+        if (resp.status === 401) {
+          redirectToLogin();
+          return false;
+        }
+        const txt = await resp.text();
+        throw new Error(txt || t("lock.failedToUpdateLockTime"));
+      }
+
+      const updated = await resp.json();
+      setGame(updated.game);
+      setOrganizer(updated.organizer);
+      return true;
+    } catch (e) {
+      setLockError(
+        e instanceof Error ? e.message : t("lock.failedToUpdateLockTime")
+      );
+      return false;
+    } finally {
+      setIsLocking(false);
+    }
+  }
+
+  async function handleLockNow() {
+    const ok = await updateLockTime(new Date().toISOString());
+    if (ok) {
+      setShowLockNowWarning(false);
+      setIsEditingLockSchedule(false);
+    }
+  }
+
+  async function handleScheduleLock() {
+    if (!lockAtInput) {
+      setLockError(t("game.selectDateTimeToSchedule"));
+      return;
+    }
+    const iso = fromLocalInputValue(lockAtInput);
+    if (!iso) {
+      setLockError(t("game.invalidDateTime"));
+      return;
+    }
+    const ok = await updateLockTime(iso);
+    if (ok) {
+      setShowLockScheduleWarning(false);
+      setIsEditingLockSchedule(false);
+    }
+  }
+
+  async function handleClearLock() {
+    const ok = await updateLockTime(null);
+    if (ok) {
+      setShowLockClearWarning(false);
+    }
+  }
+
   async function saveField(field: string, value: unknown) {
     if (!isOrganizer || !id) return;
     // Skip sending empty strings to avoid accidental clearing until supported
@@ -651,6 +759,11 @@ export default function GameDetailPage() {
     }
     const maxGuests = game?.maxGuestsPerPlayer ?? 0;
     if (maxGuests !== -1 && guestCount > maxGuests) {
+      return;
+    }
+    
+    // Don't allow joining if game is locked
+    if (isLocked) {
       return;
     }
     
@@ -856,16 +969,24 @@ export default function GameDetailPage() {
 
                 {/* Status Badge */}
                 <div className="flex flex-wrap gap-2 items-center">
-                  <GameStatusBadge
-                    state={
-                      isPublished
-                        ? "published"
-                        : isScheduled
-                        ? "scheduled"
-                        : "draft"
-                    }
-                    publishedAt={publishedAtDate ?? undefined}
-                  />
+                  {isOrganizer && (
+                    <GameStatusBadge
+                      state={
+                        isPublished
+                          ? "published"
+                          : isScheduled
+                          ? "scheduled"
+                          : "draft"
+                      }
+                      publishedAt={publishedAtDate ?? undefined}
+                    />
+                  )}
+                  {(isLocked || isLockScheduled) && (
+                    <div className="inline-flex items-center gap-2 text-sm font-semibold px-3 py-1.5 rounded-full bg-yellow-100 text-yellow-800 border border-yellow-300">
+                      <Lock className="h-4 w-4" />
+                      {isLocked ? t("lock.gameLocked") : t("lock.lockScheduled")}
+                    </div>
+                  )}
                   {isPublished || isScheduled && (
                     <button
                       onClick={handleCopyShareLink}
@@ -944,6 +1065,7 @@ export default function GameDetailPage() {
               <div>
                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
                   {t("game.location")}
+                  {isLocked && isOrganizer && <span className="ml-1">🔒</span>}
                 </label>
                 {editingField === "location" && isOrganizer ? (
                   <Input
@@ -960,7 +1082,7 @@ export default function GameDetailPage() {
                 ) : (
                   <EditableFieldDisplay
                     isEditing={editingField === "location"}
-                    isEditable={isOrganizer}
+                    isEditable={isOrganizer && !isLocked}
                     onClick={() =>
                       startEditing("location", game?.location || "")
                     }
@@ -971,7 +1093,7 @@ export default function GameDetailPage() {
                       }`}
                     >
                       {game?.location ||
-                        (isOrganizer ? t("game.clickToAddLocation") : "—")}
+                        (isOrganizer && !isLocked ? t("game.clickToAddLocation") : "—")}
                     </div>
                   </EditableFieldDisplay>
                 )}
@@ -992,10 +1114,11 @@ export default function GameDetailPage() {
                   <div>
                     <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
                       {t("game.when")}
+                      {isLocked && isOrganizer && <span className="ml-1">🔒</span>}
                     </label>
                     <EditableFieldDisplay
                       isEditing={editingField === "startsAt"}
-                      isEditable={isOrganizer}
+                      isEditable={isOrganizer && !isLocked}
                       onClick={() =>
                         startEditing("startsAt", game?.startsAt || "")
                       }
@@ -1011,7 +1134,7 @@ export default function GameDetailPage() {
                             displayFormat="friendly"
                             className="text-gray-900"
                           />
-                        ) : isOrganizer ? (
+                        ) : isOrganizer && !isLocked ? (
                           t("game.clickToSetTime")
                         ) : (
                           "—"
@@ -1026,6 +1149,7 @@ export default function GameDetailPage() {
               <div>
                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
                   {t("game.duration")}
+                  {isLocked && isOrganizer && <span className="ml-1">🔒</span>}
                 </label>
                 {editingField === "durationMinutes" && isOrganizer ? (
                   <Input
@@ -1042,7 +1166,7 @@ export default function GameDetailPage() {
                 ) : (
                   <EditableFieldDisplay
                     isEditing={editingField === "durationMinutes"}
-                    isEditable={isOrganizer}
+                    isEditable={isOrganizer && !isLocked}
                     onClick={() =>
                       startEditing(
                         "durationMinutes",
@@ -1057,7 +1181,7 @@ export default function GameDetailPage() {
                     >
                       {game?.durationMinutes
                         ? `${game.durationMinutes} min`
-                        : isOrganizer
+                        : isOrganizer && !isLocked
                         ? t("game.clickToAddDuration")
                         : "—"}
                     </div>
@@ -1072,6 +1196,7 @@ export default function GameDetailPage() {
               <div>
                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
                   {t("common.players")}
+                  {isLocked && isOrganizer && <span className="ml-1">🔒</span>}
                 </label>
                 {editingField === "maxPlayers" && isOrganizer ? (
                   <NumberLimitEditor
@@ -1093,7 +1218,7 @@ export default function GameDetailPage() {
                 ) : (
                   <EditableFieldDisplay
                     isEditing={editingField === "maxPlayers"}
-                    isEditable={isOrganizer}
+                    isEditable={isOrganizer && !isLocked}
                     onClick={() =>
                       startEditing("maxPlayers", game?.maxPlayers || "")
                     }
@@ -1105,7 +1230,7 @@ export default function GameDetailPage() {
                     >
                       {game?.maxPlayers
                         ? `${t("common.upTo")} ${game.maxPlayers}`
-                        : isOrganizer
+                        : isOrganizer && !isLocked
                         ? t("common.clickToSet")
                         : "—"}
                     </div>
@@ -1117,6 +1242,7 @@ export default function GameDetailPage() {
               <div>
                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
                   {t("common.guestsPerPlayer")}
+                  {isLocked && isOrganizer && <span className="ml-1">🔒</span>}
                 </label>
                 {editingField === "maxGuestsPerPlayer" && isOrganizer ? (
                   <NumberLimitEditor
@@ -1134,7 +1260,7 @@ export default function GameDetailPage() {
                 ) : (
                   <EditableFieldDisplay
                     isEditing={editingField === "maxGuestsPerPlayer"}
-                    isEditable={isOrganizer}
+                    isEditable={isOrganizer && !isLocked}
                     onClick={() =>
                       startEditing(
                         "maxGuestsPerPlayer",
@@ -1153,7 +1279,7 @@ export default function GameDetailPage() {
                         ? game.maxGuestsPerPlayer === 0
                           ? t("common.disabled")
                           : `${t("common.upTo")} ${game.maxGuestsPerPlayer}`
-                        : isOrganizer
+                        : isOrganizer && !isLocked
                         ? t("common.clickToSet")
                         : "—"}
                     </div>
@@ -1165,6 +1291,7 @@ export default function GameDetailPage() {
               <div>
                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
                   {t("game.price")}
+                  {isLocked && isOrganizer && <span className="ml-1">🔒</span>}
                 </label>
                 {editingField === "totalPriceCents" && isOrganizer ? (
                   <Input
@@ -1182,7 +1309,7 @@ export default function GameDetailPage() {
                 ) : (
                   <EditableFieldDisplay
                     isEditing={editingField === "totalPriceCents"}
-                    isEditable={isOrganizer}
+                    isEditable={isOrganizer && !isLocked}
                     onClick={() =>
                       startEditing(
                         "totalPriceCents",
@@ -1204,7 +1331,7 @@ export default function GameDetailPage() {
                           totalPriceCents={game.totalPriceCents}
                           maxPlayers={game.maxPlayers}
                         />
-                      ) : isOrganizer ? (
+                      ) : isOrganizer && !isLocked ? (
                         t("game.clickToAddPrice")
                       ) : (
                         "—"
@@ -1280,6 +1407,144 @@ export default function GameDetailPage() {
                   </div>
                 </EditableFieldDisplay>
               )}
+            </div>
+          )}
+
+          {/* Lock Control Section */}
+          {isOrganizer && isPublished && (
+            <div className="px-8 py-6 border-t border-gray-100">
+              {/* Lock Controls */}
+              <div className="bg-white p-4 rounded-xl border-2 border-yellow-200">
+                <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <span className="text-lg">🔒</span>
+                  {isLocked ? t("lock.gameLocked") : isLockScheduled ? t("lock.lockScheduled") : t("lock.controlAccess")}
+                </h3>
+
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4 text-sm text-yellow-900">
+                  <p className="font-semibold mb-1">
+                    ⚠️ {t("lock.lockingImplications")}
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 text-xs">
+                    <li>{t("lock.implication1")}</li>
+                    <li>{t("lock.implication2")}</li>
+                    <li>{t("lock.implication3")}</li>
+                  </ul>
+                </div>
+
+                <div className="flex gap-2">
+                  {!isLocked && !isLockScheduled && (
+                    <>
+                      <Button
+                        onClick={() => setShowLockNowWarning(true)}
+                        disabled={isLocking}
+                        className="bg-yellow-600 hover:bg-yellow-700"
+                      >
+                        {isLocking ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            {t("lock.locking")}
+                          </>
+                        ) : (
+                          <>
+                            <span className="mr-2">🔒</span>
+                            {t("lock.lockNow")}
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setIsEditingLockSchedule(true);
+                        }}
+                      >
+                        {t("lock.scheduleLock")}
+                      </Button>
+                    </>
+                  )}
+                  {(isLocked || isLockScheduled) && (
+                    <>
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowLockClearWarning(true)}
+                        disabled={isLocking}
+                      >
+                        {t("lock.clearLock")}
+                      </Button>
+                      {isLockScheduled && (
+                        <Button
+                          variant="outline"
+                          onClick={() => setIsEditingLockSchedule(true)}
+                        >
+                          {t("lock.rescheduleLock")}
+                        </Button>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {isEditingLockSchedule && (
+                  <div className="mt-4 pt-4 border-t border-gray-200 space-y-3">
+                    <DateTimeEditor
+                      value={lockAtInput}
+                      onChange={setLockAtInput}
+                      locale={datePickerLocale}
+                      dateLabel={t("game.date", { defaultValue: "Date" })}
+                      timeLabel={t("game.time", { defaultValue: "Time" })}
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setIsEditingLockSchedule(false);
+                          setShowLockScheduleWarning(false);
+                        }}
+                      >
+                        {t("common.cancel")}
+                      </Button>
+                      <Button
+                        onClick={() => setShowLockScheduleWarning(true)}
+                        disabled={isLocking || !lockAtInput}
+                      >
+                        {isLockScheduled ? t("lock.updateSchedule") : t("lock.schedulePublish")}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {lockError && (
+                  <div className="mt-3 text-red-600 text-sm">
+                    {lockError}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Lock Status Info - shown to all users */}
+          {isPublished && (isLocked || isLockScheduled) && (
+            <div className="px-8 py-6 border-t border-gray-100">
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-900">
+                {isLocked && (
+                  <>
+                    <p className="font-semibold mb-1">🔒 {t("lock.gameLocked")}</p>
+                    <p>{t("lock.lockedInfo")}</p>
+                  </>
+                )}
+                {isLockScheduled && !isLocked && (
+                  <>
+                    <p className="font-semibold mb-1">⏰ {t("lock.lockScheduled")}</p>
+                    <p>{t("lock.scheduledInfo")}</p>
+                    {lockedAtDate && (
+                      <p className="mt-2 font-mono text-xs">
+                        <TimeDisplay
+                          timestamp={game?.lockedAt || ""}
+                          displayFormat="friendly"
+                        />
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           )}
 
@@ -1483,6 +1748,9 @@ export default function GameDetailPage() {
                   )}
                 </div>
               </div>
+            ) : isOrganizer && isPublished ? (
+              <div className="space-y-4">
+              </div>
             ) : user && isPublished ? (
               <div>
                 {currentUserParticipation && currentUserParticipation.status !== "not_going" ? (
@@ -1490,7 +1758,7 @@ export default function GameDetailPage() {
                     <Button
                       variant="outline"
                       onClick={() => setShowUngoingConfirmation(true)}
-                      disabled={isUpdatingParticipation}
+                      disabled={isUpdatingParticipation || isLocked}
                       className="w-full bg-accent/10 border-accent text-accent hover:bg-accent/20"
                     >
                       {isUpdatingParticipation
@@ -1499,6 +1767,11 @@ export default function GameDetailPage() {
                         ? t("participants.leaveWaitlist")
                         : t("participants.youreGoing")}
                     </Button>
+                    {isLocked && (
+                      <p className="text-xs text-gray-500 mt-2 text-center">
+                        {t("lock.gameLockedNoChanges")}
+                      </p>
+                    )}
                     <Dialog
                       open={showUngoingConfirmation}
                       onOpenChange={setShowUngoingConfirmation}
@@ -1531,7 +1804,7 @@ export default function GameDetailPage() {
                               setShowUngoingConfirmation(false);
                               await updateParticipation("not_going");
                             }}
-                            disabled={isUpdatingParticipation}
+                            disabled={isUpdatingParticipation || isLocked}
                           >
                             {isUpdatingParticipation
                               ? t("participants.updating")
@@ -1545,88 +1818,99 @@ export default function GameDetailPage() {
                   </>
                 ) : (
                   <div className="space-y-3">
-                    <div className="grid grid-cols-[1fr,auto] gap-3 items-end">
-                      <Button
-                        onClick={handleJoinWithGuests}
-                        disabled={
-                          joinButtonDisabled ||
-                          (() => {
-                            const count = parseInt(guestCountInput, 10);
-                            if (isNaN(count) || count < 0) return true;
-                            const maxGuests = game?.maxGuestsPerPlayer ?? 0;
-                            if (maxGuests !== -1 && count > maxGuests)
-                              return true;
-                            return false;
-                          })()
-                        }
-                        className="bg-accent w-full"
-                      >
-                        {isUpdatingParticipation ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            {t("participants.joining")}
-                          </>
-                        ) : (
-                          t("participants.countMeIn")
-                        )}
-                      </Button>
-                      <div className="flex flex-col gap-1">
-                        <label className="text-xs font-medium text-gray-600">
-                          {t("participants.guests")}
-                        </label>
-                        <Input
-                          type="number"
-                          min="0"
-                          max={
-                            game?.maxGuestsPerPlayer
-                          }
-                          value={guestCountInput}
-                          onChange={(e) => setGuestCountInput(e.target.value)}
-                          placeholder="0"
-                          disabled={
-                            game?.maxGuestsPerPlayer === 0 ||
-                            isUpdatingParticipation
-                          }
-                          className="w-20 text-center"
-                        />
+                    {isLocked && (
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-900">
+                        <p className="font-semibold">🔒 {t("lock.gameLocked")}</p>
+                        <p>{t("lock.cannotJoinLockedGame")}</p>
                       </div>
-                    </div>
-                    {(() => {
-                      const count = parseInt(guestCountInput, 10);
-                      const maxGuests = game?.maxGuestsPerPlayer ?? 0;
-                      if (game?.maxGuestsPerPlayer === 0) {
-                        return (
-                          <p className="text-xs text-gray-500">
-                            {t("participants.noGuestsAllowed")}
-                          </p>
-                        );
-                      }
-                      if (
-                        !isNaN(count) &&
-                        count > maxGuests
-                      ) {
-                        return (
-                          <p className="text-xs text-red-600">
-                            {t("participants.exceedsMaxGuests", {
-                              max: maxGuests,
-                            })}
-                          </p>
-                        );
-                      }
-                      if (
-                        game?.maxGuestsPerPlayer &&
-                        game.maxGuestsPerPlayer > 0
-                      ) {
-                        return (
-                          <p className="text-xs text-gray-500">
-                            {t("participants.maxGuestsInfo", {
-                              max: game.maxGuestsPerPlayer,
-                            })}
-                          </p>
-                        );
-                      }
-                      return null;
-                    })()}
+                    )}
+                    {!isLocked && (
+                      <>
+                        <div className="grid grid-cols-[1fr,auto] gap-3 items-end">
+                          <Button
+                            onClick={handleJoinWithGuests}
+                            disabled={
+                              joinButtonDisabled ||
+                              (() => {
+                                const count = parseInt(guestCountInput, 10);
+                                if (isNaN(count) || count < 0) return true;
+                                const maxGuests = game?.maxGuestsPerPlayer ?? 0;
+                                if (maxGuests !== -1 && count > maxGuests)
+                                  return true;
+                                return false;
+                              })()
+                            }
+                            className="bg-accent w-full"
+                          >
+                            {isUpdatingParticipation ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                {t("participants.joining")}
+                              </>
+                            ) : (
+                              t("participants.countMeIn")
+                            )}
+                          </Button>
+                          <div className="flex flex-col gap-1">
+                            <label className="text-xs font-medium text-gray-600">
+                              {t("participants.guests")}
+                            </label>
+                            <Input
+                              type="number"
+                              min="0"
+                              max={
+                                game?.maxGuestsPerPlayer
+                              }
+                              value={guestCountInput}
+                              onChange={(e) => setGuestCountInput(e.target.value)}
+                              placeholder="0"
+                              disabled={
+                                game?.maxGuestsPerPlayer === 0 ||
+                                isUpdatingParticipation ||
+                                isLocked
+                              }
+                              className="w-20 text-center"
+                            />
+                          </div>
+                        </div>
+                        {(() => {
+                          const count = parseInt(guestCountInput, 10);
+                          const maxGuests = game?.maxGuestsPerPlayer ?? 0;
+                          if (game?.maxGuestsPerPlayer === 0) {
+                            return (
+                              <p className="text-xs text-gray-500">
+                                {t("participants.noGuestsAllowed")}
+                              </p>
+                            );
+                          }
+                          if (
+                            !isNaN(count) &&
+                            count > maxGuests
+                          ) {
+                            return (
+                              <p className="text-xs text-red-600">
+                                {t("participants.exceedsMaxGuests", {
+                                  max: maxGuests,
+                                })}
+                              </p>
+                            );
+                          }
+                          if (
+                            game?.maxGuestsPerPlayer &&
+                            game.maxGuestsPerPlayer > 0
+                          ) {
+                            return (
+                              <p className="text-xs text-gray-500">
+                                {t("participants.maxGuestsInfo", {
+                                  max: game.maxGuestsPerPlayer,
+                                })}
+                              </p>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -1664,6 +1948,131 @@ export default function GameDetailPage() {
                 {isUpdatingParticipation
                   ? t("participants.joining")
                   : t("participants.confirmJoin")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Lock Now Warning Dialog */}
+        <Dialog
+          open={showLockNowWarning}
+          onOpenChange={setShowLockNowWarning}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <span className="text-lg">🔒</span>
+                {t("lock.lockGameNow")}
+              </DialogTitle>
+              <DialogDescription>
+                {t("lock.lockNowWarning")}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowLockNowWarning(false)}
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button
+                onClick={handleLockNow}
+                disabled={isLocking}
+                className="bg-yellow-600 hover:bg-yellow-700"
+              >
+                {isLocking ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {t("lock.locking")}
+                  </>
+                ) : (
+                  <>
+                    <span className="mr-2">🔒</span>
+                    {t("lock.confirmLockNow")}
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Lock Schedule Warning Dialog */}
+        <Dialog
+          open={showLockScheduleWarning}
+          onOpenChange={setShowLockScheduleWarning}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <span className="text-lg">⏰</span>
+                {t("lock.scheduleLocking")}
+              </DialogTitle>
+              <DialogDescription>
+                {t("lock.scheduleLockWarning")}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowLockScheduleWarning(false);
+                  setIsEditingLockSchedule(false);
+                }}
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button
+                onClick={handleScheduleLock}
+                disabled={isLocking}
+              >
+                {isLocking ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {t("lock.scheduling")}
+                  </>
+                ) : (
+                  t("lock.confirmSchedule")
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Clear Lock Warning Dialog */}
+        <Dialog
+          open={showLockClearWarning}
+          onOpenChange={setShowLockClearWarning}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <span className="text-lg">🔓</span>
+                {t("lock.clearLock")}
+              </DialogTitle>
+              <DialogDescription>
+                {t("lock.clearLockWarning")}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowLockClearWarning(false)}
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button
+                onClick={handleClearLock}
+                disabled={isLocking}
+                variant="destructive"
+              >
+                {isLocking ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {t("lock.clearing")}
+                  </>
+                ) : (
+                  t("lock.confirmClear")
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>

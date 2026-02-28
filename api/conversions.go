@@ -23,6 +23,11 @@ func (game *Game) FromDb(dbGame db.Game) {
 		game.PublishedAt = &t
 	}
 
+	if dbGame.LockedAt.Valid {
+		t := dbGame.LockedAt.Time
+		game.LockedAt = &t
+	}
+
 	game.TotalPriceCents = ptr.Ptr(dbGame.TotalPriceCents)
 
 	if dbGame.Location.Valid {
