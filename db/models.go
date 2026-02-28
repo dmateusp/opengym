@@ -24,6 +24,7 @@ type Game struct {
 	GameSpotsLeft      int64
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
+	LockedAt           sql.NullTime
 }
 
 type GameParticipant struct {

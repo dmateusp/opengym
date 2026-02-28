@@ -390,6 +390,14 @@ func (srv *server) PatchApiGamesId(w http.ResponseWriter, r *http.Request, id st
 		return
 	}
 
+	isLocked := game.LockedAt.Valid && !game.LockedAt.Time.After(now)
+	if isLocked {
+		if req.Name != nil || req.PublishedAt.IsSpecified() || req.TotalPriceCents != nil || req.Location != nil || req.StartsAt != nil || req.DurationMinutes != nil || req.MaxPlayers != nil || req.MaxGuestsPerPlayer != nil || req.GameSpotsLeft != nil {
+			http.Error(w, "locked game can only update description or lockedAt", http.StatusBadRequest)
+			return
+		}
+	}
+
 	params := db.GameUpdateParams{
 		ID:   id,
 		Name: game.Name,
@@ -431,6 +439,22 @@ func (srv *server) PatchApiGamesId(w http.ResponseWriter, r *http.Request, id st
 		} else {
 			params.PublishedAt = publishAt
 		}
+	}
+
+	if req.LockedAt.IsNull() {
+		params.ClearLockedAt = true
+	}
+
+	if req.LockedAt.IsSpecified() {
+		var lockAt sql.NullTime
+		if !req.LockedAt.IsNull() {
+			lockAt = sql.NullTime{Time: req.LockedAt.MustGet(), Valid: true}
+			if lockAt.Time.Before(now) {
+				lockAt = sql.NullTime{Time: now, Valid: true}
+			}
+		}
+
+		params.LockedAt = lockAt
 	}
 
 	if req.TotalPriceCents != nil {

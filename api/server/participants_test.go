@@ -262,6 +262,37 @@ func TestPutApiGamesIdParticipants_ConfirmParticipation(t *testing.T) {
 	}
 }
 
+func TestPutApiGamesIdParticipants_BlockedWhenGameIsLocked(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+	staticClock := clock.StaticClock{Time: time.Now()}
+
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "organizer@example.com")
+	participantID := dbtesting.UpsertTestUser(t, sqlDB, "participant@example.com")
+
+	querier := db.New(sqlDB)
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
+
+	createGame(t, querier, "g1", organizerID, sql.NullTime{Time: time.Now().Add(-time.Hour), Valid: true})
+
+	_, err := sqlDB.Exec(`update games set locked_at = ? where id = ?`, staticClock.Now().Add(-1*time.Minute), "g1")
+	if err != nil {
+		t.Fatalf("failed to lock game: %v", err)
+	}
+
+	req := api.UpdateGameParticipationRequest{Status: api.Going}
+	body, _ := json.Marshal(req)
+	r := httptest.NewRequest(http.MethodPut, "/api/games/g1/participants", bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(participantID)}))
+	w := httptest.NewRecorder()
+
+	srv.PutApiGamesIdParticipants(w, r, "g1")
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d when game is locked, got %d", http.StatusBadRequest, w.Code)
+	}
+}
+
 func createGame(t *testing.T, querier *db.Queries, id string, organizerID int64, publishedAt sql.NullTime) {
 	t.Helper()
 
