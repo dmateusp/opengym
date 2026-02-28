@@ -299,10 +299,8 @@
     "confirmClear": "Clear Lock",
     "updateSchedule": "Update Schedule",
     "schedulePublish": "Schedule",
-    "gameLocked": "Game Locked",
     "lockedInfo": "This game is locked. Only the description can be edited.",
-    "lockScheduled": "Lock Scheduled",
-    "scheduledInfo": "This game will be locked at the scheduled time. Participants will no longer be able to change their participation status.",
+    "scheduledInfo": "This game will be locked at the scheduled time. Participants will no longer be able to change their participation status after that time.",
     "gameLockedNoChanges": "This game is locked. You cannot change your participation status.",
     "cannotJoinLockedGame": "This game is locked. You cannot join locked games.",
     "failedToUpdateLockTime": "Failed to update lock time"

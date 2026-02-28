@@ -25,6 +25,7 @@ import {
   Rocket,
   Copy,
   Check,
+  Lock,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
@@ -968,16 +969,24 @@ export default function GameDetailPage() {
 
                 {/* Status Badge */}
                 <div className="flex flex-wrap gap-2 items-center">
-                  <GameStatusBadge
-                    state={
-                      isPublished
-                        ? "published"
-                        : isScheduled
-                        ? "scheduled"
-                        : "draft"
-                    }
-                    publishedAt={publishedAtDate ?? undefined}
-                  />
+                  {isOrganizer && (
+                    <GameStatusBadge
+                      state={
+                        isPublished
+                          ? "published"
+                          : isScheduled
+                          ? "scheduled"
+                          : "draft"
+                      }
+                      publishedAt={publishedAtDate ?? undefined}
+                    />
+                  )}
+                  {(isLocked || isLockScheduled) && (
+                    <div className="inline-flex items-center gap-2 text-sm font-semibold px-3 py-1.5 rounded-full bg-yellow-100 text-yellow-800 border border-yellow-300">
+                      <Lock className="h-4 w-4" />
+                      {isLocked ? t("lock.gameLocked") : t("lock.lockScheduled")}
+                    </div>
+                  )}
                   {isPublished || isScheduled && (
                     <button
                       onClick={handleCopyShareLink}
@@ -1056,7 +1065,7 @@ export default function GameDetailPage() {
               <div>
                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
                   {t("game.location")}
-                  {isLocked && <span className="ml-1">🔒</span>}
+                  {isLocked && isOrganizer && <span className="ml-1">🔒</span>}
                 </label>
                 {editingField === "location" && isOrganizer ? (
                   <Input
@@ -1105,7 +1114,7 @@ export default function GameDetailPage() {
                   <div>
                     <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
                       {t("game.when")}
-                      {isLocked && <span className="ml-1">🔒</span>}
+                      {isLocked && isOrganizer && <span className="ml-1">🔒</span>}
                     </label>
                     <EditableFieldDisplay
                       isEditing={editingField === "startsAt"}
@@ -1140,7 +1149,7 @@ export default function GameDetailPage() {
               <div>
                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
                   {t("game.duration")}
-                  {isLocked && <span className="ml-1">🔒</span>}
+                  {isLocked && isOrganizer && <span className="ml-1">🔒</span>}
                 </label>
                 {editingField === "durationMinutes" && isOrganizer ? (
                   <Input
@@ -1187,7 +1196,7 @@ export default function GameDetailPage() {
               <div>
                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
                   {t("common.players")}
-                  {isLocked && <span className="ml-1">🔒</span>}
+                  {isLocked && isOrganizer && <span className="ml-1">🔒</span>}
                 </label>
                 {editingField === "maxPlayers" && isOrganizer ? (
                   <NumberLimitEditor
@@ -1233,7 +1242,7 @@ export default function GameDetailPage() {
               <div>
                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
                   {t("common.guestsPerPlayer")}
-                  {isLocked && <span className="ml-1">🔒</span>}
+                  {isLocked && isOrganizer && <span className="ml-1">🔒</span>}
                 </label>
                 {editingField === "maxGuestsPerPlayer" && isOrganizer ? (
                   <NumberLimitEditor
@@ -1282,7 +1291,7 @@ export default function GameDetailPage() {
               <div>
                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
                   {t("game.price")}
-                  {isLocked && <span className="ml-1">🔒</span>}
+                  {isLocked && isOrganizer && <span className="ml-1">🔒</span>}
                 </label>
                 {editingField === "totalPriceCents" && isOrganizer ? (
                   <Input
@@ -1446,7 +1455,6 @@ export default function GameDetailPage() {
                         variant="outline"
                         onClick={() => {
                           setIsEditingLockSchedule(true);
-                          setShowLockScheduleWarning(true);
                         }}
                       >
                         {t("lock.scheduleLock")}
@@ -1494,8 +1502,8 @@ export default function GameDetailPage() {
                         {t("common.cancel")}
                       </Button>
                       <Button
-                        onClick={handleScheduleLock}
-                        disabled={isLocking}
+                        onClick={() => setShowLockScheduleWarning(true)}
+                        disabled={isLocking || !lockAtInput}
                       >
                         {isLockScheduled ? t("lock.updateSchedule") : t("lock.schedulePublish")}
                       </Button>
@@ -1509,32 +1517,34 @@ export default function GameDetailPage() {
                   </div>
                 )}
               </div>
+            </div>
+          )}
 
-              {/* Lock Status Info */}
-              {(isLocked || isLockScheduled) && (
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-900 mt-4">
-                  {isLocked && (
-                    <>
-                      <p className="font-semibold mb-1">🔒 {t("lock.gameLocked")}</p>
-                      <p>{t("lock.lockedInfo")}</p>
-                    </>
-                  )}
-                  {isLockScheduled && !isLocked && (
-                    <>
-                      <p className="font-semibold mb-1">⏰ {t("lock.lockScheduled")}</p>
-                      <p>{t("lock.scheduledInfo")}</p>
-                      {lockedAtDate && (
-                        <p className="mt-2 font-mono text-xs">
-                          <TimeDisplay
-                            timestamp={game?.lockedAt || ""}
-                            displayFormat="friendly"
-                          />
-                        </p>
-                      )}
-                    </>
-                  )}
-                </div>
-              )}
+          {/* Lock Status Info - shown to all users */}
+          {isPublished && (isLocked || isLockScheduled) && (
+            <div className="px-8 py-6 border-t border-gray-100">
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-900">
+                {isLocked && (
+                  <>
+                    <p className="font-semibold mb-1">🔒 {t("lock.gameLocked")}</p>
+                    <p>{t("lock.lockedInfo")}</p>
+                  </>
+                )}
+                {isLockScheduled && !isLocked && (
+                  <>
+                    <p className="font-semibold mb-1">⏰ {t("lock.lockScheduled")}</p>
+                    <p>{t("lock.scheduledInfo")}</p>
+                    {lockedAtDate && (
+                      <p className="mt-2 font-mono text-xs">
+                        <TimeDisplay
+                          timestamp={game?.lockedAt || ""}
+                          displayFormat="friendly"
+                        />
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           )}
 
@@ -1958,14 +1968,6 @@ export default function GameDetailPage() {
                 {t("lock.lockNowWarning")}
               </DialogDescription>
             </DialogHeader>
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-900">
-              <p className="font-semibold mb-2">{t("lock.whatWillChange")}:</p>
-              <ul className="list-disc list-inside space-y-1 text-xs">
-                <li>{t("lock.warningNoParticipantChanges")}</li>
-                <li>{t("lock.warningOnlyDescriptionEditable")}</li>
-                <li>{t("lock.warningParticipantsCanReimburse")}</li>
-              </ul>
-            </div>
             <DialogFooter>
               <Button
                 variant="outline"
@@ -2009,14 +2011,6 @@ export default function GameDetailPage() {
                 {t("lock.scheduleLockWarning")}
               </DialogDescription>
             </DialogHeader>
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-900">
-              <p className="font-semibold mb-2">{t("lock.whatWillChange")}:</p>
-              <ul className="list-disc list-inside space-y-1 text-xs">
-                <li>{t("lock.warningNoParticipantChanges")}</li>
-                <li>{t("lock.warningOnlyDescriptionEditable")}</li>
-                <li>{t("lock.warningParticipantsCanReimburse")}</li>
-              </ul>
-            </div>
             <DialogFooter>
               <Button
                 variant="outline"
@@ -2059,13 +2053,6 @@ export default function GameDetailPage() {
                 {t("lock.clearLockWarning")}
               </DialogDescription>
             </DialogHeader>
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-sm text-orange-900">
-              <p className="font-semibold mb-2">{t("lock.whatWillChange")}:</p>
-              <ul className="list-disc list-inside space-y-1 text-xs">
-                <li>{t("lock.clearWarningParticipantsCanChange")}</li>
-                <li>{t("lock.clearWarningCausesUncertainty")}</li>
-              </ul>
-            </div>
             <DialogFooter>
               <Button
                 variant="outline"
