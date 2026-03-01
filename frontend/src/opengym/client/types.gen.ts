@@ -307,6 +307,49 @@ export type GameListResponse = Pagination & {
  */
 export type Error = string;
 
+export type UpdateReimbursementRequest = {
+    /**
+     * ID of the participant to update reimbursement for
+     */
+    participantId: string;
+    /**
+     * When the organizer received and confirmed the reimbursement. Set to null to clear.
+     */
+    reimbursement_received_at?: string | null;
+} | {
+    /**
+     * When the participant sent the reimbursement. Set to null to clear.
+     */
+    reimbursed_at: string | null;
+};
+
+export type ReimbursementRecord = {
+    /**
+     * ID of the participant
+     */
+    participantId: string;
+    /**
+     * ID of the game
+     */
+    gameId: string;
+    /**
+     * When the participant sent the reimbursement
+     */
+    reimbursed_at?: string | null;
+    /**
+     * When the organizer received and confirmed the reimbursement
+     */
+    reimbursement_received_at?: string | null;
+    /**
+     * Timestamp when the reimbursement record was created
+     */
+    createdAt?: string;
+    /**
+     * Timestamp when the reimbursement record was last updated
+     */
+    updatedAt?: string;
+};
+
 export type GetApiAuthByProviderLoginData = {
     body?: never;
     path: {
@@ -720,3 +763,45 @@ export type PutApiGamesByIdParticipantsResponses = {
 };
 
 export type PutApiGamesByIdParticipantsResponse = PutApiGamesByIdParticipantsResponses[keyof PutApiGamesByIdParticipantsResponses];
+
+export type PutApiGamesByIdReimbursementsData = {
+    body: UpdateReimbursementRequest;
+    path: {
+        /**
+         * The game ID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/games/{id}/reimbursements';
+};
+
+export type PutApiGamesByIdReimbursementsErrors = {
+    /**
+     * Invalid request data or participant tried to include participantId field
+     */
+    400: Error;
+    /**
+     * Unauthorized - invalid or missing token
+     */
+    401: Error;
+    /**
+     * Forbidden - not the organizer or participant for this reimbursement
+     */
+    403: Error;
+    /**
+     * Game or participant not found
+     */
+    404: Error;
+};
+
+export type PutApiGamesByIdReimbursementsError = PutApiGamesByIdReimbursementsErrors[keyof PutApiGamesByIdReimbursementsErrors];
+
+export type PutApiGamesByIdReimbursementsResponses = {
+    /**
+     * Reimbursement status updated successfully
+     */
+    200: ReimbursementRecord;
+};
+
+export type PutApiGamesByIdReimbursementsResponse = PutApiGamesByIdReimbursementsResponses[keyof PutApiGamesByIdReimbursementsResponses];
