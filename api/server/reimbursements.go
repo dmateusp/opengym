@@ -1,0 +1,167 @@
+package server
+
+import (
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"strconv"
+	"time"
+
+	"github.com/dmateusp/opengym/api"
+	"github.com/dmateusp/opengym/auth"
+	"github.com/dmateusp/opengym/db"
+	"github.com/dmateusp/opengym/ptr"
+	"github.com/oapi-codegen/nullable"
+)
+
+func (s *server) PutApiGamesIdReimbursements(w http.ResponseWriter, r *http.Request, id string) {
+	authInfo, ok := auth.FromCtx(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	game, err := s.querier.GameGetById(r.Context(), id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "game not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, fmt.Sprintf("failed to retrieve game: %s", err.Error()), http.StatusInternalServerError)
+		return
+	}
+
+	var req api.UpdateReimbursementRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, fmt.Sprintf("invalid request body: %s", err.Error()), http.StatusBadRequest)
+		return
+	}
+
+	userID := int64(authInfo.UserId)
+	isOrganizer := game.OrganizerID == userID
+	participantID := userID
+
+	if isOrganizer {
+		organizerReq, err := req.AsUpdateReimbursementRequest0()
+		if err != nil {
+			http.Error(w, fmt.Sprintf("invalid request body: %s", err.Error()), http.StatusBadRequest)
+			return
+		}
+
+		if organizerReq.ParticipantId == "" || !organizerReq.ReimbursementReceivedAt.IsSpecified() {
+			http.Error(w, "invalid request body", http.StatusBadRequest)
+			return
+		}
+
+		participantID, err = strconv.ParseInt(organizerReq.ParticipantId, 10, 64)
+		if err != nil {
+			http.Error(w, "invalid participantId", http.StatusBadRequest)
+			return
+		}
+
+		reimbursementReceivedAt := nullableToNullTime(organizerReq.ReimbursementReceivedAt)
+		rowsAffected, err := s.querier.ParticipantUpdateReimbursementReceivedAt(r.Context(), db.ParticipantUpdateReimbursementReceivedAtParams{
+			GameID:                  id,
+			UserID:                  participantID,
+			ReimbursementReceivedAt: reimbursementReceivedAt,
+		})
+		if err != nil {
+			http.Error(w, fmt.Sprintf("failed to update reimbursement status: %s", err.Error()), http.StatusInternalServerError)
+			return
+		}
+		if rowsAffected == 0 {
+			http.Error(w, "participant not found", http.StatusNotFound)
+			return
+		}
+	} else {
+		organizerReq, err := req.AsUpdateReimbursementRequest0()
+		if err != nil {
+			http.Error(w, fmt.Sprintf("invalid request body: %s", err.Error()), http.StatusBadRequest)
+			return
+		}
+		if organizerReq.ParticipantId != "" || organizerReq.ReimbursementReceivedAt.IsSpecified() {
+			http.Error(w, "participants cannot set participantId or reimbursement_received_at", http.StatusBadRequest)
+			return
+		}
+
+		participantReq, err := req.AsUpdateReimbursementRequest1()
+		if err != nil {
+			http.Error(w, fmt.Sprintf("invalid request body: %s", err.Error()), http.StatusBadRequest)
+			return
+		}
+		if !participantReq.ReimbursedAt.IsSpecified() {
+			http.Error(w, "invalid request body", http.StatusBadRequest)
+			return
+		}
+
+		if _, err := s.querier.ParticipantGetByGameAndUser(r.Context(), db.ParticipantGetByGameAndUserParams{
+			GameID: id,
+			UserID: userID,
+		}); err != nil {
+			if err == sql.ErrNoRows {
+				http.Error(w, "forbidden: you are not a participant of this game", http.StatusForbidden)
+				return
+			}
+			http.Error(w, fmt.Sprintf("failed to retrieve participant: %s", err.Error()), http.StatusInternalServerError)
+			return
+		}
+
+		reimbursedAt := nullableToNullTime(participantReq.ReimbursedAt)
+		rowsAffected, err := s.querier.ParticipantUpdateReimbursedAt(r.Context(), db.ParticipantUpdateReimbursedAtParams{
+			GameID:       id,
+			UserID:       userID,
+			ReimbursedAt: reimbursedAt,
+		})
+		if err != nil {
+			http.Error(w, fmt.Sprintf("failed to update reimbursement status: %s", err.Error()), http.StatusInternalServerError)
+			return
+		}
+		if rowsAffected == 0 {
+			http.Error(w, "forbidden: you are not a participant of this game", http.StatusForbidden)
+			return
+		}
+	}
+
+	participant, err := s.querier.ParticipantGetByGameAndUser(r.Context(), db.ParticipantGetByGameAndUserParams{
+		GameID: id,
+		UserID: participantID,
+	})
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "participant not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, fmt.Sprintf("failed to retrieve participant: %s", err.Error()), http.StatusInternalServerError)
+		return
+	}
+
+	response := api.ReimbursementRecord{
+		ParticipantId:           strconv.FormatInt(participantID, 10),
+		GameId:                  id,
+		CreatedAt:               ptr.Ptr(participant.CreatedAt),
+		UpdatedAt:               ptr.Ptr(participant.UpdatedAt),
+		ReimbursedAt:            sqlNullTimeToNullable(participant.ReimbursedAt),
+		ReimbursementReceivedAt: sqlNullTimeToNullable(participant.ReimbursementReceivedAt),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, fmt.Sprintf("failed to encode response: %s", err.Error()), http.StatusInternalServerError)
+	}
+}
+
+func nullableToNullTime(value nullable.Nullable[time.Time]) sql.NullTime {
+	if value.IsNull() || !value.IsSpecified() {
+		return sql.NullTime{}
+	}
+	return sql.NullTime{Time: value.MustGet(), Valid: true}
+}
+
+func sqlNullTimeToNullable(value sql.NullTime) nullable.Nullable[time.Time] {
+	if !value.Valid {
+		return nullable.NewNullNullable[time.Time]()
+	}
+	return nullable.NewNullableWithValue(value.Time)
+}

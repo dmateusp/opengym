@@ -29,4 +29,26 @@ join users on game_participants.user_id = users.id
 where game_participants.game_id = sqlc.arg(game_id)
 order by
     1 desc, -- if the user is the organizer, they should have priority
-    game_participants.going_updated_at asc
+    game_participants.going_updated_at asc;
+
+-- name: ParticipantGetByGameAndUser :one
+select *
+from game_participants
+where game_id = sqlc.arg(game_id)
+    and user_id = sqlc.arg(user_id);
+
+-- name: ParticipantUpdateReimbursedAt :execrows
+update game_participants
+set
+    updated_at = current_timestamp,
+    reimbursed_at = sqlc.arg(reimbursed_at)
+where game_id = sqlc.arg(game_id)
+    and user_id = sqlc.arg(user_id);
+
+-- name: ParticipantUpdateReimbursementReceivedAt :execrows
+update game_participants
+set
+    updated_at = current_timestamp,
+    reimbursement_received_at = sqlc.arg(reimbursement_received_at)
+where game_id = sqlc.arg(game_id)
+    and user_id = sqlc.arg(user_id);

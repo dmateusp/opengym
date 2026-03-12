@@ -11,6 +11,83 @@ import (
 	"time"
 )
 
+const participantGetByGameAndUser = `-- name: ParticipantGetByGameAndUser :one
+select user_id, game_id, created_at, updated_at, going_updated_at, going, confirmed_at, guests, reimbursed_at, reimbursement_received_at, reimbursement_reference
+from game_participants
+where game_id = ?1
+    and user_id = ?2
+`
+
+type ParticipantGetByGameAndUserParams struct {
+	GameID string
+	UserID int64
+}
+
+func (q *Queries) ParticipantGetByGameAndUser(ctx context.Context, arg ParticipantGetByGameAndUserParams) (GameParticipant, error) {
+	row := q.db.QueryRowContext(ctx, participantGetByGameAndUser, arg.GameID, arg.UserID)
+	var i GameParticipant
+	err := row.Scan(
+		&i.UserID,
+		&i.GameID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.GoingUpdatedAt,
+		&i.Going,
+		&i.ConfirmedAt,
+		&i.Guests,
+		&i.ReimbursedAt,
+		&i.ReimbursementReceivedAt,
+		&i.ReimbursementReference,
+	)
+	return i, err
+}
+
+const participantUpdateReimbursedAt = `-- name: ParticipantUpdateReimbursedAt :execrows
+update game_participants
+set
+        updated_at = current_timestamp,
+        reimbursed_at = ?1
+where game_id = ?2
+    and user_id = ?3
+`
+
+type ParticipantUpdateReimbursedAtParams struct {
+	ReimbursedAt sql.NullTime
+	GameID       string
+	UserID       int64
+}
+
+func (q *Queries) ParticipantUpdateReimbursedAt(ctx context.Context, arg ParticipantUpdateReimbursedAtParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, participantUpdateReimbursedAt, arg.ReimbursedAt, arg.GameID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const participantUpdateReimbursementReceivedAt = `-- name: ParticipantUpdateReimbursementReceivedAt :execrows
+update game_participants
+set
+        updated_at = current_timestamp,
+        reimbursement_received_at = ?1
+where game_id = ?2
+    and user_id = ?3
+`
+
+type ParticipantUpdateReimbursementReceivedAtParams struct {
+	ReimbursementReceivedAt sql.NullTime
+	GameID                  string
+	UserID                  int64
+}
+
+func (q *Queries) ParticipantUpdateReimbursementReceivedAt(ctx context.Context, arg ParticipantUpdateReimbursementReceivedAtParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, participantUpdateReimbursementReceivedAt, arg.ReimbursementReceivedAt, arg.GameID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const participantsList = `-- name: ParticipantsList :many
 select
     users.id = ?1 as is_organizer,
