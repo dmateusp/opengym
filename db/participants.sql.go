@@ -14,7 +14,7 @@ import (
 const participantsList = `-- name: ParticipantsList :many
 select
     users.id = ?1 as is_organizer,
-    game_participants.user_id, game_participants.game_id, game_participants.created_at, game_participants.updated_at, game_participants.going_updated_at, game_participants.going, game_participants.confirmed_at, game_participants.guests,
+    game_participants.user_id, game_participants.game_id, game_participants.created_at, game_participants.updated_at, game_participants.going_updated_at, game_participants.going, game_participants.confirmed_at, game_participants.guests, game_participants.reimbursed_at, game_participants.reimbursement_received_at, game_participants.reimbursement_reference,
     users.id, users.name, users.email, users.photo, users.created_at, users.updated_at, users.is_demo
 from game_participants
 join users on game_participants.user_id = users.id
@@ -54,6 +54,9 @@ func (q *Queries) ParticipantsList(ctx context.Context, arg ParticipantsListPara
 			&i.GameParticipant.Going,
 			&i.GameParticipant.ConfirmedAt,
 			&i.GameParticipant.Guests,
+			&i.GameParticipant.ReimbursedAt,
+			&i.GameParticipant.ReimbursementReceivedAt,
+			&i.GameParticipant.ReimbursementReference,
 			&i.User.ID,
 			&i.User.Name,
 			&i.User.Email,
