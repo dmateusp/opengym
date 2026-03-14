@@ -13,7 +13,66 @@ import (
 	"github.com/dmateusp/opengym/db"
 	"github.com/dmateusp/opengym/ptr"
 	"github.com/oapi-codegen/nullable"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
+
+func (s *server) GetApiGamesIdReimbursements(w http.ResponseWriter, r *http.Request, id string) {
+	authInfo, ok := auth.FromCtx(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	game, err := s.querier.GameGetById(r.Context(), id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "game not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, fmt.Sprintf("failed to retrieve game: %s", err.Error()), http.StatusInternalServerError)
+		return
+	}
+
+	userID := int64(authInfo.UserId)
+	if game.OrganizerID != userID {
+		http.Error(w, "forbidden: only the organizer can view reimbursements", http.StatusForbidden)
+		return
+	}
+
+	rows, err := s.querier.ReimbursementsListByGame(r.Context(), id)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to retrieve reimbursements: %s", err.Error()), http.StatusInternalServerError)
+		return
+	}
+
+	entries := make([]api.GameReimbursementEntry, 0, len(rows))
+	for _, row := range rows {
+		var name *string
+		if row.User.Name.Valid {
+			name = &row.User.Name.String
+		}
+		var picture *string
+		if row.User.Photo.Valid {
+			picture = &row.User.Photo.String
+		}
+		entries = append(entries, api.GameReimbursementEntry{
+			Participant: api.User{
+				Id:      strconv.FormatInt(row.User.ID, 10),
+				Email:   openapi_types.Email(row.User.Email),
+				Name:    name,
+				Picture: picture,
+			},
+			ReimbursedAt:            sqlNullTimeToNullable(row.ReimbursedAt),
+			ReimbursementReceivedAt: sqlNullTimeToNullable(row.ReimbursementReceivedAt),
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(entries); err != nil {
+		http.Error(w, fmt.Sprintf("failed to encode response: %s", err.Error()), http.StatusInternalServerError)
+	}
+}
 
 func (s *server) PutApiGamesIdReimbursements(w http.ResponseWriter, r *http.Request, id string) {
 	authInfo, ok := auth.FromCtx(r.Context())

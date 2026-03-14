@@ -45,8 +45,8 @@ func (q *Queries) ParticipantGetByGameAndUser(ctx context.Context, arg Participa
 const participantUpdateReimbursedAt = `-- name: ParticipantUpdateReimbursedAt :execrows
 update game_participants
 set
-        updated_at = current_timestamp,
-        reimbursed_at = ?1
+    updated_at = current_timestamp,
+    reimbursed_at = ?1
 where game_id = ?2
     and user_id = ?3
 `
@@ -68,8 +68,8 @@ func (q *Queries) ParticipantUpdateReimbursedAt(ctx context.Context, arg Partici
 const participantUpdateReimbursementReceivedAt = `-- name: ParticipantUpdateReimbursementReceivedAt :execrows
 update game_participants
 set
-        updated_at = current_timestamp,
-        reimbursement_received_at = ?1
+    updated_at = current_timestamp,
+    reimbursement_received_at = ?1
 where game_id = ?2
     and user_id = ?3
 `
@@ -196,4 +196,56 @@ func (q *Queries) ParticipantsUpsert(ctx context.Context, arg ParticipantsUpsert
 		arg.Guests,
 	)
 	return err
+}
+
+const reimbursementsListByGame = `-- name: ReimbursementsListByGame :many
+select
+    users.id, users.name, users.email, users.photo, users.created_at, users.updated_at, users.is_demo,
+    game_participants.reimbursed_at,
+    game_participants.reimbursement_received_at
+from game_participants
+join users on game_participants.user_id = users.id
+where game_participants.game_id = ?1
+    and game_participants.going = true
+order by
+    game_participants.going_updated_at asc
+`
+
+type ReimbursementsListByGameRow struct {
+	User                    User
+	ReimbursedAt            sql.NullTime
+	ReimbursementReceivedAt sql.NullTime
+}
+
+func (q *Queries) ReimbursementsListByGame(ctx context.Context, gameID string) ([]ReimbursementsListByGameRow, error) {
+	rows, err := q.db.QueryContext(ctx, reimbursementsListByGame, gameID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ReimbursementsListByGameRow
+	for rows.Next() {
+		var i ReimbursementsListByGameRow
+		if err := rows.Scan(
+			&i.User.ID,
+			&i.User.Name,
+			&i.User.Email,
+			&i.User.Photo,
+			&i.User.CreatedAt,
+			&i.User.UpdatedAt,
+			&i.User.IsDemo,
+			&i.ReimbursedAt,
+			&i.ReimbursementReceivedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

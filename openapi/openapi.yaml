@@ -454,6 +454,48 @@ paths:
                 $ref: '#/components/schemas/Error'
 
   /api/games/{id}/reimbursements:
+    get:
+      summary: List reimbursements for a game
+      description: Returns the reimbursement tracking entries needed to build the reimbursements page. Only the organizer and participants of the game can access it.
+      tags:
+        - Games
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The game ID
+      responses:
+        '200':
+          description: Reimbursements retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GameReimbursementEntry'
+        '401':
+          description: Unauthorized - invalid or missing token
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - not the organizer or a participant of this game
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Game not found
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+
     put:
       summary: Update reimbursement status for a participant
       description: Update reimbursement tracking for a game participant. Organizers provide participantId and can set reimbursement_received_at. Participants set their own reimbursed_at without providing participantId.
@@ -835,6 +877,24 @@ components:
           type: string
           format: date-time
           description: Timestamp when the participation record was last updated
+
+    GameReimbursementEntry:
+      type: object
+      required:
+        - participant
+      properties:
+        participant:
+          $ref: '#/components/schemas/User'
+        reimbursedAt:
+          type: string
+          format: date-time
+          description: When the participant claims to have sent the reimbursement
+          nullable: true
+        reimbursementReceivedAt:
+          type: string
+          format: date-time
+          description: When the organizer claims to have received the reimbursement
+          nullable: true
 
     UpdateGameParticipationRequest:
       type: object

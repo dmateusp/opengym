@@ -22,6 +22,7 @@ type Querier interface {
 	ParticipantUpdateReimbursementReceivedAt(ctx context.Context, arg ParticipantUpdateReimbursementReceivedAtParams) (int64, error)
 	ParticipantsList(ctx context.Context, arg ParticipantsListParams) ([]ParticipantsListRow, error)
 	ParticipantsUpsert(ctx context.Context, arg ParticipantsUpsertParams) error
+	ReimbursementsListByGame(ctx context.Context, gameID string) ([]ReimbursementsListByGameRow, error)
 	UserGetById(ctx context.Context, id int64) (UserGetByIdRow, error)
 	UserUpsertRetuningId(ctx context.Context, arg UserUpsertRetuningIdParams) (int64, error)
 }

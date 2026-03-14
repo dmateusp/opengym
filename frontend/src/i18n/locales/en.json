@@ -268,6 +268,22 @@
     "stayOnWaitlist": "Keep me on the waitlist",
     "yesLeaveWaitlist": "Yes, leave the waitlist"
   },
+  "reimbursements": {
+    "title": "Reimbursements",
+    "backToGame": "Back to Game",
+    "participant": "Participant",
+    "sentAt": "Sent Reimbursement",
+    "receivedAt": "Payment Received",
+    "actions": "Actions",
+    "notSent": "Not sent",
+    "notReceived": "Not received",
+    "markReceived": "Mark as received",
+    "clearReceived": "Clear received",
+    "failedToLoad": "Failed to load reimbursements",
+    "failedToUpdate": "Failed to update reimbursement",
+    "noParticipants": "No participants yet",
+    "viewReimbursements": "View Reimbursements"
+  },
   "lock": {
     "gameLocked": "Game Locked",
     "lockScheduled": "Lock Scheduled",

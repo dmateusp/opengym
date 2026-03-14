@@ -236,6 +236,18 @@ export type ParticipantWithUser = {
     updatedAt?: string;
 };
 
+export type GameReimbursementEntry = {
+    participant: User;
+    /**
+     * When the participant claims to have sent the reimbursement
+     */
+    reimbursedAt?: string | null;
+    /**
+     * When the organizer claims to have received the reimbursement
+     */
+    reimbursementReceivedAt?: string | null;
+};
+
 export type UpdateGameParticipationRequest = {
     status: ParticipationStatusUpdate;
     /**
@@ -763,6 +775,44 @@ export type PutApiGamesByIdParticipantsResponses = {
 };
 
 export type PutApiGamesByIdParticipantsResponse = PutApiGamesByIdParticipantsResponses[keyof PutApiGamesByIdParticipantsResponses];
+
+export type GetApiGamesByIdReimbursementsData = {
+    body?: never;
+    path: {
+        /**
+         * The game ID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/games/{id}/reimbursements';
+};
+
+export type GetApiGamesByIdReimbursementsErrors = {
+    /**
+     * Unauthorized - invalid or missing token
+     */
+    401: Error;
+    /**
+     * Forbidden - not the organizer or a participant of this game
+     */
+    403: Error;
+    /**
+     * Game not found
+     */
+    404: Error;
+};
+
+export type GetApiGamesByIdReimbursementsError = GetApiGamesByIdReimbursementsErrors[keyof GetApiGamesByIdReimbursementsErrors];
+
+export type GetApiGamesByIdReimbursementsResponses = {
+    /**
+     * Reimbursements retrieved successfully
+     */
+    200: Array<GameReimbursementEntry>;
+};
+
+export type GetApiGamesByIdReimbursementsResponse = GetApiGamesByIdReimbursementsResponses[keyof GetApiGamesByIdReimbursementsResponses];
 
 export type PutApiGamesByIdReimbursementsData = {
     body: UpdateReimbursementRequest;

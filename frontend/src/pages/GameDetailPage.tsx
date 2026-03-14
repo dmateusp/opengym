@@ -1750,6 +1750,12 @@ export default function GameDetailPage() {
               </div>
             ) : isOrganizer && isPublished ? (
               <div className="space-y-4">
+                <Button
+                  variant="outline"
+                  onClick={() => navigate(`/games/${id}/reimbursements`)}
+                >
+                  {t("reimbursements.viewReimbursements")}
+                </Button>
               </div>
             ) : user && isPublished ? (
               <div>

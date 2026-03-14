@@ -37,6 +37,18 @@ from game_participants
 where game_id = sqlc.arg(game_id)
     and user_id = sqlc.arg(user_id);
 
+-- name: ReimbursementsListByGame :many
+select
+    sqlc.embed(users),
+    game_participants.reimbursed_at,
+    game_participants.reimbursement_received_at
+from game_participants
+join users on game_participants.user_id = users.id
+where game_participants.game_id = sqlc.arg(game_id)
+    and game_participants.going = true
+order by
+    game_participants.going_updated_at asc;
+
 -- name: ParticipantUpdateReimbursedAt :execrows
 update game_participants
 set

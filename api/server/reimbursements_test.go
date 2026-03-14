@@ -20,6 +20,168 @@ import (
 	"github.com/oapi-codegen/nullable"
 )
 
+func TestGetApiGamesIdReimbursements_Unauthorized(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+
+	staticClock := clock.StaticClock{Time: time.Now()}
+	querier := db.New(sqlDB)
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
+
+	r := httptest.NewRequest(http.MethodGet, "/api/games/g1/reimbursements", nil)
+	w := httptest.NewRecorder()
+
+	srv.GetApiGamesIdReimbursements(w, r, "g1")
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected status %d, got %d", http.StatusUnauthorized, w.Code)
+	}
+}
+
+func TestGetApiGamesIdReimbursements_GameNotFound(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+
+	staticClock := clock.StaticClock{Time: time.Now()}
+	userID := dbtesting.UpsertTestUser(t, sqlDB, "user@example.com")
+	querier := db.New(sqlDB)
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
+
+	r := httptest.NewRequest(http.MethodGet, "/api/games/missing/reimbursements", nil)
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(userID)}))
+	w := httptest.NewRecorder()
+
+	srv.GetApiGamesIdReimbursements(w, r, "missing")
+
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected status %d, got %d", http.StatusNotFound, w.Code)
+	}
+}
+
+func TestGetApiGamesIdReimbursements_ForbiddenForNonOrganizer(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+
+	staticClock := clock.StaticClock{Time: time.Now()}
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "organizer@example.com")
+	otherID := dbtesting.UpsertTestUser(t, sqlDB, "other@example.com")
+	querier := db.New(sqlDB)
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
+
+	createGame(t, querier, "g1", organizerID, sql.NullTime{})
+
+	r := httptest.NewRequest(http.MethodGet, "/api/games/g1/reimbursements", nil)
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(otherID)}))
+	w := httptest.NewRecorder()
+
+	srv.GetApiGamesIdReimbursements(w, r, "g1")
+
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("expected status %d, got %d", http.StatusForbidden, w.Code)
+	}
+}
+
+func TestGetApiGamesIdReimbursements_OrganizerSeesParticipants(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+
+	staticClock := clock.StaticClock{Time: time.Now()}
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "organizer@example.com")
+	participantID := dbtesting.UpsertTestUser(t, sqlDB, "participant@example.com")
+	querier := db.New(sqlDB)
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
+
+	createGame(t, querier, "g1", organizerID, sql.NullTime{})
+	reimbursedAt := staticClock.Now().Add(-10 * time.Minute)
+	if err := querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
+		UserID:         participantID,
+		GameID:         "g1",
+		Going:          sql.NullBool{Valid: true, Bool: true},
+		GoingUpdatedAt: staticClock.Now(),
+		ConfirmedAt:    sql.NullTime{},
+		Guests:         sql.NullInt64{},
+	}); err != nil {
+		t.Fatalf("failed to insert participant: %v", err)
+	}
+	if _, err := sqlDB.Exec(`update game_participants set reimbursed_at = ? where game_id = ? and user_id = ?`,
+		reimbursedAt, "g1", participantID); err != nil {
+		t.Fatalf("failed to set reimbursed_at: %v", err)
+	}
+
+	r := httptest.NewRequest(http.MethodGet, "/api/games/g1/reimbursements", nil)
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w := httptest.NewRecorder()
+
+	srv.GetApiGamesIdReimbursements(w, r, "g1")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d, body=%s", http.StatusOK, w.Code, w.Body.String())
+	}
+
+	var entries []api.GameReimbursementEntry
+	if err := json.NewDecoder(w.Body).Decode(&entries); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(entries))
+	}
+	if entries[0].Participant.Id != strconv.FormatInt(participantID, 10) {
+		t.Fatalf("expected participant id %d, got %s", participantID, entries[0].Participant.Id)
+	}
+	if !entries[0].ReimbursedAt.IsSpecified() || entries[0].ReimbursedAt.IsNull() {
+		t.Fatalf("expected reimbursed_at to be set, got %+v", entries[0].ReimbursedAt)
+	}
+	if !entries[0].ReimbursedAt.MustGet().Equal(reimbursedAt) {
+		t.Fatalf("expected reimbursed_at %v, got %v", reimbursedAt, entries[0].ReimbursedAt.MustGet())
+	}
+}
+
+func TestGetApiGamesIdReimbursements_NotGoingParticipantsExcluded(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+
+	staticClock := clock.StaticClock{Time: time.Now()}
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "organizer@example.com")
+	goingID := dbtesting.UpsertTestUser(t, sqlDB, "going@example.com")
+	notGoingID := dbtesting.UpsertTestUser(t, sqlDB, "notgoing@example.com")
+	querier := db.New(sqlDB)
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
+
+	createGame(t, querier, "g1", organizerID, sql.NullTime{})
+	for _, uid := range []int64{goingID, notGoingID} {
+		going := uid == goingID
+		if err := querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
+			UserID:         uid,
+			GameID:         "g1",
+			Going:          sql.NullBool{Valid: true, Bool: going},
+			GoingUpdatedAt: staticClock.Now(),
+		}); err != nil {
+			t.Fatalf("failed to insert participant: %v", err)
+		}
+	}
+
+	r := httptest.NewRequest(http.MethodGet, "/api/games/g1/reimbursements", nil)
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w := httptest.NewRecorder()
+
+	srv.GetApiGamesIdReimbursements(w, r, "g1")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d, body=%s", http.StatusOK, w.Code, w.Body.String())
+	}
+
+	var entries []api.GameReimbursementEntry
+	if err := json.NewDecoder(w.Body).Decode(&entries); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 entry (only going), got %d", len(entries))
+	}
+	if entries[0].Participant.Id != strconv.FormatInt(goingID, 10) {
+		t.Fatalf("expected going participant %d, got %s", goingID, entries[0].Participant.Id)
+	}
+}
+
 func TestPutApiGamesIdReimbursements_Unauthorized(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()

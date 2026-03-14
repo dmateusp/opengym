@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 // Lazy load pages for code splitting
 const HomePage = lazy(() => import('@/pages/HomePage'))
 const GameDetailPage = lazy(() => import('@/pages/GameDetailPage'))
+const ReimbursementsPage = lazy(() => import('@/pages/ReimbursementsPage'))
 const LoginPage = lazy(() => import('@/pages/LoginPage'))
 
 function App() {
@@ -14,6 +15,7 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/auth/login" element={<LoginPage />} />
           <Route path="/games/:id" element={<GameDetailPage />} />
+          <Route path="/games/:id/reimbursements" element={<ReimbursementsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
