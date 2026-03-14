@@ -12,7 +12,7 @@ import (
 )
 
 const participantGetByGameAndUser = `-- name: ParticipantGetByGameAndUser :one
-select user_id, game_id, created_at, updated_at, going_updated_at, going, confirmed_at, guests, reimbursed_at, reimbursement_received_at, reimbursement_reference
+select id, user_id, game_id, created_at, updated_at, going_updated_at, going, confirmed_at, guests, reimbursed_at, reimbursement_received_at, reimbursement_reference
 from game_participants
 where game_id = ?1
     and user_id = ?2
@@ -27,6 +27,7 @@ func (q *Queries) ParticipantGetByGameAndUser(ctx context.Context, arg Participa
 	row := q.db.QueryRowContext(ctx, participantGetByGameAndUser, arg.GameID, arg.UserID)
 	var i GameParticipant
 	err := row.Scan(
+		&i.ID,
 		&i.UserID,
 		&i.GameID,
 		&i.CreatedAt,
@@ -91,14 +92,18 @@ func (q *Queries) ParticipantUpdateReimbursementReceivedAt(ctx context.Context, 
 const participantsList = `-- name: ParticipantsList :many
 select
     users.id = ?1 as is_organizer,
-    game_participants.user_id, game_participants.game_id, game_participants.created_at, game_participants.updated_at, game_participants.going_updated_at, game_participants.going, game_participants.confirmed_at, game_participants.guests, game_participants.reimbursed_at, game_participants.reimbursement_received_at, game_participants.reimbursement_reference,
+    game_participants.id, game_participants.user_id, game_participants.game_id, game_participants.created_at, game_participants.updated_at, game_participants.going_updated_at, game_participants.going, game_participants.confirmed_at, game_participants.guests, game_participants.reimbursed_at, game_participants.reimbursement_received_at, game_participants.reimbursement_reference,
     users.id, users.name, users.email, users.photo, users.created_at, users.updated_at, users.is_demo
 from game_participants
 join users on game_participants.user_id = users.id
 where game_participants.game_id = ?2
 order by
     1 desc, -- if the user is the organizer, they should have priority
-    game_participants.going_updated_at asc
+    game_participants.going_updated_at asc,
+    -- Ties on going_updated_at are common in tests (static clocks) and can happen in
+    -- production too; ordering by the auto-incremented participant ID makes queue
+    -- ordering deterministic without relying on timestamp precision.
+    game_participants.id asc
 `
 
 type ParticipantsListParams struct {
@@ -123,6 +128,7 @@ func (q *Queries) ParticipantsList(ctx context.Context, arg ParticipantsListPara
 		var i ParticipantsListRow
 		if err := rows.Scan(
 			&i.IsOrganizer,
+			&i.GameParticipant.ID,
 			&i.GameParticipant.UserID,
 			&i.GameParticipant.GameID,
 			&i.GameParticipant.CreatedAt,

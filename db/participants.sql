@@ -30,7 +30,11 @@ join users on game_participants.user_id = users.id
 where game_participants.game_id = sqlc.arg(game_id)
 order by
     1 desc, -- if the user is the organizer, they should have priority
-    game_participants.going_updated_at asc;
+    game_participants.going_updated_at asc,
+    -- Ties on going_updated_at are common in tests (static clocks) and can happen in
+    -- production too; ordering by the auto-incremented participant ID makes queue
+    -- ordering deterministic without relying on timestamp precision.
+    game_participants.id asc;
 
 -- name: ParticipantGetByGameAndUser :one
 select *

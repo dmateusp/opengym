@@ -28,6 +28,7 @@ type Game struct {
 }
 
 type GameParticipant struct {
+	ID                      int64
 	UserID                  int64
 	GameID                  string
 	CreatedAt               time.Time
