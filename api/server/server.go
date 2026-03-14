@@ -3,10 +3,12 @@ package server
 import (
 	"database/sql"
 	"flag"
+	"net/url"
 
 	"github.com/dmateusp/opengym/api"
 	"github.com/dmateusp/opengym/clock"
 	"github.com/dmateusp/opengym/db"
+	"github.com/dmateusp/opengym/demo"
 )
 
 var (
@@ -16,6 +18,19 @@ var (
 
 func GetBaseUrl() string {
 	return *baseUrl
+}
+
+func shouldUseSecureCookies() bool {
+	if !demo.GetDemoMode() {
+		return true
+	}
+
+	parsed, err := url.Parse(*baseUrl)
+	if err != nil {
+		return true
+	}
+
+	return parsed.Scheme != "http"
 }
 
 type server struct {
