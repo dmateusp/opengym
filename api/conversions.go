@@ -23,9 +23,9 @@ func (game *Game) FromDb(dbGame db.Game) {
 		game.PublishedAt = &t
 	}
 
-	if dbGame.LockedAt.Valid {
-		t := dbGame.LockedAt.Time
-		game.LockedAt = &t
+	if dbGame.FrozenAt.Valid {
+		t := dbGame.FrozenAt.Time
+		game.FrozenAt = &t
 	}
 
 	game.TotalPriceCents = ptr.Ptr(dbGame.TotalPriceCents)

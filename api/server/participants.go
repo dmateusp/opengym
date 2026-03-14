@@ -161,8 +161,8 @@ func (s *server) PutApiGamesIdParticipants(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	if game.LockedAt.Valid && !game.LockedAt.Time.After(s.clock.Now()) {
-		http.Error(w, "game is locked", http.StatusBadRequest)
+	if game.FrozenAt.Valid && !game.FrozenAt.Time.After(s.clock.Now()) {
+		http.Error(w, "game is frozen", http.StatusBadRequest)
 		return
 	}
 

@@ -42,7 +42,7 @@ export default function ReimbursementsPage() {
   const [entries, setEntries] = useState<GameReimbursementEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isLockRequiredError, setIsLockRequiredError] = useState(false);
+  const [isFreezeRequiredError, setIsFreezeRequiredError] = useState(false);
   const [isOrganizerOnlyError, setIsOrganizerOnlyError] = useState(false);
   const [updating, setUpdating] = useState<string | null>(null);
 
@@ -53,7 +53,7 @@ export default function ReimbursementsPage() {
       try {
         setIsLoading(true);
         setError(null);
-        setIsLockRequiredError(false);
+        setIsFreezeRequiredError(false);
         setIsOrganizerOnlyError(false);
         const resp = await fetchWithDemoRecovery(
           `${API_BASE_URL}/api/games/${id}/reimbursements`,
@@ -70,9 +70,9 @@ export default function ReimbursementsPage() {
             return;
           }
           const errorText = (await resp.text()).toLowerCase();
-          if (resp.status === 400 && errorText.includes("locked")) {
-            setIsLockRequiredError(true);
-            setError(t("reimbursements.lockRequired"));
+          if (resp.status === 400 && errorText.includes("frozen")) {
+            setIsFreezeRequiredError(true);
+            setError(t("reimbursements.freezeRequired"));
             return;
           }
           setError(t("reimbursements.failedToLoad"));
@@ -95,7 +95,7 @@ export default function ReimbursementsPage() {
     setUpdating(participantId);
     try {
       setError(null);
-      setIsLockRequiredError(false);
+      setIsFreezeRequiredError(false);
       setIsOrganizerOnlyError(false);
       const result = await fetchWithDemoRecovery(
         `${API_BASE_URL}/api/games/${id}/reimbursements`,
@@ -120,9 +120,9 @@ export default function ReimbursementsPage() {
           return;
         }
         const errorText = (await result.text()).toLowerCase();
-        if (result.status === 400 && errorText.includes("locked")) {
-          setIsLockRequiredError(true);
-          setError(t("reimbursements.lockRequired"));
+        if (result.status === 400 && errorText.includes("frozen")) {
+          setIsFreezeRequiredError(true);
+          setError(t("reimbursements.freezeRequired"));
           return;
         }
         setError(t("reimbursements.failedToUpdate"));
@@ -178,13 +178,13 @@ export default function ReimbursementsPage() {
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
             ) : error ? (
-              isLockRequiredError ? (
+              isFreezeRequiredError ? (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 text-yellow-900">
                   <p className="font-semibold text-base mb-2">
-                    {t("reimbursements.lockRequired")}
+                    {t("reimbursements.freezeRequired")}
                   </p>
                   <p className="text-sm text-yellow-800 mb-4">
-                    {t("reimbursements.lockRequiredDescription")}
+                    {t("reimbursements.freezeRequiredDescription")}
                   </p>
                   <Button variant="outline" onClick={() => navigate(`/games/${id}`)}>
                     {t("reimbursements.backToGame")}

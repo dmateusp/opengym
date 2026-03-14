@@ -24,11 +24,10 @@ type Game struct {
 	GameSpotsLeft      int64
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
-	LockedAt           sql.NullTime
+	FrozenAt           sql.NullTime
 }
 
 type GameParticipant struct {
-	ID                      int64
 	UserID                  int64
 	GameID                  string
 	CreatedAt               time.Time
