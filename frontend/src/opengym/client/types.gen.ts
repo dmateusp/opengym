@@ -100,9 +100,9 @@ export type UpdateGameRequest = GameFields & {
      */
     publishedAt?: string | null;
     /**
-     * When the game should become locked. Past timestamps lock immediately. It can be rescheduled or cleared.
+     * When the game should become frozen. Past timestamps freeze immediately. It can be rescheduled or cleared.
      */
-    lockedAt?: string | null;
+    frozenAt?: string | null;
 };
 
 export type Game = GameFields & {
@@ -119,9 +119,9 @@ export type Game = GameFields & {
      */
     publishedAt?: string;
     /**
-     * When the game is locked
+     * When the game is frozen
      */
-    lockedAt?: string;
+    frozenAt?: string;
     /**
      * Timestamp when game was created
      */

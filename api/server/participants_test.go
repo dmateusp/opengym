@@ -321,7 +321,7 @@ func TestPutApiGamesIdParticipants_ReimbursementReferenceGeneratedAndStable(t *t
 	}
 }
 
-func TestPutApiGamesIdParticipants_BlockedWhenGameIsLocked(t *testing.T) {
+func TestPutApiGamesIdParticipants_BlockedWhenGameIsFrozen(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 	staticClock := clock.StaticClock{Time: time.Now()}
@@ -334,9 +334,9 @@ func TestPutApiGamesIdParticipants_BlockedWhenGameIsLocked(t *testing.T) {
 
 	createGame(t, querier, "g1", organizerID, sql.NullTime{Time: time.Now().Add(-time.Hour), Valid: true})
 
-	_, err := sqlDB.Exec(`update games set locked_at = ? where id = ?`, staticClock.Now().Add(-1*time.Minute), "g1")
+	_, err := sqlDB.Exec(`update games set frozen_at = ? where id = ?`, staticClock.Now().Add(-1*time.Minute), "g1")
 	if err != nil {
-		t.Fatalf("failed to lock game: %v", err)
+		t.Fatalf("failed to freeze game: %v", err)
 	}
 
 	req := api.UpdateGameParticipationRequest{Status: api.Going}
@@ -348,7 +348,7 @@ func TestPutApiGamesIdParticipants_BlockedWhenGameIsLocked(t *testing.T) {
 	srv.PutApiGamesIdParticipants(w, r, "g1")
 
 	if w.Code != http.StatusBadRequest {
-		t.Fatalf("expected status %d when game is locked, got %d", http.StatusBadRequest, w.Code)
+		t.Fatalf("expected status %d when game is frozen, got %d", http.StatusBadRequest, w.Code)
 	}
 }
 

@@ -34,7 +34,7 @@ order by
     -- Ties on going_updated_at are common in tests (static clocks) and can happen in
     -- production too; ordering by the auto-incremented participant ID makes queue
     -- ordering deterministic without relying on timestamp precision.
-    game_participants.id asc;
+    game_participants.rowid asc;
 
 -- name: ParticipantGetByGameAndUser :one
 select *

@@ -41,7 +41,7 @@ insert into games(
   max_guests_per_player,
   game_spots_left
 ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-returning id, organizer_id, name, description, published_at, total_price_cents, location, starts_at, duration_minutes, max_players, max_guests_per_player, game_spots_left, created_at, updated_at, locked_at
+returning id, organizer_id, name, description, published_at, total_price_cents, location, starts_at, duration_minutes, max_players, max_guests_per_player, game_spots_left, created_at, updated_at, frozen_at
 `
 
 type GameCreateParams struct {
@@ -90,13 +90,13 @@ func (q *Queries) GameCreate(ctx context.Context, arg GameCreateParams) (Game, e
 		&i.GameSpotsLeft,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.LockedAt,
+		&i.FrozenAt,
 	)
 	return i, err
 }
 
 const gameGetById = `-- name: GameGetById :one
-select id, organizer_id, name, description, published_at, total_price_cents, location, starts_at, duration_minutes, max_players, max_guests_per_player, game_spots_left, created_at, updated_at, locked_at
+select id, organizer_id, name, description, published_at, total_price_cents, location, starts_at, duration_minutes, max_players, max_guests_per_player, game_spots_left, created_at, updated_at, frozen_at
 from games
 where games.id = ?
 `
@@ -119,14 +119,14 @@ func (q *Queries) GameGetById(ctx context.Context, id string) (Game, error) {
 		&i.GameSpotsLeft,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.LockedAt,
+		&i.FrozenAt,
 	)
 	return i, err
 }
 
 const gameGetByIdWithOrganizer = `-- name: GameGetByIdWithOrganizer :one
 select
-  games.id, games.organizer_id, games.name, games.description, games.published_at, games.total_price_cents, games.location, games.starts_at, games.duration_minutes, games.max_players, games.max_guests_per_player, games.game_spots_left, games.created_at, games.updated_at, games.locked_at,
+  games.id, games.organizer_id, games.name, games.description, games.published_at, games.total_price_cents, games.location, games.starts_at, games.duration_minutes, games.max_players, games.max_guests_per_player, games.game_spots_left, games.created_at, games.updated_at, games.frozen_at,
   users.id, users.name, users.email, users.photo, users.created_at, users.updated_at, users.is_demo
 from games
 join users
@@ -157,7 +157,7 @@ func (q *Queries) GameGetByIdWithOrganizer(ctx context.Context, id string) (Game
 		&i.Game.GameSpotsLeft,
 		&i.Game.CreatedAt,
 		&i.Game.UpdatedAt,
-		&i.Game.LockedAt,
+		&i.Game.FrozenAt,
 		&i.User.ID,
 		&i.User.Name,
 		&i.User.Email,
@@ -293,9 +293,9 @@ set
     when cast(?3 as boolean) then null
     else coalesce(?4, published_at)
   end,
-  locked_at = case
+  frozen_at = case
     when cast(?5 as boolean) then null
-    else coalesce(?6, locked_at)
+    else coalesce(?6, frozen_at)
   end,
   total_price_cents = coalesce(?7, total_price_cents),
   location = coalesce(?8, location),
@@ -313,8 +313,8 @@ type GameUpdateParams struct {
 	Description        sql.NullString
 	ClearPublishedAt   bool
 	PublishedAt        sql.NullTime
-	ClearLockedAt      bool
-	LockedAt           sql.NullTime
+	ClearFrozenAt      bool
+	FrozenAt           sql.NullTime
 	TotalPriceCents    sql.NullInt64
 	Location           sql.NullString
 	StartsAt           sql.NullTime
@@ -331,8 +331,8 @@ func (q *Queries) GameUpdate(ctx context.Context, arg GameUpdateParams) error {
 		arg.Description,
 		arg.ClearPublishedAt,
 		arg.PublishedAt,
-		arg.ClearLockedAt,
-		arg.LockedAt,
+		arg.ClearFrozenAt,
+		arg.FrozenAt,
 		arg.TotalPriceCents,
 		arg.Location,
 		arg.StartsAt,

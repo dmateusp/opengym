@@ -27,7 +27,7 @@ export default function LandingSection() {
       href: undefined,
     },
     {
-      icon: '🔓',
+      icon: '❄️',
       label: 'landing.openSource',
       descLabel: 'landing.openSourceDesc',
       href: 'https://github.com/dmateusp/opengym',

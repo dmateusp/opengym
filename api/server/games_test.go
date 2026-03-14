@@ -1616,7 +1616,7 @@ func TestPatchApiGamesId_CannotClearAfterPublished(t *testing.T) {
 	}
 }
 
-func TestPatchApiGamesId_LockCanBeRescheduledAndCleared(t *testing.T) {
+func TestPatchApiGamesId_FreezeCanBeRescheduledAndCleared(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 	staticClock := clock.StaticClock{Time: time.Now()}
@@ -1626,7 +1626,7 @@ func TestPatchApiGamesId_LockCanBeRescheduledAndCleared(t *testing.T) {
 	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
 
 	createReq := api.CreateGameRequest{
-		Name:            "Lockable",
+		Name:            "Freezable",
 		TotalPriceCents: ptr.Ptr(int64(2500)),
 	}
 	body, _ := json.Marshal(createReq)
@@ -1639,66 +1639,66 @@ func TestPatchApiGamesId_LockCanBeRescheduledAndCleared(t *testing.T) {
 	json.NewDecoder(w.Body).Decode(&created)
 
 	past := staticClock.Now().Add(-1 * time.Hour)
-	updateReq := api.UpdateGameRequest{LockedAt: nullable.NewNullableWithValue(past)}
+	updateReq := api.UpdateGameRequest{FrozenAt: nullable.NewNullableWithValue(past)}
 	body, _ = json.Marshal(updateReq)
 	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Game.Id, bytes.NewReader(body))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
 	w = httptest.NewRecorder()
 	srv.PatchApiGamesId(w, r, created.Game.Id)
 	if w.Code != http.StatusOK {
-		t.Fatalf("expected locking with past timestamp to succeed, got %d", w.Code)
+		t.Fatalf("expected freezing with past timestamp to succeed, got %d", w.Code)
 	}
 
 	future := staticClock.Now().Add(2 * time.Hour)
-	updateReq = api.UpdateGameRequest{LockedAt: nullable.NewNullableWithValue(future)}
+	updateReq = api.UpdateGameRequest{FrozenAt: nullable.NewNullableWithValue(future)}
 	body, _ = json.Marshal(updateReq)
 	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Game.Id, bytes.NewReader(body))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
 	w = httptest.NewRecorder()
 	srv.PatchApiGamesId(w, r, created.Game.Id)
 	if w.Code != http.StatusOK {
-		t.Fatalf("expected rescheduling lock to future to succeed, got %d", w.Code)
+		t.Fatalf("expected rescheduling freeze to future to succeed, got %d", w.Code)
 	}
 
 	var rescheduled api.GameDetail
 	json.NewDecoder(w.Body).Decode(&rescheduled)
 	if rescheduled.Game.Name != createReq.Name {
-		t.Fatalf("expected name to remain unchanged after lock reschedule, got %q", rescheduled.Game.Name)
+		t.Fatalf("expected name to remain unchanged after freeze reschedule, got %q", rescheduled.Game.Name)
 	}
 	if rescheduled.Game.TotalPriceCents == nil || *rescheduled.Game.TotalPriceCents != *createReq.TotalPriceCents {
-		t.Fatalf("expected totalPriceCents to remain %d after lock reschedule, got %v", *createReq.TotalPriceCents, rescheduled.Game.TotalPriceCents)
+		t.Fatalf("expected totalPriceCents to remain %d after freeze reschedule, got %v", *createReq.TotalPriceCents, rescheduled.Game.TotalPriceCents)
 	}
-	if rescheduled.Game.LockedAt == nil {
-		t.Fatalf("expected lockedAt to remain set after reschedule")
+	if rescheduled.Game.FrozenAt == nil {
+		t.Fatalf("expected frozenAt to remain set after reschedule")
 	}
-	if !rescheduled.Game.LockedAt.After(staticClock.Now()) {
-		t.Fatalf("expected lockedAt to be in the future after reschedule, got %v", rescheduled.Game.LockedAt)
+	if !rescheduled.Game.FrozenAt.After(staticClock.Now()) {
+		t.Fatalf("expected frozenAt to be in the future after reschedule, got %v", rescheduled.Game.FrozenAt)
 	}
 
-	updateReq = api.UpdateGameRequest{LockedAt: nullable.NewNullNullable[time.Time]()}
+	updateReq = api.UpdateGameRequest{FrozenAt: nullable.NewNullNullable[time.Time]()}
 	body, _ = json.Marshal(updateReq)
 	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Game.Id, bytes.NewReader(body))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
 	w = httptest.NewRecorder()
 	srv.PatchApiGamesId(w, r, created.Game.Id)
 	if w.Code != http.StatusOK {
-		t.Fatalf("expected clearing lock to succeed, got %d", w.Code)
+		t.Fatalf("expected clearing freeze to succeed, got %d", w.Code)
 	}
 
 	var cleared api.GameDetail
 	json.NewDecoder(w.Body).Decode(&cleared)
 	if cleared.Game.Name != createReq.Name {
-		t.Fatalf("expected name to remain unchanged after clearing lock, got %q", cleared.Game.Name)
+		t.Fatalf("expected name to remain unchanged after clearing freeze, got %q", cleared.Game.Name)
 	}
 	if cleared.Game.TotalPriceCents == nil || *cleared.Game.TotalPriceCents != *createReq.TotalPriceCents {
-		t.Fatalf("expected totalPriceCents to remain %d after clearing lock, got %v", *createReq.TotalPriceCents, cleared.Game.TotalPriceCents)
+		t.Fatalf("expected totalPriceCents to remain %d after clearing freeze, got %v", *createReq.TotalPriceCents, cleared.Game.TotalPriceCents)
 	}
-	if cleared.Game.LockedAt != nil {
-		t.Fatalf("expected lockedAt to be cleared")
+	if cleared.Game.FrozenAt != nil {
+		t.Fatalf("expected frozenAt to be cleared")
 	}
 }
 
-func TestPatchApiGamesId_WhenLockedOnlyDescriptionAndLockedAtCanChange(t *testing.T) {
+func TestPatchApiGamesId_WhenFrozenOnlyDescriptionAndFrozenAtCanChange(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
 	staticClock := clock.StaticClock{Time: time.Now()}
@@ -1707,7 +1707,7 @@ func TestPatchApiGamesId_WhenLockedOnlyDescriptionAndLockedAtCanChange(t *testin
 	querier := db.New(sqlDB)
 	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
 
-	createReq := api.CreateGameRequest{Name: "Locked Edit Rules"}
+	createReq := api.CreateGameRequest{Name: "Frozen Edit Rules"}
 	body, _ := json.Marshal(createReq)
 	r := httptest.NewRequest(http.MethodPost, "/api/games", bytes.NewReader(body))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
@@ -1718,14 +1718,14 @@ func TestPatchApiGamesId_WhenLockedOnlyDescriptionAndLockedAtCanChange(t *testin
 	json.NewDecoder(w.Body).Decode(&created)
 
 	past := staticClock.Now().Add(-1 * time.Hour)
-	lockReq := api.UpdateGameRequest{LockedAt: nullable.NewNullableWithValue(past)}
-	body, _ = json.Marshal(lockReq)
+	freezeReq := api.UpdateGameRequest{FrozenAt: nullable.NewNullableWithValue(past)}
+	body, _ = json.Marshal(freezeReq)
 	r = httptest.NewRequest(http.MethodPatch, "/api/games/"+created.Game.Id, bytes.NewReader(body))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
 	w = httptest.NewRecorder()
 	srv.PatchApiGamesId(w, r, created.Game.Id)
 	if w.Code != http.StatusOK {
-		t.Fatalf("expected locking to succeed, got %d", w.Code)
+		t.Fatalf("expected freezing to succeed, got %d", w.Code)
 	}
 
 	newName := "Should Fail"
@@ -1736,7 +1736,7 @@ func TestPatchApiGamesId_WhenLockedOnlyDescriptionAndLockedAtCanChange(t *testin
 	w = httptest.NewRecorder()
 	srv.PatchApiGamesId(w, r, created.Game.Id)
 	if w.Code != http.StatusBadRequest {
-		t.Fatalf("expected locked game name update to fail with 400, got %d", w.Code)
+		t.Fatalf("expected frozen game name update to fail with 400, got %d", w.Code)
 	}
 
 	newDescription := "Allowed change"
@@ -1747,13 +1747,13 @@ func TestPatchApiGamesId_WhenLockedOnlyDescriptionAndLockedAtCanChange(t *testin
 	w = httptest.NewRecorder()
 	srv.PatchApiGamesId(w, r, created.Game.Id)
 	if w.Code != http.StatusOK {
-		t.Fatalf("expected locked game description update to succeed, got %d", w.Code)
+		t.Fatalf("expected frozen game description update to succeed, got %d", w.Code)
 	}
 
 	var updated api.GameDetail
 	json.NewDecoder(w.Body).Decode(&updated)
 	if updated.Game.Description == nil || *updated.Game.Description != newDescription {
-		t.Fatalf("expected description to be updated on locked game")
+		t.Fatalf("expected description to be updated on frozen game")
 	}
 }
 

@@ -25,7 +25,7 @@ import {
   Rocket,
   Copy,
   Check,
-  Lock,
+  Snowflake,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
@@ -63,7 +63,7 @@ interface Game {
   createdAt: string;
   updatedAt: string;
   publishedAt?: string | null;
-  lockedAt?: string | null;
+  frozenAt?: string | null;
 }
 
 interface PublicGame {
@@ -137,14 +137,14 @@ export default function GameDetailPage() {
   const [nowTs, setNowTs] = useState(() => Date.now());
   const [isEditingSchedule, setIsEditingSchedule] = useState(false);
 
-  // Lock state
-  const [isLocking, setIsLocking] = useState(false);
-  const [lockError, setLockError] = useState<string | null>(null);
-  const [lockAtInput, setLockAtInput] = useState("");
-  const [isEditingLockSchedule, setIsEditingLockSchedule] = useState(false);
-  const [showLockNowWarning, setShowLockNowWarning] = useState(false);
-  const [showLockScheduleWarning, setShowLockScheduleWarning] = useState(false);
-  const [showLockClearWarning, setShowLockClearWarning] = useState(false);
+  // Freeze state
+  const [isFreezing, setIsFreezing] = useState(false);
+  const [freezeError, setFreezeError] = useState<string | null>(null);
+  const [freezeAtInput, setFreezeAtInput] = useState("");
+  const [isEditingFreezeSchedule, setIsEditingFreezeSchedule] = useState(false);
+  const [showFreezeNowWarning, setShowFreezeNowWarning] = useState(false);
+  const [showFreezeScheduleWarning, setShowFreezeScheduleWarning] = useState(false);
+  const [showFreezeClearWarning, setShowFreezeClearWarning] = useState(false);
 
   // Participants state
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -452,12 +452,12 @@ export default function GameDetailPage() {
     return d;
   }, [game?.publishedAt]);
 
-  const lockedAtDate = useMemo(() => {
-    if (!game?.lockedAt) return null;
-    const d = new Date(game.lockedAt);
+  const frozenAtDate = useMemo(() => {
+    if (!game?.frozenAt) return null;
+    const d = new Date(game.frozenAt);
     if (Number.isNaN(d.getTime())) return null;
     return d;
-  }, [game?.lockedAt]);
+  }, [game?.frozenAt]);
 
   const isScheduled = useMemo(() => {
     if (!publishedAtDate) return false;
@@ -471,16 +471,16 @@ export default function GameDetailPage() {
     return publishedAtDate.getTime() <= nowTs + 60000;
   }, [publishedAtDate, nowTs]);
 
-  const isLockScheduled = useMemo(() => {
-    if (!lockedAtDate) return false;
-    return lockedAtDate.getTime() > nowTs;
-  }, [lockedAtDate, nowTs]);
+  const isFreezeScheduled = useMemo(() => {
+    if (!frozenAtDate) return false;
+    return frozenAtDate.getTime() > nowTs;
+  }, [frozenAtDate, nowTs]);
 
-  const isLocked = useMemo(() => {
-    if (!lockedAtDate) return false;
-    // Treat as locked if the timestamp is in the past, or within 60 seconds of now
-    return lockedAtDate.getTime() <= nowTs + 60000;
-  }, [lockedAtDate, nowTs]);
+  const isFrozen = useMemo(() => {
+    if (!frozenAtDate) return false;
+    // Treat as frozen if the timestamp is in the past, or within 60 seconds of now
+    return frozenAtDate.getTime() <= nowTs + 60000;
+  }, [frozenAtDate, nowTs]);
 
   // Total slots to display in the participant grids.
   // ParticipantGrid uses this to calculate empty slots: totalSlots - participants.length
@@ -493,13 +493,13 @@ export default function GameDetailPage() {
     } else {
       setPublishAtInput("");
     }
-    if (game?.lockedAt) {
-      setLockAtInput(toLocalInputValue(game.lockedAt));
-      setIsEditingLockSchedule(false);
+    if (game?.frozenAt) {
+      setFreezeAtInput(toLocalInputValue(game.frozenAt));
+      setIsEditingFreezeSchedule(false);
     } else {
-      setLockAtInput("");
+      setFreezeAtInput("");
     }
-  }, [game?.publishedAt, game?.lockedAt]);
+  }, [game?.publishedAt, game?.frozenAt]);
 
   // Focus input when editing starts
   useEffect(() => {
@@ -510,8 +510,8 @@ export default function GameDetailPage() {
 
   function startEditing(field: string, currentValue: unknown) {
     if (!isOrganizer) return;
-    // Prevent editing of non-description fields when game is locked
-    if (isLocked && field !== "description") return;
+    // Prevent editing of non-description fields when game is frozen
+    if (isFrozen && field !== "description") return;
     setEditingField(field);
     if (field === "totalPriceCents" && typeof currentValue === "number") {
       setEditValue(formatCentsAsDollars(currentValue));
@@ -607,20 +607,20 @@ export default function GameDetailPage() {
     if (ok) setIsEditingSchedule(false);
   }
 
-  async function updateLockTime(
-    lockedAtValue: string | null
+  async function updateFreezeTime(
+    frozenAtValue: string | null
   ) {
     if (!isOrganizer || !id) return false;
 
-    setIsLocking(true);
-    setLockError(null);
+    setIsFreezing(true);
+    setFreezeError(null);
 
     try {
       const resp = await fetch(`${API_BASE_URL}/api/games/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ lockedAt: lockedAtValue }),
+        body: JSON.stringify({ frozenAt: frozenAtValue }),
       });
 
       if (!resp.ok) {
@@ -629,7 +629,7 @@ export default function GameDetailPage() {
           return false;
         }
         const txt = await resp.text();
-        throw new Error(txt || t("lock.failedToUpdateLockTime"));
+        throw new Error(txt || t("freeze.failedToUpdateFreezeTime"));
       }
 
       const updated = await resp.json();
@@ -637,44 +637,44 @@ export default function GameDetailPage() {
       setOrganizer(updated.organizer);
       return true;
     } catch (e) {
-      setLockError(
-        e instanceof Error ? e.message : t("lock.failedToUpdateLockTime")
+      setFreezeError(
+        e instanceof Error ? e.message : t("freeze.failedToUpdateFreezeTime")
       );
       return false;
     } finally {
-      setIsLocking(false);
+      setIsFreezing(false);
     }
   }
 
-  async function handleLockNow() {
-    const ok = await updateLockTime(new Date().toISOString());
+  async function handleFreezeNow() {
+    const ok = await updateFreezeTime(new Date().toISOString());
     if (ok) {
-      setShowLockNowWarning(false);
-      setIsEditingLockSchedule(false);
+      setShowFreezeNowWarning(false);
+      setIsEditingFreezeSchedule(false);
     }
   }
 
-  async function handleScheduleLock() {
-    if (!lockAtInput) {
-      setLockError(t("game.selectDateTimeToSchedule"));
+  async function handleScheduleFreeze() {
+    if (!freezeAtInput) {
+      setFreezeError(t("game.selectDateTimeToSchedule"));
       return;
     }
-    const iso = fromLocalInputValue(lockAtInput);
+    const iso = fromLocalInputValue(freezeAtInput);
     if (!iso) {
-      setLockError(t("game.invalidDateTime"));
+      setFreezeError(t("game.invalidDateTime"));
       return;
     }
-    const ok = await updateLockTime(iso);
+    const ok = await updateFreezeTime(iso);
     if (ok) {
-      setShowLockScheduleWarning(false);
-      setIsEditingLockSchedule(false);
+      setShowFreezeScheduleWarning(false);
+      setIsEditingFreezeSchedule(false);
     }
   }
 
-  async function handleClearLock() {
-    const ok = await updateLockTime(null);
+  async function handleClearFreeze() {
+    const ok = await updateFreezeTime(null);
     if (ok) {
-      setShowLockClearWarning(false);
+      setShowFreezeClearWarning(false);
     }
   }
 
@@ -763,8 +763,8 @@ export default function GameDetailPage() {
       return;
     }
     
-    // Don't allow joining if game is locked
-    if (isLocked) {
+    // Don't allow joining if game is frozen
+    if (isFrozen) {
       return;
     }
     
@@ -982,10 +982,10 @@ export default function GameDetailPage() {
                       publishedAt={publishedAtDate ?? undefined}
                     />
                   )}
-                  {(isLocked || isLockScheduled) && (
+                  {(isFrozen || isFreezeScheduled) && (
                     <div className="inline-flex items-center gap-2 text-sm font-semibold px-3 py-1.5 rounded-full bg-yellow-100 text-yellow-800 border border-yellow-300">
-                      <Lock className="h-4 w-4" />
-                      {isLocked ? t("lock.gameLocked") : t("lock.lockScheduled")}
+                      <Snowflake className="h-4 w-4" />
+                      {isFrozen ? t("freeze.gameFrozen") : t("freeze.freezeScheduled")}
                     </div>
                   )}
                   {isPublished || isScheduled && (
@@ -1066,7 +1066,7 @@ export default function GameDetailPage() {
               <div>
                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
                   {t("game.location")}
-                  {isLocked && isOrganizer && <span className="ml-1">🔒</span>}
+                  {isFrozen && isOrganizer && <span className="ml-1">❄️</span>}
                 </label>
                 {editingField === "location" && isOrganizer ? (
                   <Input
@@ -1083,7 +1083,7 @@ export default function GameDetailPage() {
                 ) : (
                   <EditableFieldDisplay
                     isEditing={editingField === "location"}
-                    isEditable={isOrganizer && !isLocked}
+                    isEditable={isOrganizer && !isFrozen}
                     onClick={() =>
                       startEditing("location", game?.location || "")
                     }
@@ -1094,7 +1094,7 @@ export default function GameDetailPage() {
                       }`}
                     >
                       {game?.location ||
-                        (isOrganizer && !isLocked ? t("game.clickToAddLocation") : "—")}
+                        (isOrganizer && !isFrozen ? t("game.clickToAddLocation") : "—")}
                     </div>
                   </EditableFieldDisplay>
                 )}
@@ -1115,11 +1115,11 @@ export default function GameDetailPage() {
                   <div>
                     <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
                       {t("game.when")}
-                      {isLocked && isOrganizer && <span className="ml-1">🔒</span>}
+                      {isFrozen && isOrganizer && <span className="ml-1">❄️</span>}
                     </label>
                     <EditableFieldDisplay
                       isEditing={editingField === "startsAt"}
-                      isEditable={isOrganizer && !isLocked}
+                      isEditable={isOrganizer && !isFrozen}
                       onClick={() =>
                         startEditing("startsAt", game?.startsAt || "")
                       }
@@ -1135,7 +1135,7 @@ export default function GameDetailPage() {
                             displayFormat="friendly"
                             className="text-gray-900"
                           />
-                        ) : isOrganizer && !isLocked ? (
+                        ) : isOrganizer && !isFrozen ? (
                           t("game.clickToSetTime")
                         ) : (
                           "—"
@@ -1150,7 +1150,7 @@ export default function GameDetailPage() {
               <div>
                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
                   {t("game.duration")}
-                  {isLocked && isOrganizer && <span className="ml-1">🔒</span>}
+                  {isFrozen && isOrganizer && <span className="ml-1">❄️</span>}
                 </label>
                 {editingField === "durationMinutes" && isOrganizer ? (
                   <Input
@@ -1167,7 +1167,7 @@ export default function GameDetailPage() {
                 ) : (
                   <EditableFieldDisplay
                     isEditing={editingField === "durationMinutes"}
-                    isEditable={isOrganizer && !isLocked}
+                    isEditable={isOrganizer && !isFrozen}
                     onClick={() =>
                       startEditing(
                         "durationMinutes",
@@ -1182,7 +1182,7 @@ export default function GameDetailPage() {
                     >
                       {game?.durationMinutes
                         ? `${game.durationMinutes} min`
-                        : isOrganizer && !isLocked
+                        : isOrganizer && !isFrozen
                         ? t("game.clickToAddDuration")
                         : "—"}
                     </div>
@@ -1197,7 +1197,7 @@ export default function GameDetailPage() {
               <div>
                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
                   {t("common.players")}
-                  {isLocked && isOrganizer && <span className="ml-1">🔒</span>}
+                  {isFrozen && isOrganizer && <span className="ml-1">❄️</span>}
                 </label>
                 {editingField === "maxPlayers" && isOrganizer ? (
                   <NumberLimitEditor
@@ -1219,7 +1219,7 @@ export default function GameDetailPage() {
                 ) : (
                   <EditableFieldDisplay
                     isEditing={editingField === "maxPlayers"}
-                    isEditable={isOrganizer && !isLocked}
+                    isEditable={isOrganizer && !isFrozen}
                     onClick={() =>
                       startEditing("maxPlayers", game?.maxPlayers || "")
                     }
@@ -1231,7 +1231,7 @@ export default function GameDetailPage() {
                     >
                       {game?.maxPlayers
                         ? `${t("common.upTo")} ${game.maxPlayers}`
-                        : isOrganizer && !isLocked
+                        : isOrganizer && !isFrozen
                         ? t("common.clickToSet")
                         : "—"}
                     </div>
@@ -1243,7 +1243,7 @@ export default function GameDetailPage() {
               <div>
                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
                   {t("common.guestsPerPlayer")}
-                  {isLocked && isOrganizer && <span className="ml-1">🔒</span>}
+                  {isFrozen && isOrganizer && <span className="ml-1">❄️</span>}
                 </label>
                 {editingField === "maxGuestsPerPlayer" && isOrganizer ? (
                   <NumberLimitEditor
@@ -1261,7 +1261,7 @@ export default function GameDetailPage() {
                 ) : (
                   <EditableFieldDisplay
                     isEditing={editingField === "maxGuestsPerPlayer"}
-                    isEditable={isOrganizer && !isLocked}
+                    isEditable={isOrganizer && !isFrozen}
                     onClick={() =>
                       startEditing(
                         "maxGuestsPerPlayer",
@@ -1280,7 +1280,7 @@ export default function GameDetailPage() {
                         ? game.maxGuestsPerPlayer === 0
                           ? t("common.disabled")
                           : `${t("common.upTo")} ${game.maxGuestsPerPlayer}`
-                        : isOrganizer && !isLocked
+                        : isOrganizer && !isFrozen
                         ? t("common.clickToSet")
                         : "—"}
                     </div>
@@ -1292,7 +1292,7 @@ export default function GameDetailPage() {
               <div>
                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 block">
                   {t("game.price")}
-                  {isLocked && isOrganizer && <span className="ml-1">🔒</span>}
+                  {isFrozen && isOrganizer && <span className="ml-1">❄️</span>}
                 </label>
                 {editingField === "totalPriceCents" && isOrganizer ? (
                   <Input
@@ -1310,7 +1310,7 @@ export default function GameDetailPage() {
                 ) : (
                   <EditableFieldDisplay
                     isEditing={editingField === "totalPriceCents"}
-                    isEditable={isOrganizer && !isLocked}
+                    isEditable={isOrganizer && !isFrozen}
                     onClick={() =>
                       startEditing(
                         "totalPriceCents",
@@ -1333,7 +1333,7 @@ export default function GameDetailPage() {
                           currentPlayers={participantCounts.going}
                           maxPlayers={game.maxPlayers}
                         />
-                      ) : isOrganizer && !isLocked ? (
+                      ) : isOrganizer && !isFrozen ? (
                         t("game.clickToAddPrice")
                       ) : (
                         "—"
@@ -1412,83 +1412,83 @@ export default function GameDetailPage() {
             </div>
           )}
 
-          {/* Lock Control Section */}
+          {/* Freeze Control Section */}
           {isOrganizer && isPublished && (
             <div className="px-8 py-6 border-t border-gray-100">
-              {/* Lock Controls */}
+              {/* Freeze Controls */}
               <div className="bg-white p-4 rounded-xl border-2 border-yellow-200">
                 <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <span className="text-lg">🔒</span>
-                  {isLocked ? t("lock.gameLocked") : isLockScheduled ? t("lock.lockScheduled") : t("lock.controlAccess")}
+                  <span className="text-lg">❄️</span>
+                  {isFrozen ? t("freeze.gameFrozen") : isFreezeScheduled ? t("freeze.freezeScheduled") : t("freeze.controlAccess")}
                 </h3>
 
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4 text-sm text-yellow-900">
                   <p className="font-semibold mb-1">
-                    ⚠️ {t("lock.lockingImplications")}
+                    ⚠️ {t("freeze.freezingImplications")}
                   </p>
                   <ul className="list-disc list-inside space-y-1 text-xs">
-                    <li>{t("lock.implication1")}</li>
-                    <li>{t("lock.implication2")}</li>
-                    <li>{t("lock.implication3")}</li>
+                    <li>{t("freeze.implication1")}</li>
+                    <li>{t("freeze.implication2")}</li>
+                    <li>{t("freeze.implication3")}</li>
                   </ul>
                 </div>
 
                 <div className="flex gap-2">
-                  {!isLocked && !isLockScheduled && (
+                  {!isFrozen && !isFreezeScheduled && (
                     <>
                       <Button
-                        onClick={() => setShowLockNowWarning(true)}
-                        disabled={isLocking}
+                        onClick={() => setShowFreezeNowWarning(true)}
+                        disabled={isFreezing}
                         className="bg-yellow-600 hover:bg-yellow-700"
                       >
-                        {isLocking ? (
+                        {isFreezing ? (
                           <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            {t("lock.locking")}
+                            {t("freeze.freezing")}
                           </>
                         ) : (
                           <>
-                            <span className="mr-2">🔒</span>
-                            {t("lock.lockNow")}
+                            <span className="mr-2">❄️</span>
+                            {t("freeze.freezeNow")}
                           </>
                         )}
                       </Button>
                       <Button
                         variant="outline"
                         onClick={() => {
-                          setIsEditingLockSchedule(true);
+                          setIsEditingFreezeSchedule(true);
                         }}
                       >
-                        {t("lock.scheduleLock")}
+                        {t("freeze.scheduleFreeze")}
                       </Button>
                     </>
                   )}
-                  {(isLocked || isLockScheduled) && (
+                  {(isFrozen || isFreezeScheduled) && (
                     <>
                       <Button
                         variant="outline"
-                        onClick={() => setShowLockClearWarning(true)}
-                        disabled={isLocking}
+                        onClick={() => setShowFreezeClearWarning(true)}
+                        disabled={isFreezing}
                       >
-                        {t("lock.clearLock")}
+                        {t("freeze.clearFreeze")}
                       </Button>
-                      {isLockScheduled && (
+                      {isFreezeScheduled && (
                         <Button
                           variant="outline"
-                          onClick={() => setIsEditingLockSchedule(true)}
+                          onClick={() => setIsEditingFreezeSchedule(true)}
                         >
-                          {t("lock.rescheduleLock")}
+                          {t("freeze.rescheduleFreeze")}
                         </Button>
                       )}
                     </>
                   )}
                 </div>
 
-                {isEditingLockSchedule && (
+                {isEditingFreezeSchedule && (
                   <div className="mt-4 pt-4 border-t border-gray-200 space-y-3">
                     <DateTimeEditor
-                      value={lockAtInput}
-                      onChange={setLockAtInput}
+                      value={freezeAtInput}
+                      onChange={setFreezeAtInput}
                       locale={datePickerLocale}
                       dateLabel={t("game.date", { defaultValue: "Date" })}
                       timeLabel={t("game.time", { defaultValue: "Time" })}
@@ -1497,25 +1497,25 @@ export default function GameDetailPage() {
                       <Button
                         variant="outline"
                         onClick={() => {
-                          setIsEditingLockSchedule(false);
-                          setShowLockScheduleWarning(false);
+                          setIsEditingFreezeSchedule(false);
+                          setShowFreezeScheduleWarning(false);
                         }}
                       >
                         {t("common.cancel")}
                       </Button>
                       <Button
-                        onClick={() => setShowLockScheduleWarning(true)}
-                        disabled={isLocking || !lockAtInput}
+                        onClick={() => setShowFreezeScheduleWarning(true)}
+                        disabled={isFreezing || !freezeAtInput}
                       >
-                        {isLockScheduled ? t("lock.updateSchedule") : t("lock.schedulePublish")}
+                        {isFreezeScheduled ? t("freeze.updateSchedule") : t("freeze.schedulePublish")}
                       </Button>
                     </div>
                   </div>
                 )}
 
-                {lockError && (
+                {freezeError && (
                   <div className="mt-3 text-red-600 text-sm">
-                    {lockError}
+                    {freezeError}
                   </div>
                 )}
 
@@ -1523,7 +1523,7 @@ export default function GameDetailPage() {
                   <h4 className="text-sm font-semibold text-gray-900 mb-2">
                     {t("reimbursements.title")}
                   </h4>
-                  {isLocked ? (
+                  {isFrozen ? (
                     <Button
                       variant="outline"
                       onClick={() => navigate(`/games/${id}/reimbursements`)}
@@ -1532,7 +1532,7 @@ export default function GameDetailPage() {
                     </Button>
                   ) : (
                     <p className="text-sm text-yellow-800">
-                      {t("reimbursements.lockGameToAccess")}
+                      {t("reimbursements.freezeGameToAccess")}
                     </p>
                   )}
                 </div>
@@ -1743,7 +1743,7 @@ export default function GameDetailPage() {
               </div>
             ) : user && isPublished ? (
               <div>
-                {isLocked && currentUserParticipation?.status === "going" && id && user?.id ? (
+                {isFrozen && currentUserParticipation?.status === "going" && id && user?.id ? (
                   <div className="mb-3">
                     <ParticipantReimbursementCard
                       gameId={id}
@@ -1753,13 +1753,13 @@ export default function GameDetailPage() {
                 ) : (
                   <div
                     className={`mb-3 rounded-lg border p-3 text-sm ${
-                      isLocked
+                      isFrozen
                         ? "border-emerald-200 bg-emerald-50 text-emerald-900"
                         : "border-amber-200 bg-amber-50 text-amber-900"
                     }`}
                   >
                     <p className="font-semibold">
-                      {t("reimbursements.waitForLockToSend")}
+                      {t("reimbursements.waitForFreezeToSend")}
                     </p>
                   </div>
                 )}
@@ -1768,7 +1768,7 @@ export default function GameDetailPage() {
                     <Button
                       variant="outline"
                       onClick={() => setShowUngoingConfirmation(true)}
-                      disabled={isUpdatingParticipation || isLocked}
+                      disabled={isUpdatingParticipation || isFrozen}
                       className="w-full bg-accent/10 border-accent text-accent hover:bg-accent/20"
                     >
                       {isUpdatingParticipation
@@ -1777,9 +1777,9 @@ export default function GameDetailPage() {
                         ? t("participants.leaveWaitlist")
                         : t("participants.youreGoing")}
                     </Button>
-                    {isLocked && (
+                    {isFrozen && (
                       <p className="text-xs text-gray-500 mt-2 text-center">
-                        {t("lock.gameLockedNoChanges")}
+                        {t("freeze.gameFrozenNoChanges")}
                       </p>
                     )}
                     <Dialog
@@ -1814,7 +1814,7 @@ export default function GameDetailPage() {
                               setShowUngoingConfirmation(false);
                               await updateParticipation("not_going");
                             }}
-                            disabled={isUpdatingParticipation || isLocked}
+                            disabled={isUpdatingParticipation || isFrozen}
                           >
                             {isUpdatingParticipation
                               ? t("participants.updating")
@@ -1828,13 +1828,13 @@ export default function GameDetailPage() {
                   </>
                 ) : (
                   <div className="space-y-3">
-                    {isLocked && (
+                    {isFrozen && (
                       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-900">
-                        <p className="font-semibold">🔒 {t("lock.gameLocked")}</p>
-                        <p>{t("lock.cannotJoinLockedGame")}</p>
+                        <p className="font-semibold">❄️ {t("freeze.gameFrozen")}</p>
+                        <p>{t("freeze.cannotJoinFrozenGame")}</p>
                       </div>
                     )}
-                    {!isLocked && (
+                    {!isFrozen && (
                       <>
                         <div className="grid grid-cols-[1fr,auto] gap-3 items-end">
                           <Button
@@ -1877,7 +1877,7 @@ export default function GameDetailPage() {
                               disabled={
                                 game?.maxGuestsPerPlayer === 0 ||
                                 isUpdatingParticipation ||
-                                isLocked
+                                isFrozen
                               }
                               className="w-20 text-center"
                             />
@@ -1964,42 +1964,42 @@ export default function GameDetailPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Lock Now Warning Dialog */}
+        {/* Freeze Now Warning Dialog */}
         <Dialog
-          open={showLockNowWarning}
-          onOpenChange={setShowLockNowWarning}
+          open={showFreezeNowWarning}
+          onOpenChange={setShowFreezeNowWarning}
         >
           <DialogContent>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <span className="text-lg">🔒</span>
-                {t("lock.lockGameNow")}
+                <span className="text-lg">❄️</span>
+                {t("freeze.freezeGameNow")}
               </DialogTitle>
               <DialogDescription>
-                {t("lock.lockNowWarning")}
+                {t("freeze.freezeNowWarning")}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
               <Button
                 variant="outline"
-                onClick={() => setShowLockNowWarning(false)}
+                onClick={() => setShowFreezeNowWarning(false)}
               >
                 {t("common.cancel")}
               </Button>
               <Button
-                onClick={handleLockNow}
-                disabled={isLocking}
+                onClick={handleFreezeNow}
+                disabled={isFreezing}
                 className="bg-yellow-600 hover:bg-yellow-700"
               >
-                {isLocking ? (
+                {isFreezing ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {t("lock.locking")}
+                    {t("freeze.freezing")}
                   </>
                 ) : (
                   <>
-                    <span className="mr-2">🔒</span>
-                    {t("lock.confirmLockNow")}
+                    <span className="mr-2">❄️</span>
+                    {t("freeze.confirmFreezeNow")}
                   </>
                 )}
               </Button>
@@ -2007,82 +2007,82 @@ export default function GameDetailPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Lock Schedule Warning Dialog */}
+        {/* Freeze Schedule Warning Dialog */}
         <Dialog
-          open={showLockScheduleWarning}
-          onOpenChange={setShowLockScheduleWarning}
+          open={showFreezeScheduleWarning}
+          onOpenChange={setShowFreezeScheduleWarning}
         >
           <DialogContent>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <span className="text-lg">⏰</span>
-                {t("lock.scheduleLocking")}
+                {t("freeze.scheduleFreezing")}
               </DialogTitle>
               <DialogDescription>
-                {t("lock.scheduleLockWarning")}
+                {t("freeze.scheduleFreezeWarning")}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
               <Button
                 variant="outline"
                 onClick={() => {
-                  setShowLockScheduleWarning(false);
-                  setIsEditingLockSchedule(false);
+                  setShowFreezeScheduleWarning(false);
+                  setIsEditingFreezeSchedule(false);
                 }}
               >
                 {t("common.cancel")}
               </Button>
               <Button
-                onClick={handleScheduleLock}
-                disabled={isLocking}
+                onClick={handleScheduleFreeze}
+                disabled={isFreezing}
               >
-                {isLocking ? (
+                {isFreezing ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {t("lock.scheduling")}
+                    {t("freeze.scheduling")}
                   </>
                 ) : (
-                  t("lock.confirmSchedule")
+                  t("freeze.confirmSchedule")
                 )}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        {/* Clear Lock Warning Dialog */}
+        {/* Clear Freeze Warning Dialog */}
         <Dialog
-          open={showLockClearWarning}
-          onOpenChange={setShowLockClearWarning}
+          open={showFreezeClearWarning}
+          onOpenChange={setShowFreezeClearWarning}
         >
           <DialogContent>
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <span className="text-lg">🔓</span>
-                {t("lock.clearLock")}
+                <span className="text-lg">❄️</span>
+                {t("freeze.clearFreeze")}
               </DialogTitle>
               <DialogDescription>
-                {t("lock.clearLockWarning")}
+                {t("freeze.clearFreezeWarning")}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
               <Button
                 variant="outline"
-                onClick={() => setShowLockClearWarning(false)}
+                onClick={() => setShowFreezeClearWarning(false)}
               >
                 {t("common.cancel")}
               </Button>
               <Button
-                onClick={handleClearLock}
-                disabled={isLocking}
+                onClick={handleClearFreeze}
+                disabled={isFreezing}
                 variant="destructive"
               >
-                {isLocking ? (
+                {isFreezing ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {t("lock.clearing")}
+                    {t("freeze.clearing")}
                   </>
                 ) : (
-                  t("lock.confirmClear")
+                  t("freeze.confirmClear")
                 )}
               </Button>
             </DialogFooter>

@@ -100,8 +100,8 @@ func (s *server) GetApiGamesIdReimbursements(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if !game.LockedAt.Valid || game.LockedAt.Time.After(s.clock.Now()) {
-		http.Error(w, "reimbursements are only available for locked games", http.StatusBadRequest)
+	if !game.FrozenAt.Valid || game.FrozenAt.Time.After(s.clock.Now()) {
+		http.Error(w, "reimbursements are only available for frozen games", http.StatusBadRequest)
 		return
 	}
 
@@ -201,8 +201,8 @@ func (s *server) PutApiGamesIdReimbursements(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if !game.LockedAt.Valid || game.LockedAt.Time.After(s.clock.Now()) {
-		http.Error(w, "reimbursements are only available for locked games", http.StatusBadRequest)
+	if !game.FrozenAt.Valid || game.FrozenAt.Time.After(s.clock.Now()) {
+		http.Error(w, "reimbursements are only available for frozen games", http.StatusBadRequest)
 		return
 	}
 
