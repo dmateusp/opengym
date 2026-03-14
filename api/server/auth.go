@@ -317,7 +317,7 @@ func (srv *server) GetApiAuthProviderCallback(w http.ResponseWriter, r *http.Req
 			Value:    signedJwt,
 			Path:     "/",
 			HttpOnly: true,
-			Secure:   true,
+			Secure:   shouldUseSecureCookies(),
 			SameSite: http.SameSiteLaxMode,
 			MaxAge:   int((4 * time.Hour).Seconds()),
 		},
@@ -369,10 +369,7 @@ func (srv *server) GetApiAuthProviderLogin(w http.ResponseWriter, r *http.Reques
 	}
 	verifier := oauth2.GenerateVerifier()
 
-	isHTTPS := false
-	if parsed, err := url.Parse(*baseUrl); err == nil && parsed.Scheme == "https" {
-		isHTTPS = true
-	}
+	isHTTPS := shouldUseSecureCookies()
 
 	http.SetCookie(
 		w,

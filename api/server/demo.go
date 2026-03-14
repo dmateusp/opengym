@@ -69,7 +69,7 @@ func (s *server) PostApiDemoUsersUserIdImpersonate(w http.ResponseWriter, r *htt
 			Value:    signedJwt,
 			Path:     "/",
 			HttpOnly: true,
-			Secure:   true,
+			Secure:   shouldUseSecureCookies(),
 			SameSite: http.SameSiteLaxMode,
 			MaxAge:   int((4 * time.Hour).Seconds()),
 		},

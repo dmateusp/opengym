@@ -78,6 +78,41 @@ Not all contributions are code—we also welcome documentation, translations, an
 
 The [AGENTS.md](AGENTS.md) file describes the tooling we use for development; it should contain everything you need to know to start contributing code.
 
+### Checking it out on mobile locally
+
+You can run opengym so that it is reachable from your phone on the same network.
+
+1. Get your machine's private LAN IP:
+
+```bash
+LAN_IP=$(ipconfig getifaddr en0 || ipconfig getifaddr en1)
+echo "$LAN_IP"
+```
+
+2. Start the back-end on all interfaces (`0.0.0.0`):
+
+```bash
+LAN_IP=$(ipconfig getifaddr en0 || ipconfig getifaddr en1)
+go run cmd/opengymserver/main.go \
+  -server-addr=0.0.0.0:8080 \
+  -db.run-migrations=true \
+  -demo.enabled=true \
+  -demo.auth.signing-secret=$(openssl rand -hex 32) \
+  -base-url=http://$LAN_IP:8080 \
+  -frontend.base-url=http://$LAN_IP:5173 \
+  -cors.allowed-origin-prefix=http://$LAN_IP:
+```
+
+3. In another terminal, start the front-end on all interfaces (`0.0.0.0`):
+
+```bash
+cd frontend
+LAN_IP=$(ipconfig getifaddr en0 || ipconfig getifaddr en1)
+VITE_API_BASE_URL=http://$LAN_IP:8080 pnpm run dev --host 0.0.0.0 --port 5173
+```
+
+4. Open `http://<YOUR_LAN_IP>:5173` on your phone.
+
 ##  Configuration
 
 opengym can be configured using command-line flags or/and environment variables. Environment variables overwrite flags.
