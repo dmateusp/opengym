@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetApiAuthByProviderCallbackData, GetApiAuthByProviderCallbackErrors, GetApiAuthByProviderCallbackResponses, GetApiAuthByProviderLoginData, GetApiAuthByProviderLoginErrors, GetApiAuthMeData, GetApiAuthMeErrors, GetApiAuthMeResponses, GetApiDemoUsersData, GetApiDemoUsersErrors, GetApiDemoUsersResponses, GetApiGamesByIdData, GetApiGamesByIdErrors, GetApiGamesByIdParticipantsData, GetApiGamesByIdParticipantsErrors, GetApiGamesByIdParticipantsResponses, GetApiGamesByIdReimbursementsData, GetApiGamesByIdReimbursementsErrors, GetApiGamesByIdReimbursementsResponses, GetApiGamesByIdResponses, GetApiGamesData, GetApiGamesErrors, GetApiGamesResponses, GetPublicApiGamesByIdData, GetPublicApiGamesByIdErrors, GetPublicApiGamesByIdResponses, PatchApiGamesByIdData, PatchApiGamesByIdErrors, PatchApiGamesByIdResponses, PostApiAuthLogoutData, PostApiAuthLogoutErrors, PostApiAuthLogoutResponses, PostApiDemoUsersByUserIdImpersonateData, PostApiDemoUsersByUserIdImpersonateErrors, PostApiDemoUsersByUserIdImpersonateResponses, PostApiGamesData, PostApiGamesErrors, PostApiGamesResponses, PutApiGamesByIdParticipantsData, PutApiGamesByIdParticipantsErrors, PutApiGamesByIdParticipantsResponses, PutApiGamesByIdReimbursementsData, PutApiGamesByIdReimbursementsErrors, PutApiGamesByIdReimbursementsResponses } from './types.gen';
+import type { GetApiAuthByProviderCallbackData, GetApiAuthByProviderCallbackErrors, GetApiAuthByProviderCallbackResponses, GetApiAuthByProviderLoginData, GetApiAuthByProviderLoginErrors, GetApiAuthMeData, GetApiAuthMeErrors, GetApiAuthMeResponses, GetApiDemoUsersData, GetApiDemoUsersErrors, GetApiDemoUsersResponses, GetApiGamesByIdData, GetApiGamesByIdErrors, GetApiGamesByIdParticipantsData, GetApiGamesByIdParticipantsErrors, GetApiGamesByIdParticipantsResponses, GetApiGamesByIdReimbursementsByParticipantIdData, GetApiGamesByIdReimbursementsByParticipantIdErrors, GetApiGamesByIdReimbursementsByParticipantIdResponses, GetApiGamesByIdReimbursementsData, GetApiGamesByIdReimbursementsErrors, GetApiGamesByIdReimbursementsResponses, GetApiGamesByIdResponses, GetApiGamesData, GetApiGamesErrors, GetApiGamesResponses, GetPublicApiGamesByIdData, GetPublicApiGamesByIdErrors, GetPublicApiGamesByIdResponses, PatchApiGamesByIdData, PatchApiGamesByIdErrors, PatchApiGamesByIdResponses, PostApiAuthLogoutData, PostApiAuthLogoutErrors, PostApiAuthLogoutResponses, PostApiDemoUsersByUserIdImpersonateData, PostApiDemoUsersByUserIdImpersonateErrors, PostApiDemoUsersByUserIdImpersonateResponses, PostApiGamesData, PostApiGamesErrors, PostApiGamesResponses, PutApiGamesByIdParticipantsData, PutApiGamesByIdParticipantsErrors, PutApiGamesByIdParticipantsResponses, PutApiGamesByIdReimbursementsData, PutApiGamesByIdReimbursementsErrors, PutApiGamesByIdReimbursementsResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -147,6 +147,17 @@ export const putApiGamesByIdParticipants = <ThrowOnError extends boolean = false
         'Content-Type': 'application/json',
         ...options.headers
     }
+});
+
+/**
+ * Get reimbursement record for a participant
+ *
+ * Returns the reimbursement record for a specific participant. Accessible only to the participant themselves or the game organizer.
+ */
+export const getApiGamesByIdReimbursementsByParticipantId = <ThrowOnError extends boolean = false>(options: Options<GetApiGamesByIdReimbursementsByParticipantIdData, ThrowOnError>) => (options.client ?? client).get<GetApiGamesByIdReimbursementsByParticipantIdResponses, GetApiGamesByIdReimbursementsByParticipantIdErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/games/{id}/reimbursements/{participant_id}',
+    ...options
 });
 
 /**

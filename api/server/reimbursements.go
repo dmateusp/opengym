@@ -16,6 +16,67 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+func (s *server) GetApiGamesIdReimbursementsParticipantId(w http.ResponseWriter, r *http.Request, id string, participantId string) {
+	authInfo, ok := auth.FromCtx(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	game, err := s.querier.GameGetById(r.Context(), id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "game not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, fmt.Sprintf("failed to retrieve game: %s", err.Error()), http.StatusInternalServerError)
+		return
+	}
+
+	userID := int64(authInfo.UserId)
+	isOrganizer := game.OrganizerID == userID
+
+	targetParticipantID, err := strconv.ParseInt(participantId, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid participant_id", http.StatusBadRequest)
+		return
+	}
+
+	if !isOrganizer && userID != targetParticipantID {
+		http.Error(w, "forbidden: only the participant or the organizer can access this record", http.StatusForbidden)
+		return
+	}
+
+	participant, err := s.querier.ParticipantGetByGameAndUser(r.Context(), db.ParticipantGetByGameAndUserParams{
+		GameID: id,
+		UserID: targetParticipantID,
+	})
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "participant not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, fmt.Sprintf("failed to retrieve participant: %s", err.Error()), http.StatusInternalServerError)
+		return
+	}
+
+	response := api.ReimbursementRecord{
+		ParticipantId:           participantId,
+		GameId:                  id,
+		ReimbursementReference:  participant.ReimbursementReference.String,
+		CreatedAt:               ptr.Ptr(participant.CreatedAt),
+		UpdatedAt:               ptr.Ptr(participant.UpdatedAt),
+		ReimbursedAt:            sqlNullTimeToNullable(participant.ReimbursedAt),
+		ReimbursementReceivedAt: sqlNullTimeToNullable(participant.ReimbursementReceivedAt),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, fmt.Sprintf("failed to encode response: %s", err.Error()), http.StatusInternalServerError)
+	}
+}
+
 func (s *server) GetApiGamesIdReimbursements(w http.ResponseWriter, r *http.Request, id string) {
 	authInfo, ok := auth.FromCtx(r.Context())
 	if !ok {

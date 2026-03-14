@@ -792,6 +792,48 @@ export type PutApiGamesByIdParticipantsResponses = {
 
 export type PutApiGamesByIdParticipantsResponse = PutApiGamesByIdParticipantsResponses[keyof PutApiGamesByIdParticipantsResponses];
 
+export type GetApiGamesByIdReimbursementsByParticipantIdData = {
+    body?: never;
+    path: {
+        /**
+         * The game ID
+         */
+        id: string;
+        /**
+         * The participant's user ID
+         */
+        participant_id: string;
+    };
+    query?: never;
+    url: '/api/games/{id}/reimbursements/{participant_id}';
+};
+
+export type GetApiGamesByIdReimbursementsByParticipantIdErrors = {
+    /**
+     * Unauthorized - invalid or missing token
+     */
+    401: Error;
+    /**
+     * Forbidden - not the participant or the game organizer
+     */
+    403: Error;
+    /**
+     * Game or participant not found
+     */
+    404: Error;
+};
+
+export type GetApiGamesByIdReimbursementsByParticipantIdError = GetApiGamesByIdReimbursementsByParticipantIdErrors[keyof GetApiGamesByIdReimbursementsByParticipantIdErrors];
+
+export type GetApiGamesByIdReimbursementsByParticipantIdResponses = {
+    /**
+     * Reimbursement record retrieved successfully
+     */
+    200: ReimbursementRecord;
+};
+
+export type GetApiGamesByIdReimbursementsByParticipantIdResponse = GetApiGamesByIdReimbursementsByParticipantIdResponses[keyof GetApiGamesByIdReimbursementsByParticipantIdResponses];
+
 export type GetApiGamesByIdReimbursementsData = {
     body?: never;
     path: {

@@ -453,6 +453,53 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /api/games/{id}/reimbursements/{participant_id}:
+    get:
+      summary: Get reimbursement record for a participant
+      description: Returns the reimbursement record for a specific participant. Accessible only to the participant themselves or the game organizer.
+      tags:
+        - Games
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The game ID
+        - name: participant_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The participant's user ID
+      responses:
+        '200':
+          description: Reimbursement record retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReimbursementRecord'
+        '401':
+          description: Unauthorized - invalid or missing token
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - not the participant or the game organizer
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Game or participant not found
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /api/games/{id}/reimbursements:
     get:
       summary: List reimbursements for a game
