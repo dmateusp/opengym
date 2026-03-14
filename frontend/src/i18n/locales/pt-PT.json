@@ -96,6 +96,11 @@
     "minutes": "minutos",
     "free": "Grátis",
     "perPlayer": "por jogador",
+    "total": "Total",
+    "perPersonNow": "por pessoa agora",
+    "perPersonIfFull": "por pessoa com o jogo cheio",
+    "costDependsOnAttendance": "Divisão final depende da participação",
+    "perPersonIfFullUnavailable": "n/d por pessoa com o jogo cheio",
     "locationSet": "Localização definida",
     "startTimeSet": "Hora de início definida",
     "durationSet": "Duração definida",
@@ -218,6 +223,7 @@
     "pricePlaceholder": "ex: 15,50",
     "pickTimeToPublish": "Escolhe hora para publicar",
     "by": "por",
+    "notAvailable": "n/d",
     "login": "Iniciar Sessão"
   },
   "numberLimitEditor": {
@@ -286,6 +292,8 @@
     "noParticipants": "Ainda não há participantes",
     "viewReimbursements": "Ver Reembolsos",
     "availableAfterLock": "Os reembolsos ficam disponíveis após bloquear o jogo",
+    "waitForLockToSend": "Espera para enviar reembolsos até o organizador bloquear o jogo.",
+    "sendNowGameLocked": "O jogo está bloqueado. Agora podes enviar reembolsos.",
     "lockGameToAccess": "Bloqueia primeiro este jogo para aceder ao controlo de reembolsos.",
     "lockRequired": "Os reembolsos ainda não estão disponíveis",
     "lockRequiredDescription": "Esta página só fica disponível depois do jogo estar bloqueado.",

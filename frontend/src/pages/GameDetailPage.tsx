@@ -1329,6 +1329,7 @@ export default function GameDetailPage() {
                       game.totalPriceCents >= 0 ? (
                         <PriceDisplay
                           totalPriceCents={game.totalPriceCents}
+                          currentPlayers={participantCounts.going}
                           maxPlayers={game.maxPlayers}
                         />
                       ) : isOrganizer && !isLocked ? (
@@ -1769,6 +1770,19 @@ export default function GameDetailPage() {
               </div>
             ) : user && isPublished ? (
               <div>
+                <div
+                  className={`mb-3 rounded-lg border p-3 text-sm ${
+                    isLocked
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+                      : "border-amber-200 bg-amber-50 text-amber-900"
+                  }`}
+                >
+                  <p className="font-semibold">
+                    {isLocked
+                      ? t("reimbursements.sendNowGameLocked")
+                      : t("reimbursements.waitForLockToSend")}
+                  </p>
+                </div>
                 {currentUserParticipation && currentUserParticipation.status !== "not_going" ? (
                   <>
                     <Button
