@@ -452,6 +452,149 @@ paths:
             text/plain:
               schema:
                 $ref: '#/components/schemas/Error'
+
+  /api/games/{id}/reimbursements/{participant_id}:
+    get:
+      summary: Get reimbursement record for a participant
+      description: Returns the reimbursement record for a specific participant. Accessible only to the participant themselves or the game organizer.
+      tags:
+        - Games
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The game ID
+        - name: participant_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The participant's user ID
+      responses:
+        '200':
+          description: Reimbursement record retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReimbursementRecord'
+        '401':
+          description: Unauthorized - invalid or missing token
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - not the participant or the game organizer
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Game or participant not found
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/games/{id}/reimbursements:
+    get:
+      summary: List reimbursements for a game
+      description: Returns the reimbursement tracking entries needed to build the reimbursements page. Only the organizer and participants of the game can access it.
+      tags:
+        - Games
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The game ID
+      responses:
+        '200':
+          description: Reimbursements retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GameReimbursementEntry'
+        '401':
+          description: Unauthorized - invalid or missing token
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - not the organizer or a participant of this game
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Game not found
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Update reimbursement status for a participant
+      description: Update reimbursement tracking for a game participant. Organizers provide participantId and can set reimbursement_received_at. Participants set their own reimbursed_at without providing participantId.
+      tags:
+        - Games
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The game ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateReimbursementRequest'
+      responses:
+        '200':
+          description: Reimbursement status updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReimbursementRecord'
+        '400':
+          description: Invalid request data or participant tried to include participantId field
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized - invalid or missing token
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - not the organizer or participant for this reimbursement
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Game or participant not found
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -782,6 +925,40 @@ components:
           format: date-time
           description: Timestamp when the participation record was last updated
 
+    GameReimbursementEntry:
+      type: object
+      required:
+        - participant
+        - reimbursementReference
+        - amountOwedCents
+        - guests
+      properties:
+        reimbursementReference:
+          type: string
+          description: 4-character case-sensitive alphanumeric reference used to identify participant reimbursements
+          minLength: 4
+          maxLength: 4
+          pattern: '^[A-Za-z0-9]{4}$'
+        amountOwedCents:
+          type: integer
+          format: int64
+          description: Amount owed by this participant in cents, including guests and excluding waitlisted participants
+        guests:
+          type: integer
+          description: Number of guests this participant is bringing
+        participant:
+          $ref: '#/components/schemas/User'
+        reimbursedAt:
+          type: string
+          format: date-time
+          description: When the participant claims to have sent the reimbursement
+          nullable: true
+        reimbursementReceivedAt:
+          type: string
+          format: date-time
+          description: When the organizer claims to have received the reimbursement
+          nullable: true
+
     UpdateGameParticipationRequest:
       type: object
       required:
@@ -877,3 +1054,67 @@ components:
     Error:
       type: string
       description: Error message string
+
+    UpdateReimbursementRequest:
+      oneOf:
+        - type: object
+          description: Organizer request - update a participant's reimbursement status
+          required:
+            - participantId
+          properties:
+            participantId:
+              type: string
+              description: ID of the participant to update reimbursement for
+            reimbursement_received_at:
+              type: string
+              format: date-time
+              description: When the organizer received and confirmed the reimbursement. Set to null to clear.
+              nullable: true
+        - type: object
+          description: Participant request - set their own reimbursement date
+          required:
+            - reimbursed_at
+          properties:
+            reimbursed_at:
+              type: string
+              format: date-time
+              description: When the participant sent the reimbursement. Set to null to clear.
+              nullable: true
+
+    ReimbursementRecord:
+      type: object
+      required:
+        - participantId
+        - gameId
+        - reimbursementReference
+      properties:
+        participantId:
+          type: string
+          description: ID of the participant
+        gameId:
+          type: string
+          description: ID of the game
+        reimbursementReference:
+          type: string
+          description: 4-character case-sensitive alphanumeric reference used to identify participant reimbursements
+          minLength: 4
+          maxLength: 4
+          pattern: '^[A-Za-z0-9]{4}$'
+        reimbursed_at:
+          type: string
+          format: date-time
+          description: When the participant sent the reimbursement
+          nullable: true
+        reimbursement_received_at:
+          type: string
+          format: date-time
+          description: When the organizer received and confirmed the reimbursement
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when the reimbursement record was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the reimbursement record was last updated

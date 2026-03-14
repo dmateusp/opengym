@@ -46,7 +46,7 @@ where games.id = ?;
 -- name: GameUpdate :exec
 update games
 set
-  name = coalesce(sqlc.arg(name), name),
+  name = coalesce(sqlc.narg(name), name),
   description = coalesce(sqlc.arg(description), description),
   published_at = case
     when cast(sqlc.arg(clear_published_at) as boolean) then null
@@ -56,7 +56,7 @@ set
     when cast(sqlc.arg(clear_locked_at) as boolean) then null
     else coalesce(sqlc.arg(locked_at), locked_at)
   end,
-  total_price_cents = coalesce(sqlc.arg(total_price_cents), total_price_cents),
+  total_price_cents = coalesce(sqlc.narg(total_price_cents), total_price_cents),
   location = coalesce(sqlc.arg(location), location),
   starts_at = coalesce(sqlc.arg(starts_at), starts_at),
   duration_minutes = coalesce(nullif(cast(sqlc.arg(duration_minutes) as integer), 0), duration_minutes),

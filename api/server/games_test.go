@@ -1625,7 +1625,10 @@ func TestPatchApiGamesId_LockCanBeRescheduledAndCleared(t *testing.T) {
 	querier := db.New(sqlDB)
 	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
 
-	createReq := api.CreateGameRequest{Name: "Lockable"}
+	createReq := api.CreateGameRequest{
+		Name:            "Lockable",
+		TotalPriceCents: ptr.Ptr(int64(2500)),
+	}
 	body, _ := json.Marshal(createReq)
 	r := httptest.NewRequest(http.MethodPost, "/api/games", bytes.NewReader(body))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
@@ -1659,6 +1662,12 @@ func TestPatchApiGamesId_LockCanBeRescheduledAndCleared(t *testing.T) {
 
 	var rescheduled api.GameDetail
 	json.NewDecoder(w.Body).Decode(&rescheduled)
+	if rescheduled.Game.Name != createReq.Name {
+		t.Fatalf("expected name to remain unchanged after lock reschedule, got %q", rescheduled.Game.Name)
+	}
+	if rescheduled.Game.TotalPriceCents == nil || *rescheduled.Game.TotalPriceCents != *createReq.TotalPriceCents {
+		t.Fatalf("expected totalPriceCents to remain %d after lock reschedule, got %v", *createReq.TotalPriceCents, rescheduled.Game.TotalPriceCents)
+	}
 	if rescheduled.Game.LockedAt == nil {
 		t.Fatalf("expected lockedAt to remain set after reschedule")
 	}
@@ -1678,6 +1687,12 @@ func TestPatchApiGamesId_LockCanBeRescheduledAndCleared(t *testing.T) {
 
 	var cleared api.GameDetail
 	json.NewDecoder(w.Body).Decode(&cleared)
+	if cleared.Game.Name != createReq.Name {
+		t.Fatalf("expected name to remain unchanged after clearing lock, got %q", cleared.Game.Name)
+	}
+	if cleared.Game.TotalPriceCents == nil || *cleared.Game.TotalPriceCents != *createReq.TotalPriceCents {
+		t.Fatalf("expected totalPriceCents to remain %d after clearing lock, got %v", *createReq.TotalPriceCents, cleared.Game.TotalPriceCents)
+	}
 	if cleared.Game.LockedAt != nil {
 		t.Fatalf("expected lockedAt to be cleared")
 	}

@@ -11,17 +11,99 @@ import (
 	"time"
 )
 
+const participantGetByGameAndUser = `-- name: ParticipantGetByGameAndUser :one
+select id, user_id, game_id, created_at, updated_at, going_updated_at, going, confirmed_at, guests, reimbursed_at, reimbursement_received_at, reimbursement_reference
+from game_participants
+where game_id = ?1
+    and user_id = ?2
+`
+
+type ParticipantGetByGameAndUserParams struct {
+	GameID string
+	UserID int64
+}
+
+func (q *Queries) ParticipantGetByGameAndUser(ctx context.Context, arg ParticipantGetByGameAndUserParams) (GameParticipant, error) {
+	row := q.db.QueryRowContext(ctx, participantGetByGameAndUser, arg.GameID, arg.UserID)
+	var i GameParticipant
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.GameID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.GoingUpdatedAt,
+		&i.Going,
+		&i.ConfirmedAt,
+		&i.Guests,
+		&i.ReimbursedAt,
+		&i.ReimbursementReceivedAt,
+		&i.ReimbursementReference,
+	)
+	return i, err
+}
+
+const participantUpdateReimbursedAt = `-- name: ParticipantUpdateReimbursedAt :execrows
+update game_participants
+set
+    updated_at = current_timestamp,
+    reimbursed_at = ?1
+where game_id = ?2
+    and user_id = ?3
+`
+
+type ParticipantUpdateReimbursedAtParams struct {
+	ReimbursedAt sql.NullTime
+	GameID       string
+	UserID       int64
+}
+
+func (q *Queries) ParticipantUpdateReimbursedAt(ctx context.Context, arg ParticipantUpdateReimbursedAtParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, participantUpdateReimbursedAt, arg.ReimbursedAt, arg.GameID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const participantUpdateReimbursementReceivedAt = `-- name: ParticipantUpdateReimbursementReceivedAt :execrows
+update game_participants
+set
+    updated_at = current_timestamp,
+    reimbursement_received_at = ?1
+where game_id = ?2
+    and user_id = ?3
+`
+
+type ParticipantUpdateReimbursementReceivedAtParams struct {
+	ReimbursementReceivedAt sql.NullTime
+	GameID                  string
+	UserID                  int64
+}
+
+func (q *Queries) ParticipantUpdateReimbursementReceivedAt(ctx context.Context, arg ParticipantUpdateReimbursementReceivedAtParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, participantUpdateReimbursementReceivedAt, arg.ReimbursementReceivedAt, arg.GameID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const participantsList = `-- name: ParticipantsList :many
 select
     users.id = ?1 as is_organizer,
-    game_participants.user_id, game_participants.game_id, game_participants.created_at, game_participants.updated_at, game_participants.going_updated_at, game_participants.going, game_participants.confirmed_at, game_participants.guests,
+    game_participants.id, game_participants.user_id, game_participants.game_id, game_participants.created_at, game_participants.updated_at, game_participants.going_updated_at, game_participants.going, game_participants.confirmed_at, game_participants.guests, game_participants.reimbursed_at, game_participants.reimbursement_received_at, game_participants.reimbursement_reference,
     users.id, users.name, users.email, users.photo, users.created_at, users.updated_at, users.is_demo
 from game_participants
 join users on game_participants.user_id = users.id
 where game_participants.game_id = ?2
 order by
     1 desc, -- if the user is the organizer, they should have priority
-    game_participants.going_updated_at asc
+    game_participants.going_updated_at asc,
+    -- Ties on going_updated_at are common in tests (static clocks) and can happen in
+    -- production too; ordering by the auto-incremented participant ID makes queue
+    -- ordering deterministic without relying on timestamp precision.
+    game_participants.id asc
 `
 
 type ParticipantsListParams struct {
@@ -46,6 +128,7 @@ func (q *Queries) ParticipantsList(ctx context.Context, arg ParticipantsListPara
 		var i ParticipantsListRow
 		if err := rows.Scan(
 			&i.IsOrganizer,
+			&i.GameParticipant.ID,
 			&i.GameParticipant.UserID,
 			&i.GameParticipant.GameID,
 			&i.GameParticipant.CreatedAt,
@@ -54,6 +137,9 @@ func (q *Queries) ParticipantsList(ctx context.Context, arg ParticipantsListPara
 			&i.GameParticipant.Going,
 			&i.GameParticipant.ConfirmedAt,
 			&i.GameParticipant.Guests,
+			&i.GameParticipant.ReimbursedAt,
+			&i.GameParticipant.ReimbursementReceivedAt,
+			&i.GameParticipant.ReimbursementReference,
 			&i.User.ID,
 			&i.User.Name,
 			&i.User.Email,
@@ -82,8 +168,9 @@ insert into game_participants(
     going,
     going_updated_at,
     confirmed_at,
-    guests
-) values (?, ?, ?, ?, ?, ?)
+    guests,
+    reimbursement_reference
+) values (?, ?, ?, ?, ?, ?, ?7)
 on conflict(user_id, game_id) do update set
     updated_at = current_timestamp,
     going = coalesce(excluded.going, game_participants.going),
@@ -98,12 +185,13 @@ on conflict(user_id, game_id) do update set
 `
 
 type ParticipantsUpsertParams struct {
-	UserID         int64
-	GameID         string
-	Going          sql.NullBool
-	GoingUpdatedAt time.Time
-	ConfirmedAt    sql.NullTime
-	Guests         sql.NullInt64
+	UserID                 int64
+	GameID                 string
+	Going                  sql.NullBool
+	GoingUpdatedAt         time.Time
+	ConfirmedAt            sql.NullTime
+	Guests                 sql.NullInt64
+	ReimbursementReference sql.NullString
 }
 
 func (q *Queries) ParticipantsUpsert(ctx context.Context, arg ParticipantsUpsertParams) error {
@@ -114,6 +202,62 @@ func (q *Queries) ParticipantsUpsert(ctx context.Context, arg ParticipantsUpsert
 		arg.GoingUpdatedAt,
 		arg.ConfirmedAt,
 		arg.Guests,
+		arg.ReimbursementReference,
 	)
 	return err
+}
+
+const reimbursementsListByGame = `-- name: ReimbursementsListByGame :many
+select
+    users.id, users.name, users.email, users.photo, users.created_at, users.updated_at, users.is_demo,
+    game_participants.reimbursement_reference,
+    game_participants.reimbursed_at,
+    game_participants.reimbursement_received_at
+from game_participants
+join users on game_participants.user_id = users.id
+where game_participants.game_id = ?1
+    and game_participants.going = true
+order by
+    game_participants.going_updated_at asc
+`
+
+type ReimbursementsListByGameRow struct {
+	User                    User
+	ReimbursementReference  sql.NullString
+	ReimbursedAt            sql.NullTime
+	ReimbursementReceivedAt sql.NullTime
+}
+
+func (q *Queries) ReimbursementsListByGame(ctx context.Context, gameID string) ([]ReimbursementsListByGameRow, error) {
+	rows, err := q.db.QueryContext(ctx, reimbursementsListByGame, gameID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ReimbursementsListByGameRow
+	for rows.Next() {
+		var i ReimbursementsListByGameRow
+		if err := rows.Scan(
+			&i.User.ID,
+			&i.User.Name,
+			&i.User.Email,
+			&i.User.Photo,
+			&i.User.CreatedAt,
+			&i.User.UpdatedAt,
+			&i.User.IsDemo,
+			&i.ReimbursementReference,
+			&i.ReimbursedAt,
+			&i.ReimbursementReceivedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

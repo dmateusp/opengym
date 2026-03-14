@@ -236,6 +236,30 @@ export type ParticipantWithUser = {
     updatedAt?: string;
 };
 
+export type GameReimbursementEntry = {
+    /**
+     * 4-character case-sensitive alphanumeric reference used to identify participant reimbursements
+     */
+    reimbursementReference: string;
+    /**
+     * Amount owed by this participant in cents, including guests and excluding waitlisted participants
+     */
+    amountOwedCents: number;
+    /**
+     * Number of guests this participant is bringing
+     */
+    guests: number;
+    participant: User;
+    /**
+     * When the participant claims to have sent the reimbursement
+     */
+    reimbursedAt?: string | null;
+    /**
+     * When the organizer claims to have received the reimbursement
+     */
+    reimbursementReceivedAt?: string | null;
+};
+
 export type UpdateGameParticipationRequest = {
     status: ParticipationStatusUpdate;
     /**
@@ -306,6 +330,53 @@ export type GameListResponse = Pagination & {
  * Error message string
  */
 export type Error = string;
+
+export type UpdateReimbursementRequest = {
+    /**
+     * ID of the participant to update reimbursement for
+     */
+    participantId: string;
+    /**
+     * When the organizer received and confirmed the reimbursement. Set to null to clear.
+     */
+    reimbursement_received_at?: string | null;
+} | {
+    /**
+     * When the participant sent the reimbursement. Set to null to clear.
+     */
+    reimbursed_at: string | null;
+};
+
+export type ReimbursementRecord = {
+    /**
+     * ID of the participant
+     */
+    participantId: string;
+    /**
+     * ID of the game
+     */
+    gameId: string;
+    /**
+     * 4-character case-sensitive alphanumeric reference used to identify participant reimbursements
+     */
+    reimbursementReference: string;
+    /**
+     * When the participant sent the reimbursement
+     */
+    reimbursed_at?: string | null;
+    /**
+     * When the organizer received and confirmed the reimbursement
+     */
+    reimbursement_received_at?: string | null;
+    /**
+     * Timestamp when the reimbursement record was created
+     */
+    createdAt?: string;
+    /**
+     * Timestamp when the reimbursement record was last updated
+     */
+    updatedAt?: string;
+};
 
 export type GetApiAuthByProviderLoginData = {
     body?: never;
@@ -720,3 +791,125 @@ export type PutApiGamesByIdParticipantsResponses = {
 };
 
 export type PutApiGamesByIdParticipantsResponse = PutApiGamesByIdParticipantsResponses[keyof PutApiGamesByIdParticipantsResponses];
+
+export type GetApiGamesByIdReimbursementsByParticipantIdData = {
+    body?: never;
+    path: {
+        /**
+         * The game ID
+         */
+        id: string;
+        /**
+         * The participant's user ID
+         */
+        participant_id: string;
+    };
+    query?: never;
+    url: '/api/games/{id}/reimbursements/{participant_id}';
+};
+
+export type GetApiGamesByIdReimbursementsByParticipantIdErrors = {
+    /**
+     * Unauthorized - invalid or missing token
+     */
+    401: Error;
+    /**
+     * Forbidden - not the participant or the game organizer
+     */
+    403: Error;
+    /**
+     * Game or participant not found
+     */
+    404: Error;
+};
+
+export type GetApiGamesByIdReimbursementsByParticipantIdError = GetApiGamesByIdReimbursementsByParticipantIdErrors[keyof GetApiGamesByIdReimbursementsByParticipantIdErrors];
+
+export type GetApiGamesByIdReimbursementsByParticipantIdResponses = {
+    /**
+     * Reimbursement record retrieved successfully
+     */
+    200: ReimbursementRecord;
+};
+
+export type GetApiGamesByIdReimbursementsByParticipantIdResponse = GetApiGamesByIdReimbursementsByParticipantIdResponses[keyof GetApiGamesByIdReimbursementsByParticipantIdResponses];
+
+export type GetApiGamesByIdReimbursementsData = {
+    body?: never;
+    path: {
+        /**
+         * The game ID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/games/{id}/reimbursements';
+};
+
+export type GetApiGamesByIdReimbursementsErrors = {
+    /**
+     * Unauthorized - invalid or missing token
+     */
+    401: Error;
+    /**
+     * Forbidden - not the organizer or a participant of this game
+     */
+    403: Error;
+    /**
+     * Game not found
+     */
+    404: Error;
+};
+
+export type GetApiGamesByIdReimbursementsError = GetApiGamesByIdReimbursementsErrors[keyof GetApiGamesByIdReimbursementsErrors];
+
+export type GetApiGamesByIdReimbursementsResponses = {
+    /**
+     * Reimbursements retrieved successfully
+     */
+    200: Array<GameReimbursementEntry>;
+};
+
+export type GetApiGamesByIdReimbursementsResponse = GetApiGamesByIdReimbursementsResponses[keyof GetApiGamesByIdReimbursementsResponses];
+
+export type PutApiGamesByIdReimbursementsData = {
+    body: UpdateReimbursementRequest;
+    path: {
+        /**
+         * The game ID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/games/{id}/reimbursements';
+};
+
+export type PutApiGamesByIdReimbursementsErrors = {
+    /**
+     * Invalid request data or participant tried to include participantId field
+     */
+    400: Error;
+    /**
+     * Unauthorized - invalid or missing token
+     */
+    401: Error;
+    /**
+     * Forbidden - not the organizer or participant for this reimbursement
+     */
+    403: Error;
+    /**
+     * Game or participant not found
+     */
+    404: Error;
+};
+
+export type PutApiGamesByIdReimbursementsError = PutApiGamesByIdReimbursementsErrors[keyof PutApiGamesByIdReimbursementsErrors];
+
+export type PutApiGamesByIdReimbursementsResponses = {
+    /**
+     * Reimbursement status updated successfully
+     */
+    200: ReimbursementRecord;
+};
+
+export type PutApiGamesByIdReimbursementsResponse = PutApiGamesByIdReimbursementsResponses[keyof PutApiGamesByIdReimbursementsResponses];

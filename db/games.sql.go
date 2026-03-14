@@ -309,13 +309,13 @@ where id = ?14
 `
 
 type GameUpdateParams struct {
-	Name               string
+	Name               sql.NullString
 	Description        sql.NullString
 	ClearPublishedAt   bool
 	PublishedAt        sql.NullTime
 	ClearLockedAt      bool
 	LockedAt           sql.NullTime
-	TotalPriceCents    int64
+	TotalPriceCents    sql.NullInt64
 	Location           sql.NullString
 	StartsAt           sql.NullTime
 	DurationMinutes    int64

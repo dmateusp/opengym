@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strconv"
 	"testing"
 	"time"
@@ -259,6 +260,64 @@ func TestPutApiGamesIdParticipants_ConfirmParticipation(t *testing.T) {
 	}
 	if time.Since(confirmedAt.Time) > 5*time.Second {
 		t.Fatalf("expected confirmed_at to be recent, got %v", confirmedAt.Time)
+	}
+}
+
+func TestPutApiGamesIdParticipants_ReimbursementReferenceGeneratedAndStable(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+	staticClock := clock.StaticClock{Time: time.Now()}
+
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "organizer@example.com")
+	participantID := dbtesting.UpsertTestUser(t, sqlDB, "participant@example.com")
+
+	querier := db.New(sqlDB)
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
+
+	createGame(t, querier, "g1", organizerID, sql.NullTime{Time: time.Now().Add(-time.Hour), Valid: true})
+
+	setStatus := func(status api.ParticipationStatusUpdate) {
+		t.Helper()
+		body, _ := json.Marshal(api.UpdateGameParticipationRequest{Status: status})
+		r := httptest.NewRequest(http.MethodPut, "/api/games/g1/participants", bytes.NewReader(body))
+		r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(participantID)}))
+		w := httptest.NewRecorder()
+
+		srv.PutApiGamesIdParticipants(w, r, "g1")
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected status %d, got %d, body: %s", http.StatusOK, w.Code, w.Body.String())
+		}
+	}
+
+	getReference := func() string {
+		t.Helper()
+		var ref sql.NullString
+		if err := sqlDB.QueryRow(`select reimbursement_reference from game_participants where user_id = ? and game_id = ?`, participantID, "g1").Scan(&ref); err != nil {
+			t.Fatalf("failed to query reimbursement reference: %v", err)
+		}
+		if !ref.Valid {
+			t.Fatalf("expected reimbursement reference to be set")
+		}
+		return ref.String
+	}
+
+	setStatus(api.Going)
+	firstReference := getReference()
+	if !regexp.MustCompile(`^[A-Za-z0-9]{4}$`).MatchString(firstReference) {
+		t.Fatalf("expected 4-character alphanumeric reference, got %q", firstReference)
+	}
+
+	setStatus(api.NotGoing)
+	afterNotGoing := getReference()
+	if afterNotGoing != firstReference {
+		t.Fatalf("expected reference to remain unchanged after not_going: before=%q after=%q", firstReference, afterNotGoing)
+	}
+
+	setStatus(api.Going)
+	afterGoingAgain := getReference()
+	if afterGoingAgain != firstReference {
+		t.Fatalf("expected reference to remain unchanged after going again: before=%q after=%q", firstReference, afterGoingAgain)
 	}
 }
 

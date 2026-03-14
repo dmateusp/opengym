@@ -398,13 +398,10 @@ func (srv *server) PatchApiGamesId(w http.ResponseWriter, r *http.Request, id st
 		}
 	}
 
-	params := db.GameUpdateParams{
-		ID:   id,
-		Name: game.Name,
-	}
+	params := db.GameUpdateParams{ID: id}
 
 	if req.Name != nil {
-		params.Name = *req.Name
+		params.Name = sql.NullString{String: *req.Name, Valid: true}
 	}
 
 	if req.Description != nil {
@@ -458,7 +455,7 @@ func (srv *server) PatchApiGamesId(w http.ResponseWriter, r *http.Request, id st
 	}
 
 	if req.TotalPriceCents != nil {
-		params.TotalPriceCents = int64(*req.TotalPriceCents)
+		params.TotalPriceCents = sql.NullInt64{Int64: int64(*req.TotalPriceCents), Valid: true}
 	}
 
 	if req.Location != nil {
