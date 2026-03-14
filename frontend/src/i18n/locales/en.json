@@ -272,6 +272,7 @@
     "title": "Reimbursements",
     "backToGame": "Back to Game",
     "reference": "Ref",
+    "amountOwed": "Amount Owed",
     "participant": "Participant",
     "sentAt": "Sent Reimbursement",
     "receivedAt": "Payment Received",

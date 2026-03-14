@@ -39,14 +39,48 @@ func (s *server) GetApiGamesIdReimbursements(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	rows, err := s.querier.ReimbursementsListByGame(r.Context(), id)
+	rows, err := s.querier.ParticipantsList(r.Context(), db.ParticipantsListParams{
+		OrganizerID: game.OrganizerID,
+		GameID:      id,
+	})
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to retrieve reimbursements: %s", err.Error()), http.StatusInternalServerError)
 		return
 	}
 
-	entries := make([]api.GameReimbursementEntry, 0, len(rows))
+	type reimbursementParticipant struct {
+		row       db.ParticipantsListRow
+		groupSize int64
+	}
+
+	billableParticipants := make([]reimbursementParticipant, 0, len(rows))
+	totalBillableCount := int64(0)
+
 	for _, row := range rows {
+		if !row.GameParticipant.Going.Valid || !row.GameParticipant.Going.Bool {
+			continue
+		}
+
+		groupSize := int64(1)
+		if row.GameParticipant.Guests.Valid {
+			groupSize += row.GameParticipant.Guests.Int64
+		}
+
+		// Reimbursements apply only to participants that fit in the main list.
+		if totalBillableCount+groupSize > game.MaxPlayers {
+			continue
+		}
+
+		totalBillableCount += groupSize
+		billableParticipants = append(billableParticipants, reimbursementParticipant{
+			row:       row,
+			groupSize: groupSize,
+		})
+	}
+
+	entries := make([]api.GameReimbursementEntry, 0, len(billableParticipants))
+	for _, participant := range billableParticipants {
+		row := participant.row
 		var name *string
 		if row.User.Name.Valid {
 			name = &row.User.Name.String
@@ -55,16 +89,20 @@ func (s *server) GetApiGamesIdReimbursements(w http.ResponseWriter, r *http.Requ
 		if row.User.Photo.Valid {
 			picture = &row.User.Photo.String
 		}
+
+		amountOwedCents := ceilDiv(game.TotalPriceCents*participant.groupSize, totalBillableCount)
+
 		entries = append(entries, api.GameReimbursementEntry{
-			ReimbursementReference: row.ReimbursementReference.String,
+			ReimbursementReference: row.GameParticipant.ReimbursementReference.String,
+			AmountOwedCents:        amountOwedCents,
 			Participant: api.User{
 				Id:      strconv.FormatInt(row.User.ID, 10),
 				Email:   openapi_types.Email(row.User.Email),
 				Name:    name,
 				Picture: picture,
 			},
-			ReimbursedAt:            sqlNullTimeToNullable(row.ReimbursedAt),
-			ReimbursementReceivedAt: sqlNullTimeToNullable(row.ReimbursementReceivedAt),
+			ReimbursedAt:            sqlNullTimeToNullable(row.GameParticipant.ReimbursedAt),
+			ReimbursementReceivedAt: sqlNullTimeToNullable(row.GameParticipant.ReimbursementReceivedAt),
 		})
 	}
 
@@ -225,4 +263,11 @@ func sqlNullTimeToNullable(value sql.NullTime) nullable.Nullable[time.Time] {
 		return nullable.NewNullNullable[time.Time]()
 	}
 	return nullable.NewNullableWithValue(value.Time)
+}
+
+func ceilDiv(numerator int64, denominator int64) int64 {
+	if denominator <= 0 {
+		return 0
+	}
+	return (numerator + denominator - 1) / denominator
 }

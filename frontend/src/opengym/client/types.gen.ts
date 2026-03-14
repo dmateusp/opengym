@@ -241,6 +241,10 @@ export type GameReimbursementEntry = {
      * 4-character case-sensitive alphanumeric reference used to identify participant reimbursements
      */
     reimbursementReference: string;
+    /**
+     * Amount owed by this participant in cents, including guests and excluding waitlisted participants
+     */
+    amountOwedCents: number;
     participant: User;
     /**
      * When the participant claims to have sent the reimbursement

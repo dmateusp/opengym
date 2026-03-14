@@ -33,6 +33,8 @@ const getInitials = (name?: string | null, email?: string) => {
   return "??";
 };
 
+const formatCents = (amountCents: number) => (amountCents / 100).toFixed(2);
+
 export default function ReimbursementsPage() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
@@ -158,6 +160,7 @@ export default function ReimbursementsPage() {
                   <thead>
                     <tr className="border-b border-gray-200 text-left text-gray-500 text-xs uppercase tracking-wider">
                       <th className="pb-3 pr-4">{t("reimbursements.reference")}</th>
+                      <th className="pb-3 pr-4 text-right">{t("reimbursements.amountOwed")}</th>
                       <th className="pb-3 pr-4">{t("reimbursements.participant")}</th>
                       <th className="pb-3 pr-4">{t("reimbursements.sentAt")}</th>
                       <th className="pb-3 pr-4">{t("reimbursements.receivedAt")}</th>
@@ -177,6 +180,12 @@ export default function ReimbursementsPage() {
                           <td className="py-4 pr-4">
                             <span className="inline-flex min-w-12 justify-center rounded-md bg-gray-100 px-2 py-1 font-mono text-xs font-semibold text-gray-700">
                               {entry.reimbursementReference || "----"}
+                            </span>
+                          </td>
+
+                          <td className="py-4 pr-4 text-right">
+                            <span className="inline-flex min-w-16 justify-end rounded-md bg-emerald-50 px-2 py-1 font-mono text-xs font-semibold text-emerald-700">
+                              {formatCents(entry.amountOwedCents)}
                             </span>
                           </td>
 

@@ -139,6 +139,9 @@ func TestGetApiGamesIdReimbursements_OrganizerSeesParticipants(t *testing.T) {
 	if !entries[0].ReimbursedAt.MustGet().Equal(reimbursedAt) {
 		t.Fatalf("expected reimbursed_at %v, got %v", reimbursedAt, entries[0].ReimbursedAt.MustGet())
 	}
+	if entries[0].AmountOwedCents != 0 {
+		t.Fatalf("expected amount_owed_cents to be 0 for free game, got %d", entries[0].AmountOwedCents)
+	}
 }
 
 func TestGetApiGamesIdReimbursements_NotGoingParticipantsExcluded(t *testing.T) {
@@ -185,6 +188,91 @@ func TestGetApiGamesIdReimbursements_NotGoingParticipantsExcluded(t *testing.T) 
 	}
 	if entries[0].Participant.Id != strconv.FormatInt(goingID, 10) {
 		t.Fatalf("expected going participant %d, got %s", goingID, entries[0].Participant.Id)
+	}
+}
+
+func TestGetApiGamesIdReimbursements_AmountOwedExcludesWaitlistAndIncludesGuests(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+
+	staticClock := clock.StaticClock{Time: time.Now()}
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "organizer@example.com")
+	p1ID := dbtesting.UpsertTestUser(t, sqlDB, "p1@example.com")
+	p2ID := dbtesting.UpsertTestUser(t, sqlDB, "p2@example.com")
+	p3WaitlistedID := dbtesting.UpsertTestUser(t, sqlDB, "p3@example.com")
+	querier := db.New(sqlDB)
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
+
+	createGame(t, querier, "g1", organizerID, sql.NullTime{})
+	if _, err := sqlDB.Exec(`update games set total_price_cents = ?, max_players = ?, game_spots_left = ? where id = ?`, 1000, 3, 3, "g1"); err != nil {
+		t.Fatalf("failed to update game pricing/capacity: %v", err)
+	}
+
+	if err := querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
+		UserID:                 p1ID,
+		GameID:                 "g1",
+		Going:                  sql.NullBool{Valid: true, Bool: true},
+		GoingUpdatedAt:         staticClock.Now().Add(1 * time.Minute),
+		Guests:                 sql.NullInt64{Valid: true, Int64: 1},
+		ReimbursementReference: sql.NullString{String: "A1b2", Valid: true},
+	}); err != nil {
+		t.Fatalf("failed to insert participant 1: %v", err)
+	}
+
+	if err := querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
+		UserID:                 p2ID,
+		GameID:                 "g1",
+		Going:                  sql.NullBool{Valid: true, Bool: true},
+		GoingUpdatedAt:         staticClock.Now().Add(2 * time.Minute),
+		Guests:                 sql.NullInt64{Valid: true, Int64: 0},
+		ReimbursementReference: sql.NullString{String: "C3d4", Valid: true},
+	}); err != nil {
+		t.Fatalf("failed to insert participant 2: %v", err)
+	}
+
+	if err := querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
+		UserID:                 p3WaitlistedID,
+		GameID:                 "g1",
+		Going:                  sql.NullBool{Valid: true, Bool: true},
+		GoingUpdatedAt:         staticClock.Now().Add(3 * time.Minute),
+		Guests:                 sql.NullInt64{Valid: true, Int64: 0},
+		ReimbursementReference: sql.NullString{String: "E5f6", Valid: true},
+	}); err != nil {
+		t.Fatalf("failed to insert waitlisted participant: %v", err)
+	}
+
+	r := httptest.NewRequest(http.MethodGet, "/api/games/g1/reimbursements", nil)
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w := httptest.NewRecorder()
+
+	srv.GetApiGamesIdReimbursements(w, r, "g1")
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d, body=%s", http.StatusOK, w.Code, w.Body.String())
+	}
+
+	var entries []api.GameReimbursementEntry
+	if err := json.NewDecoder(w.Body).Decode(&entries); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if len(entries) != 2 {
+		t.Fatalf("expected 2 entries (waitlisted excluded), got %d", len(entries))
+	}
+
+	amountByParticipant := map[string]int64{}
+	for _, entry := range entries {
+		amountByParticipant[entry.Participant.Id] = entry.AmountOwedCents
+	}
+
+	if _, found := amountByParticipant[strconv.FormatInt(p3WaitlistedID, 10)]; found {
+		t.Fatalf("waitlisted participant should not be included in reimbursements")
+	}
+
+	if got := amountByParticipant[strconv.FormatInt(p1ID, 10)]; got != 667 {
+		t.Fatalf("expected participant 1 amount owed to be 667, got %d", got)
+	}
+	if got := amountByParticipant[strconv.FormatInt(p2ID, 10)]; got != 334 {
+		t.Fatalf("expected participant 2 amount owed to be 334, got %d", got)
 	}
 }
 

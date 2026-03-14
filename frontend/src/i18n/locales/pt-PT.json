@@ -272,6 +272,7 @@
     "title": "Reembolsos",
     "backToGame": "Voltar ao Jogo",
     "reference": "Ref",
+    "amountOwed": "Valor em Falta",
     "participant": "Participante",
     "sentAt": "Reembolso Enviado",
     "receivedAt": "Pagamento Recebido",
