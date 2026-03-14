@@ -882,7 +882,14 @@ components:
       type: object
       required:
         - participant
+        - reimbursementReference
       properties:
+        reimbursementReference:
+          type: string
+          description: 4-character case-sensitive alphanumeric reference used to identify participant reimbursements
+          minLength: 4
+          maxLength: 4
+          pattern: '^[A-Za-z0-9]{4}$'
         participant:
           $ref: '#/components/schemas/User'
         reimbursedAt:
@@ -1023,6 +1030,7 @@ components:
       required:
         - participantId
         - gameId
+        - reimbursementReference
       properties:
         participantId:
           type: string
@@ -1030,6 +1038,12 @@ components:
         gameId:
           type: string
           description: ID of the game
+        reimbursementReference:
+          type: string
+          description: 4-character case-sensitive alphanumeric reference used to identify participant reimbursements
+          minLength: 4
+          maxLength: 4
+          pattern: '^[A-Za-z0-9]{4}$'
         reimbursed_at:
           type: string
           format: date-time

@@ -162,8 +162,9 @@ insert into game_participants(
     going,
     going_updated_at,
     confirmed_at,
-    guests
-) values (?, ?, ?, ?, ?, ?)
+    guests,
+    reimbursement_reference
+) values (?, ?, ?, ?, ?, ?, ?7)
 on conflict(user_id, game_id) do update set
     updated_at = current_timestamp,
     going = coalesce(excluded.going, game_participants.going),
@@ -178,12 +179,13 @@ on conflict(user_id, game_id) do update set
 `
 
 type ParticipantsUpsertParams struct {
-	UserID         int64
-	GameID         string
-	Going          sql.NullBool
-	GoingUpdatedAt time.Time
-	ConfirmedAt    sql.NullTime
-	Guests         sql.NullInt64
+	UserID                 int64
+	GameID                 string
+	Going                  sql.NullBool
+	GoingUpdatedAt         time.Time
+	ConfirmedAt            sql.NullTime
+	Guests                 sql.NullInt64
+	ReimbursementReference sql.NullString
 }
 
 func (q *Queries) ParticipantsUpsert(ctx context.Context, arg ParticipantsUpsertParams) error {
@@ -194,6 +196,7 @@ func (q *Queries) ParticipantsUpsert(ctx context.Context, arg ParticipantsUpsert
 		arg.GoingUpdatedAt,
 		arg.ConfirmedAt,
 		arg.Guests,
+		arg.ReimbursementReference,
 	)
 	return err
 }
@@ -201,6 +204,7 @@ func (q *Queries) ParticipantsUpsert(ctx context.Context, arg ParticipantsUpsert
 const reimbursementsListByGame = `-- name: ReimbursementsListByGame :many
 select
     users.id, users.name, users.email, users.photo, users.created_at, users.updated_at, users.is_demo,
+    game_participants.reimbursement_reference,
     game_participants.reimbursed_at,
     game_participants.reimbursement_received_at
 from game_participants
@@ -213,6 +217,7 @@ order by
 
 type ReimbursementsListByGameRow struct {
 	User                    User
+	ReimbursementReference  sql.NullString
 	ReimbursedAt            sql.NullTime
 	ReimbursementReceivedAt sql.NullTime
 }
@@ -234,6 +239,7 @@ func (q *Queries) ReimbursementsListByGame(ctx context.Context, gameID string) (
 			&i.User.CreatedAt,
 			&i.User.UpdatedAt,
 			&i.User.IsDemo,
+			&i.ReimbursementReference,
 			&i.ReimbursedAt,
 			&i.ReimbursementReceivedAt,
 		); err != nil {

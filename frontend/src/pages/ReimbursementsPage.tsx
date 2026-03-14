@@ -157,6 +157,7 @@ export default function ReimbursementsPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-gray-200 text-left text-gray-500 text-xs uppercase tracking-wider">
+                      <th className="pb-3 pr-4">{t("reimbursements.reference")}</th>
                       <th className="pb-3 pr-4">{t("reimbursements.participant")}</th>
                       <th className="pb-3 pr-4">{t("reimbursements.sentAt")}</th>
                       <th className="pb-3 pr-4">{t("reimbursements.receivedAt")}</th>
@@ -173,6 +174,12 @@ export default function ReimbursementsPage() {
                           key={p.id}
                           className="border-b border-gray-100 last:border-0"
                         >
+                          <td className="py-4 pr-4">
+                            <span className="inline-flex min-w-12 justify-center rounded-md bg-gray-100 px-2 py-1 font-mono text-xs font-semibold text-gray-700">
+                              {entry.reimbursementReference || "----"}
+                            </span>
+                          </td>
+
                           {/* Participant */}
                           <td className="py-4 pr-4">
                             <div className="flex items-center gap-3">

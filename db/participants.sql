@@ -5,8 +5,9 @@ insert into game_participants(
     going,
     going_updated_at,
     confirmed_at,
-    guests
-) values (?, ?, ?, ?, ?, ?)
+    guests,
+    reimbursement_reference
+) values (?, ?, ?, ?, ?, ?, sqlc.narg(reimbursement_reference))
 on conflict(user_id, game_id) do update set
     updated_at = current_timestamp,
     going = coalesce(excluded.going, game_participants.going),
@@ -40,6 +41,7 @@ where game_id = sqlc.arg(game_id)
 -- name: ReimbursementsListByGame :many
 select
     sqlc.embed(users),
+    game_participants.reimbursement_reference,
     game_participants.reimbursed_at,
     game_participants.reimbursement_received_at
 from game_participants

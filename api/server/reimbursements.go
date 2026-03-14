@@ -56,6 +56,7 @@ func (s *server) GetApiGamesIdReimbursements(w http.ResponseWriter, r *http.Requ
 			picture = &row.User.Photo.String
 		}
 		entries = append(entries, api.GameReimbursementEntry{
+			ReimbursementReference: row.ReimbursementReference.String,
 			Participant: api.User{
 				Id:      strconv.FormatInt(row.User.ID, 10),
 				Email:   openapi_types.Email(row.User.Email),
@@ -198,6 +199,7 @@ func (s *server) PutApiGamesIdReimbursements(w http.ResponseWriter, r *http.Requ
 	response := api.ReimbursementRecord{
 		ParticipantId:           strconv.FormatInt(participantID, 10),
 		GameId:                  id,
+		ReimbursementReference:  participant.ReimbursementReference.String,
 		CreatedAt:               ptr.Ptr(participant.CreatedAt),
 		UpdatedAt:               ptr.Ptr(participant.UpdatedAt),
 		ReimbursedAt:            sqlNullTimeToNullable(participant.ReimbursedAt),

@@ -6,12 +6,16 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/dmateusp/opengym/api"
 	"github.com/dmateusp/opengym/auth"
 	"github.com/dmateusp/opengym/db"
 	"github.com/dmateusp/opengym/ptr"
 )
+
+const reimbursementReferenceLength = 4
+const maxReimbursementReferenceAttempts = 5
 
 func (s *server) GetApiGamesIdParticipants(w http.ResponseWriter, r *http.Request, id string) {
 	authInfo, ok := auth.FromCtx(r.Context())
@@ -348,14 +352,24 @@ func (s *server) PutApiGamesIdParticipants(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	if err := querierWithTx.ParticipantsUpsert(r.Context(), db.ParticipantsUpsertParams{
-		UserID:         int64(authInfo.UserId),
-		GameID:         id,
-		Going:          going,
-		ConfirmedAt:    confirmedAt,
-		GoingUpdatedAt: s.clock.Now(),
-		Guests:         guests,
-	}); err != nil {
+	for attempt := range maxReimbursementReferenceAttempts {
+		err := querierWithTx.ParticipantsUpsert(r.Context(), db.ParticipantsUpsertParams{
+			UserID:                 int64(authInfo.UserId),
+			GameID:                 id,
+			Going:                  going,
+			ConfirmedAt:            confirmedAt,
+			GoingUpdatedAt:         s.clock.Now(),
+			Guests:                 guests,
+			ReimbursementReference: sql.NullString{String: s.randomAlphanumericGenerator.Generate(reimbursementReferenceLength), Valid: true},
+		})
+		if err == nil {
+			break
+		}
+
+		if attempt < maxReimbursementReferenceAttempts-1 && isReimbursementReferenceConstraintError(err) {
+			continue
+		}
+
 		http.Error(w, fmt.Sprintf("failed to update participation: %s", err.Error()), http.StatusInternalServerError)
 		return
 	}
@@ -377,4 +391,11 @@ func (s *server) PutApiGamesIdParticipants(w http.ResponseWriter, r *http.Reques
 		http.Error(w, fmt.Sprintf("failed to encode response: %s", err.Error()), http.StatusInternalServerError)
 		return
 	}
+}
+
+func isReimbursementReferenceConstraintError(err error) bool {
+	if err == nil {
+		return false
+	}
+	return strings.Contains(err.Error(), "UNIQUE constraint failed: game_participants.game_id, game_participants.reimbursement_reference")
 }

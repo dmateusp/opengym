@@ -237,6 +237,10 @@ export type ParticipantWithUser = {
 };
 
 export type GameReimbursementEntry = {
+    /**
+     * 4-character case-sensitive alphanumeric reference used to identify participant reimbursements
+     */
+    reimbursementReference: string;
     participant: User;
     /**
      * When the participant claims to have sent the reimbursement
@@ -344,6 +348,10 @@ export type ReimbursementRecord = {
      * ID of the game
      */
     gameId: string;
+    /**
+     * 4-character case-sensitive alphanumeric reference used to identify participant reimbursements
+     */
+    reimbursementReference: string;
     /**
      * When the participant sent the reimbursement
      */

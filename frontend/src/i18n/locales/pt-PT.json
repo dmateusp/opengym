@@ -271,6 +271,7 @@
   "reimbursements": {
     "title": "Reembolsos",
     "backToGame": "Voltar ao Jogo",
+    "reference": "Ref",
     "participant": "Participante",
     "sentAt": "Reembolso Enviado",
     "receivedAt": "Pagamento Recebido",

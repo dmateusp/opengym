@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strconv"
 	"testing"
 	"time"
@@ -94,12 +95,13 @@ func TestGetApiGamesIdReimbursements_OrganizerSeesParticipants(t *testing.T) {
 	createGame(t, querier, "g1", organizerID, sql.NullTime{})
 	reimbursedAt := staticClock.Now().Add(-10 * time.Minute)
 	if err := querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		UserID:         participantID,
-		GameID:         "g1",
-		Going:          sql.NullBool{Valid: true, Bool: true},
-		GoingUpdatedAt: staticClock.Now(),
-		ConfirmedAt:    sql.NullTime{},
-		Guests:         sql.NullInt64{},
+		UserID:                 participantID,
+		GameID:                 "g1",
+		Going:                  sql.NullBool{Valid: true, Bool: true},
+		GoingUpdatedAt:         staticClock.Now(),
+		ConfirmedAt:            sql.NullTime{},
+		Guests:                 sql.NullInt64{},
+		ReimbursementReference: sql.NullString{String: "A1b2", Valid: true},
 	}); err != nil {
 		t.Fatalf("failed to insert participant: %v", err)
 	}
@@ -128,6 +130,9 @@ func TestGetApiGamesIdReimbursements_OrganizerSeesParticipants(t *testing.T) {
 	if entries[0].Participant.Id != strconv.FormatInt(participantID, 10) {
 		t.Fatalf("expected participant id %d, got %s", participantID, entries[0].Participant.Id)
 	}
+	if !regexp.MustCompile(`^[A-Za-z0-9]{4}$`).MatchString(entries[0].ReimbursementReference) {
+		t.Fatalf("expected reimbursement reference to be a 4-character alphanumeric value, got %q", entries[0].ReimbursementReference)
+	}
 	if !entries[0].ReimbursedAt.IsSpecified() || entries[0].ReimbursedAt.IsNull() {
 		t.Fatalf("expected reimbursed_at to be set, got %+v", entries[0].ReimbursedAt)
 	}
@@ -151,10 +156,11 @@ func TestGetApiGamesIdReimbursements_NotGoingParticipantsExcluded(t *testing.T) 
 	for _, uid := range []int64{goingID, notGoingID} {
 		going := uid == goingID
 		if err := querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-			UserID:         uid,
-			GameID:         "g1",
-			Going:          sql.NullBool{Valid: true, Bool: going},
-			GoingUpdatedAt: staticClock.Now(),
+			UserID:                 uid,
+			GameID:                 "g1",
+			Going:                  sql.NullBool{Valid: true, Bool: going},
+			GoingUpdatedAt:         staticClock.Now(),
+			ReimbursementReference: sql.NullString{String: map[bool]string{true: "C3d4", false: "E5f6"}[going], Valid: true},
 		}); err != nil {
 			t.Fatalf("failed to insert participant: %v", err)
 		}
@@ -236,12 +242,13 @@ func TestPutApiGamesIdReimbursements_OrganizerUpdatesParticipant(t *testing.T) {
 
 	createGame(t, querier, "g1", organizerID, sql.NullTime{Valid: false})
 	if err := querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		UserID:         participantID,
-		GameID:         "g1",
-		Going:          sql.NullBool{Valid: true, Bool: true},
-		GoingUpdatedAt: staticClock.Now(),
-		ConfirmedAt:    sql.NullTime{},
-		Guests:         sql.NullInt64{},
+		UserID:                 participantID,
+		GameID:                 "g1",
+		Going:                  sql.NullBool{Valid: true, Bool: true},
+		GoingUpdatedAt:         staticClock.Now(),
+		ConfirmedAt:            sql.NullTime{},
+		Guests:                 sql.NullInt64{},
+		ReimbursementReference: sql.NullString{String: "G7h8", Valid: true},
 	}); err != nil {
 		t.Fatalf("failed to insert participant: %v", err)
 	}
@@ -273,6 +280,9 @@ func TestPutApiGamesIdReimbursements_OrganizerUpdatesParticipant(t *testing.T) {
 	if resp.ParticipantId != strconv.FormatInt(participantID, 10) {
 		t.Fatalf("expected participant id %d, got %s", participantID, resp.ParticipantId)
 	}
+	if !regexp.MustCompile(`^[A-Za-z0-9]{4}$`).MatchString(resp.ReimbursementReference) {
+		t.Fatalf("expected reimbursement reference to be a 4-character alphanumeric value, got %q", resp.ReimbursementReference)
+	}
 
 	stored := sql.NullTime{}
 	if err := sqlDB.QueryRow(`select reimbursement_received_at from game_participants where game_id = ? and user_id = ?`, "g1", participantID).Scan(&stored); err != nil {
@@ -296,12 +306,13 @@ func TestPutApiGamesIdReimbursements_ParticipantUpdatesSelf(t *testing.T) {
 
 	createGame(t, querier, "g1", organizerID, sql.NullTime{Time: time.Now().Add(-time.Hour), Valid: true})
 	if err := querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		UserID:         participantID,
-		GameID:         "g1",
-		Going:          sql.NullBool{Valid: true, Bool: true},
-		GoingUpdatedAt: staticClock.Now(),
-		ConfirmedAt:    sql.NullTime{},
-		Guests:         sql.NullInt64{},
+		UserID:                 participantID,
+		GameID:                 "g1",
+		Going:                  sql.NullBool{Valid: true, Bool: true},
+		GoingUpdatedAt:         staticClock.Now(),
+		ConfirmedAt:            sql.NullTime{},
+		Guests:                 sql.NullInt64{},
+		ReimbursementReference: sql.NullString{String: "J9k0", Valid: true},
 	}); err != nil {
 		t.Fatalf("failed to insert participant: %v", err)
 	}
@@ -348,22 +359,24 @@ func TestPutApiGamesIdReimbursements_ParticipantCannotSetParticipantId(t *testin
 
 	createGame(t, querier, "g1", organizerID, sql.NullTime{Time: time.Now().Add(-time.Hour), Valid: true})
 	if err := querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		UserID:         participantID,
-		GameID:         "g1",
-		Going:          sql.NullBool{Valid: true, Bool: true},
-		GoingUpdatedAt: staticClock.Now(),
-		ConfirmedAt:    sql.NullTime{},
-		Guests:         sql.NullInt64{},
+		UserID:                 participantID,
+		GameID:                 "g1",
+		Going:                  sql.NullBool{Valid: true, Bool: true},
+		GoingUpdatedAt:         staticClock.Now(),
+		ConfirmedAt:            sql.NullTime{},
+		Guests:                 sql.NullInt64{},
+		ReimbursementReference: sql.NullString{String: "L1m2", Valid: true},
 	}); err != nil {
 		t.Fatalf("failed to insert participant: %v", err)
 	}
 	if err := querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		UserID:         otherParticipantID,
-		GameID:         "g1",
-		Going:          sql.NullBool{Valid: true, Bool: true},
-		GoingUpdatedAt: staticClock.Now(),
-		ConfirmedAt:    sql.NullTime{},
-		Guests:         sql.NullInt64{},
+		UserID:                 otherParticipantID,
+		GameID:                 "g1",
+		Going:                  sql.NullBool{Valid: true, Bool: true},
+		GoingUpdatedAt:         staticClock.Now(),
+		ConfirmedAt:            sql.NullTime{},
+		Guests:                 sql.NullInt64{},
+		ReimbursementReference: sql.NullString{String: "N3p4", Valid: true},
 	}); err != nil {
 		t.Fatalf("failed to insert other participant: %v", err)
 	}
