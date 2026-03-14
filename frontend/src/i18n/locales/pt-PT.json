@@ -200,6 +200,7 @@
     "language": "Idioma",
     "game": "Jogo",
     "copied": "Copiado!",
+    "copy": "Copiar",
     "share": "Partilhar",
     "copyGameLink": "Copiar link do jogo",
     "players": "Jogadores",
@@ -298,7 +299,16 @@
     "lockRequired": "Os reembolsos ainda não estão disponíveis",
     "lockRequiredDescription": "Esta página só fica disponível depois do jogo estar bloqueado.",
     "organizerOnly": "Acesso apenas para o organizador",
-    "organizerOnlyDescription": "Só o organizador do jogo pode ver e gerir os reembolsos."
+    "organizerOnlyDescription": "Só o organizador do jogo pode ver e gerir os reembolsos.",
+    "yourReference": "A tua referência de pagamento",
+    "includeReferenceInstruction": "Inclui este código na descrição do teu pagamento para que o organizador possa identificar o teu pagamento.",
+    "notSentYet": "Ainda não marcaste como enviado",
+    "youSentAt": "Marcaste como enviado",
+    "organizerConfirmedAt": "O organizador confirmou a receção",
+    "waitingForConfirmation": "À espera de confirmação do organizador",
+    "markAsSent": "Marcar como enviado",
+    "clearSent": "Limpar data de envio",
+    "updating": "A atualizar..."
   },
   "lock": {
     "gameLocked": "Jogo Bloqueado",

@@ -201,6 +201,7 @@
     "language": "Language",
     "game": "Game",
     "copied": "Copied!",
+    "copy": "Copy",
     "share": "Share",
     "copyGameLink": "Copy game link",
     "players": "Players",
@@ -298,7 +299,16 @@
     "lockRequired": "Reimbursements are not available yet",
     "lockRequiredDescription": "This page is available only after the game is locked.",
     "organizerOnly": "Organizer access only",
-    "organizerOnlyDescription": "Only the game organizer can view and manage reimbursements."
+    "organizerOnlyDescription": "Only the game organizer can view and manage reimbursements.",
+    "yourReference": "Your payment reference",
+    "includeReferenceInstruction": "Include this code in your payment description so the organizer can identify your payment.",
+    "notSentYet": "You haven't marked this as sent yet",
+    "youSentAt": "You marked as sent",
+    "organizerConfirmedAt": "Organizer confirmed receipt",
+    "waitingForConfirmation": "Waiting for organizer confirmation",
+    "markAsSent": "Mark as sent",
+    "clearSent": "Clear sent date",
+    "updating": "Updating..."
   },
   "lock": {
     "gameLocked": "Game Locked",

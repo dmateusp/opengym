@@ -46,6 +46,7 @@ import { EditableFieldDisplay } from "@/components/ui/EditableFieldDisplay";
 import { enUS, pt } from "date-fns/locale";
 import { PublicGameTeaser } from "@/components/games/PublicGameTeaser";
 import { PublicGamePreview } from "@/components/games/PublicGamePreview";
+import { ParticipantReimbursementCard } from "@/components/games/ParticipantReimbursementCard";
 
 interface Game {
   id: string;
@@ -1770,19 +1771,28 @@ export default function GameDetailPage() {
               </div>
             ) : user && isPublished ? (
               <div>
-                <div
-                  className={`mb-3 rounded-lg border p-3 text-sm ${
-                    isLocked
-                      ? "border-emerald-200 bg-emerald-50 text-emerald-900"
-                      : "border-amber-200 bg-amber-50 text-amber-900"
-                  }`}
-                >
-                  <p className="font-semibold">
-                    {isLocked
-                      ? t("reimbursements.sendNowGameLocked")
-                      : t("reimbursements.waitForLockToSend")}
-                  </p>
-                </div>
+                {isLocked && currentUserParticipation?.status === "going" && id && user?.id ? (
+                  <div className="mb-3">
+                    <ParticipantReimbursementCard
+                      gameId={id}
+                      participantId={user.id}
+                    />
+                  </div>
+                ) : (
+                  <div
+                    className={`mb-3 rounded-lg border p-3 text-sm ${
+                      isLocked
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+                        : "border-amber-200 bg-amber-50 text-amber-900"
+                    }`}
+                  >
+                    <p className="font-semibold">
+                      {isLocked
+                        ? t("reimbursements.sendNowGameLocked")
+                        : t("reimbursements.waitForLockToSend")}
+                    </p>
+                  </div>
+                )}
                 {currentUserParticipation && currentUserParticipation.status !== "not_going" ? (
                   <>
                     <Button
