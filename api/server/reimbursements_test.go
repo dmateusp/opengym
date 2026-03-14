@@ -142,6 +142,9 @@ func TestGetApiGamesIdReimbursements_OrganizerSeesParticipants(t *testing.T) {
 	if entries[0].AmountOwedCents != 0 {
 		t.Fatalf("expected amount_owed_cents to be 0 for free game, got %d", entries[0].AmountOwedCents)
 	}
+	if entries[0].Guests != 0 {
+		t.Fatalf("expected guests to default to 0, got %d", entries[0].Guests)
+	}
 }
 
 func TestGetApiGamesIdReimbursements_NotGoingParticipantsExcluded(t *testing.T) {
@@ -260,8 +263,10 @@ func TestGetApiGamesIdReimbursements_AmountOwedExcludesWaitlistAndIncludesGuests
 	}
 
 	amountByParticipant := map[string]int64{}
+	guestsByParticipant := map[string]int{}
 	for _, entry := range entries {
 		amountByParticipant[entry.Participant.Id] = entry.AmountOwedCents
+		guestsByParticipant[entry.Participant.Id] = entry.Guests
 	}
 
 	if _, found := amountByParticipant[strconv.FormatInt(p3WaitlistedID, 10)]; found {
@@ -271,8 +276,14 @@ func TestGetApiGamesIdReimbursements_AmountOwedExcludesWaitlistAndIncludesGuests
 	if got := amountByParticipant[strconv.FormatInt(p1ID, 10)]; got != 667 {
 		t.Fatalf("expected participant 1 amount owed to be 667, got %d", got)
 	}
+	if got := guestsByParticipant[strconv.FormatInt(p1ID, 10)]; got != 1 {
+		t.Fatalf("expected participant 1 guests to be 1, got %d", got)
+	}
 	if got := amountByParticipant[strconv.FormatInt(p2ID, 10)]; got != 334 {
 		t.Fatalf("expected participant 2 amount owed to be 334, got %d", got)
+	}
+	if got := guestsByParticipant[strconv.FormatInt(p2ID, 10)]; got != 0 {
+		t.Fatalf("expected participant 2 guests to be 0, got %d", got)
 	}
 }
 

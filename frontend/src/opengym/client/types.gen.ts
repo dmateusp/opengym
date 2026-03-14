@@ -245,6 +245,10 @@ export type GameReimbursementEntry = {
      * Amount owed by this participant in cents, including guests and excluding waitlisted participants
      */
     amountOwedCents: number;
+    /**
+     * Number of guests this participant is bringing
+     */
+    guests: number;
     participant: User;
     /**
      * When the participant claims to have sent the reimbursement

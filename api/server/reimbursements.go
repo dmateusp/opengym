@@ -81,6 +81,10 @@ func (s *server) GetApiGamesIdReimbursements(w http.ResponseWriter, r *http.Requ
 	entries := make([]api.GameReimbursementEntry, 0, len(billableParticipants))
 	for _, participant := range billableParticipants {
 		row := participant.row
+		guests := 0
+		if row.GameParticipant.Guests.Valid {
+			guests = int(row.GameParticipant.Guests.Int64)
+		}
 		var name *string
 		if row.User.Name.Valid {
 			name = &row.User.Name.String
@@ -95,6 +99,7 @@ func (s *server) GetApiGamesIdReimbursements(w http.ResponseWriter, r *http.Requ
 		entries = append(entries, api.GameReimbursementEntry{
 			ReimbursementReference: row.GameParticipant.ReimbursementReference.String,
 			AmountOwedCents:        amountOwedCents,
+			Guests:                 guests,
 			Participant: api.User{
 				Id:      strconv.FormatInt(row.User.ID, 10),
 				Email:   openapi_types.Email(row.User.Email),

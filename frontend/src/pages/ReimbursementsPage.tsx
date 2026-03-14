@@ -204,9 +204,19 @@ export default function ReimbursementsPage() {
                                 </AvatarFallback>
                               </Avatar>
                               <div>
-                                <p className="font-medium text-gray-900">
-                                  {p.name ?? p.email}
-                                </p>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium text-gray-900">
+                                    {p.name ?? p.email}
+                                  </p>
+                                  {entry.guests > 0 && (
+                                    <span
+                                      className="inline-flex items-center justify-center rounded-full bg-secondary px-2 py-0.5 text-[11px] font-bold leading-none text-white"
+                                      title={`+${entry.guests}`}
+                                    >
+                                      +{entry.guests}
+                                    </span>
+                                  )}
+                                </div>
                                 {p.name && (
                                   <p className="text-xs text-gray-400">{p.email}</p>
                                 )}

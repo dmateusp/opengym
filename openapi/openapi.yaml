@@ -884,6 +884,7 @@ components:
         - participant
         - reimbursementReference
         - amountOwedCents
+        - guests
       properties:
         reimbursementReference:
           type: string
@@ -895,6 +896,9 @@ components:
           type: integer
           format: int64
           description: Amount owed by this participant in cents, including guests and excluding waitlisted participants
+        guests:
+          type: integer
+          description: Number of guests this participant is bringing
         participant:
           $ref: '#/components/schemas/User'
         reimbursedAt:
