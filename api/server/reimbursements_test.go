@@ -82,6 +82,28 @@ func TestGetApiGamesIdReimbursements_ForbiddenForNonOrganizer(t *testing.T) {
 	}
 }
 
+func TestGetApiGamesIdReimbursements_RequiresLockedGame(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+
+	staticClock := clock.StaticClock{Time: time.Now()}
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "organizer@example.com")
+	querier := db.New(sqlDB)
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
+
+	createGame(t, querier, "g1", organizerID, sql.NullTime{})
+
+	r := httptest.NewRequest(http.MethodGet, "/api/games/g1/reimbursements", nil)
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w := httptest.NewRecorder()
+
+	srv.GetApiGamesIdReimbursements(w, r, "g1")
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, w.Code)
+	}
+}
+
 func TestGetApiGamesIdReimbursements_OrganizerSeesParticipants(t *testing.T) {
 	sqlDB := dbtesting.SetupTestDB(t)
 	defer sqlDB.Close()
@@ -93,6 +115,7 @@ func TestGetApiGamesIdReimbursements_OrganizerSeesParticipants(t *testing.T) {
 	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
 
 	createGame(t, querier, "g1", organizerID, sql.NullTime{})
+	lockGameForReimbursements(t, sqlDB, staticClock.Now(), "g1")
 	reimbursedAt := staticClock.Now().Add(-10 * time.Minute)
 	if err := querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
 		UserID:                 participantID,
@@ -159,6 +182,7 @@ func TestGetApiGamesIdReimbursements_NotGoingParticipantsExcluded(t *testing.T) 
 	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
 
 	createGame(t, querier, "g1", organizerID, sql.NullTime{})
+	lockGameForReimbursements(t, sqlDB, staticClock.Now(), "g1")
 	for _, uid := range []int64{goingID, notGoingID} {
 		going := uid == goingID
 		if err := querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
@@ -207,6 +231,7 @@ func TestGetApiGamesIdReimbursements_AmountOwedExcludesWaitlistAndIncludesGuests
 	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
 
 	createGame(t, querier, "g1", organizerID, sql.NullTime{})
+	lockGameForReimbursements(t, sqlDB, staticClock.Now(), "g1")
 	if _, err := sqlDB.Exec(`update games set total_price_cents = ?, max_players = ?, game_spots_left = ? where id = ?`, 1000, 3, 3, "g1"); err != nil {
 		t.Fatalf("failed to update game pricing/capacity: %v", err)
 	}
@@ -340,6 +365,7 @@ func TestPutApiGamesIdReimbursements_OrganizerUpdatesParticipant(t *testing.T) {
 	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
 
 	createGame(t, querier, "g1", organizerID, sql.NullTime{Valid: false})
+	lockGameForReimbursements(t, sqlDB, staticClock.Now(), "g1")
 	if err := querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
 		UserID:                 participantID,
 		GameID:                 "g1",
@@ -404,6 +430,7 @@ func TestPutApiGamesIdReimbursements_ParticipantUpdatesSelf(t *testing.T) {
 	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
 
 	createGame(t, querier, "g1", organizerID, sql.NullTime{Time: time.Now().Add(-time.Hour), Valid: true})
+	lockGameForReimbursements(t, sqlDB, staticClock.Now(), "g1")
 	if err := querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
 		UserID:                 participantID,
 		GameID:                 "g1",
@@ -457,6 +484,7 @@ func TestPutApiGamesIdReimbursements_ParticipantCannotSetParticipantId(t *testin
 	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
 
 	createGame(t, querier, "g1", organizerID, sql.NullTime{Time: time.Now().Add(-time.Hour), Valid: true})
+	lockGameForReimbursements(t, sqlDB, staticClock.Now(), "g1")
 	if err := querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
 		UserID:                 participantID,
 		GameID:                 "g1",
@@ -512,6 +540,7 @@ func TestPutApiGamesIdReimbursements_NonParticipantForbidden(t *testing.T) {
 	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
 
 	createGame(t, querier, "g1", organizerID, sql.NullTime{Time: time.Now().Add(-time.Hour), Valid: true})
+	lockGameForReimbursements(t, sqlDB, staticClock.Now(), "g1")
 
 	req := api.UpdateReimbursementRequest{}
 	if err := req.FromUpdateReimbursementRequest1(api.UpdateReimbursementRequest1{
@@ -529,5 +558,43 @@ func TestPutApiGamesIdReimbursements_NonParticipantForbidden(t *testing.T) {
 
 	if w.Code != http.StatusForbidden {
 		t.Fatalf("expected status %d, got %d, body=%s", http.StatusForbidden, w.Code, w.Body.String())
+	}
+}
+
+func TestPutApiGamesIdReimbursements_RequiresLockedGame(t *testing.T) {
+	sqlDB := dbtesting.SetupTestDB(t)
+	defer sqlDB.Close()
+
+	staticClock := clock.StaticClock{Time: time.Now()}
+	organizerID := dbtesting.UpsertTestUser(t, sqlDB, "organizer@example.com")
+
+	querier := db.New(sqlDB)
+	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
+
+	createGame(t, querier, "g1", organizerID, sql.NullTime{Time: time.Now().Add(-time.Hour), Valid: true})
+
+	req := api.UpdateReimbursementRequest{}
+	if err := req.FromUpdateReimbursementRequest1(api.UpdateReimbursementRequest1{
+		ReimbursedAt: nullable.NewNullNullable[time.Time](),
+	}); err != nil {
+		t.Fatalf("failed to build request: %v", err)
+	}
+	body, _ := json.Marshal(req)
+
+	r := httptest.NewRequest(http.MethodPut, "/api/games/g1/reimbursements", bytes.NewReader(body))
+	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(organizerID)}))
+	w := httptest.NewRecorder()
+
+	srv.PutApiGamesIdReimbursements(w, r, "g1")
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d, body=%s", http.StatusBadRequest, w.Code, w.Body.String())
+	}
+}
+
+func lockGameForReimbursements(t *testing.T, sqlDB *sql.DB, now time.Time, gameID string) {
+	t.Helper()
+	if _, err := sqlDB.Exec(`update games set locked_at = ? where id = ?`, now.Add(-time.Minute), gameID); err != nil {
+		t.Fatalf("failed to lock game: %v", err)
 	}
 }

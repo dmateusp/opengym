@@ -39,6 +39,11 @@ func (s *server) GetApiGamesIdReimbursements(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	if !game.LockedAt.Valid || game.LockedAt.Time.After(s.clock.Now()) {
+		http.Error(w, "reimbursements are only available for locked games", http.StatusBadRequest)
+		return
+	}
+
 	rows, err := s.querier.ParticipantsList(r.Context(), db.ParticipantsListParams{
 		OrganizerID: game.OrganizerID,
 		GameID:      id,
@@ -132,6 +137,11 @@ func (s *server) PutApiGamesIdReimbursements(w http.ResponseWriter, r *http.Requ
 			return
 		}
 		http.Error(w, fmt.Sprintf("failed to retrieve game: %s", err.Error()), http.StatusInternalServerError)
+		return
+	}
+
+	if !game.LockedAt.Valid || game.LockedAt.Time.After(s.clock.Now()) {
+		http.Error(w, "reimbursements are only available for locked games", http.StatusBadRequest)
 		return
 	}
 

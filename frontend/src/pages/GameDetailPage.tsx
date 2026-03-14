@@ -1516,6 +1516,24 @@ export default function GameDetailPage() {
                     {lockError}
                   </div>
                 )}
+
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <h4 className="text-sm font-semibold text-gray-900 mb-2">
+                    {t("reimbursements.title")}
+                  </h4>
+                  {isLocked ? (
+                    <Button
+                      variant="outline"
+                      onClick={() => navigate(`/games/${id}/reimbursements`)}
+                    >
+                      {t("reimbursements.viewReimbursements")}
+                    </Button>
+                  ) : (
+                    <p className="text-sm text-yellow-800">
+                      {t("reimbursements.lockGameToAccess")}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -1643,6 +1661,7 @@ export default function GameDetailPage() {
           )}
 
           {/* Action Buttons */}
+          {!(isOrganizer && isPublished) && (
           <div className="px-8 py-6 border-t border-gray-100 bg-gray-50/50">
             {isOrganizer && !isPublished ? (
               <div className="space-y-4">
@@ -1747,15 +1766,6 @@ export default function GameDetailPage() {
                     </div>
                   )}
                 </div>
-              </div>
-            ) : isOrganizer && isPublished ? (
-              <div className="space-y-4">
-                <Button
-                  variant="outline"
-                  onClick={() => navigate(`/games/${id}/reimbursements`)}
-                >
-                  {t("reimbursements.viewReimbursements")}
-                </Button>
               </div>
             ) : user && isPublished ? (
               <div>
@@ -1922,6 +1932,7 @@ export default function GameDetailPage() {
               </div>
             ) : null}
           </div>
+          )}
         </Card>
         
         {/* Organizer Warning Dialog */}

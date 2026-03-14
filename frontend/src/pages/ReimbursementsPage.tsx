@@ -11,9 +11,6 @@ import { TimeDisplay } from "@/components/ui/TimeDisplay";
 import UserProfileMenu from "@/components/auth/UserProfileMenu";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import type { GameReimbursementEntry, User } from "@/opengym/client";
-import {
-  putApiGamesByIdReimbursements,
-} from "@/opengym/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 const getInitials = (name?: string | null, email?: string) => {
@@ -45,6 +42,8 @@ export default function ReimbursementsPage() {
   const [entries, setEntries] = useState<GameReimbursementEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isLockRequiredError, setIsLockRequiredError] = useState(false);
+  const [isOrganizerOnlyError, setIsOrganizerOnlyError] = useState(false);
   const [updating, setUpdating] = useState<string | null>(null);
 
   useEffect(() => {
@@ -54,6 +53,8 @@ export default function ReimbursementsPage() {
       try {
         setIsLoading(true);
         setError(null);
+        setIsLockRequiredError(false);
+        setIsOrganizerOnlyError(false);
         const resp = await fetchWithDemoRecovery(
           `${API_BASE_URL}/api/games/${id}/reimbursements`,
           { credentials: "include" }
@@ -63,6 +64,17 @@ export default function ReimbursementsPage() {
           return;
         }
         if (!resp.ok) {
+          if (resp.status === 403) {
+            setIsOrganizerOnlyError(true);
+            setError(t("reimbursements.organizerOnly"));
+            return;
+          }
+          const errorText = (await resp.text()).toLowerCase();
+          if (resp.status === 400 && errorText.includes("locked")) {
+            setIsLockRequiredError(true);
+            setError(t("reimbursements.lockRequired"));
+            return;
+          }
           setError(t("reimbursements.failedToLoad"));
           return;
         }
@@ -82,22 +94,41 @@ export default function ReimbursementsPage() {
     if (!id) return;
     setUpdating(participantId);
     try {
-      const result = await putApiGamesByIdReimbursements({
-        path: { id },
-        body: {
-          participantId,
-          reimbursement_received_at: value,
-        },
-        credentials: "include",
-      });
-      if (result.response.status === 401) {
+      setError(null);
+      setIsLockRequiredError(false);
+      setIsOrganizerOnlyError(false);
+      const result = await fetchWithDemoRecovery(
+        `${API_BASE_URL}/api/games/${id}/reimbursements`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            participantId,
+            reimbursement_received_at: value,
+          }),
+        }
+      );
+      if (result.status === 401) {
         redirectToLogin();
         return;
       }
-      if (result.error) {
-        alert(t("reimbursements.failedToUpdate"));
+      if (!result.ok) {
+        if (result.status === 403) {
+          setIsOrganizerOnlyError(true);
+          setError(t("reimbursements.organizerOnly"));
+          return;
+        }
+        const errorText = (await result.text()).toLowerCase();
+        if (result.status === 400 && errorText.includes("locked")) {
+          setIsLockRequiredError(true);
+          setError(t("reimbursements.lockRequired"));
+          return;
+        }
+        setError(t("reimbursements.failedToUpdate"));
         return;
       }
+
       // Refresh entries
       const resp = await fetchWithDemoRecovery(
         `${API_BASE_URL}/api/games/${id}/reimbursements`,
@@ -107,7 +138,7 @@ export default function ReimbursementsPage() {
         setEntries(await resp.json());
       }
     } catch {
-      alert(t("reimbursements.failedToUpdate"));
+      setError(t("reimbursements.failedToUpdate"));
     } finally {
       setUpdating(null);
     }
@@ -147,9 +178,35 @@ export default function ReimbursementsPage() {
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
             ) : error ? (
-              <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm">
-                {error}
-              </div>
+              isLockRequiredError ? (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 text-yellow-900">
+                  <p className="font-semibold text-base mb-2">
+                    {t("reimbursements.lockRequired")}
+                  </p>
+                  <p className="text-sm text-yellow-800 mb-4">
+                    {t("reimbursements.lockRequiredDescription")}
+                  </p>
+                  <Button variant="outline" onClick={() => navigate(`/games/${id}`)}>
+                    {t("reimbursements.backToGame")}
+                  </Button>
+                </div>
+              ) : isOrganizerOnlyError ? (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 text-blue-900">
+                  <p className="font-semibold text-base mb-2">
+                    {t("reimbursements.organizerOnly")}
+                  </p>
+                  <p className="text-sm text-blue-800 mb-4">
+                    {t("reimbursements.organizerOnlyDescription")}
+                  </p>
+                  <Button variant="outline" onClick={() => navigate(`/games/${id}`)}>
+                    {t("reimbursements.backToGame")}
+                  </Button>
+                </div>
+              ) : (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm">
+                  {error}
+                </div>
+              )
             ) : entries.length === 0 ? (
               <p className="text-gray-500 text-center py-12">
                 {t("reimbursements.noParticipants")}

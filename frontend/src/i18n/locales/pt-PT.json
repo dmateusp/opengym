@@ -284,7 +284,13 @@
     "failedToLoad": "Falha ao carregar reembolsos",
     "failedToUpdate": "Falha ao atualizar reembolso",
     "noParticipants": "Ainda não há participantes",
-    "viewReimbursements": "Ver Reembolsos"
+    "viewReimbursements": "Ver Reembolsos",
+    "availableAfterLock": "Os reembolsos ficam disponíveis após bloquear o jogo",
+    "lockGameToAccess": "Bloqueia primeiro este jogo para aceder ao controlo de reembolsos.",
+    "lockRequired": "Os reembolsos ainda não estão disponíveis",
+    "lockRequiredDescription": "Esta página só fica disponível depois do jogo estar bloqueado.",
+    "organizerOnly": "Acesso apenas para o organizador",
+    "organizerOnlyDescription": "Só o organizador do jogo pode ver e gerir os reembolsos."
   },
   "lock": {
     "gameLocked": "Jogo Bloqueado",

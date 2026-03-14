@@ -284,7 +284,13 @@
     "failedToLoad": "Failed to load reimbursements",
     "failedToUpdate": "Failed to update reimbursement",
     "noParticipants": "No participants yet",
-    "viewReimbursements": "View Reimbursements"
+    "viewReimbursements": "View Reimbursements",
+    "availableAfterLock": "Reimbursements unlock after game lock",
+    "lockGameToAccess": "Lock this game first to access reimbursement tracking.",
+    "lockRequired": "Reimbursements are not available yet",
+    "lockRequiredDescription": "This page is available only after the game is locked.",
+    "organizerOnly": "Organizer access only",
+    "organizerOnlyDescription": "Only the game organizer can view and manage reimbursements."
   },
   "lock": {
     "gameLocked": "Game Locked",
