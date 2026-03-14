@@ -1540,34 +1540,6 @@ export default function GameDetailPage() {
             </div>
           )}
 
-          {/* Lock Status Info - shown to all users */}
-          {isPublished && (isLocked || isLockScheduled) && (
-            <div className="px-8 py-6 border-t border-gray-100">
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-900">
-                {isLocked && (
-                  <>
-                    <p className="font-semibold mb-1">🔒 {t("lock.gameLocked")}</p>
-                    <p>{t("lock.lockedInfo")}</p>
-                  </>
-                )}
-                {isLockScheduled && !isLocked && (
-                  <>
-                    <p className="font-semibold mb-1">⏰ {t("lock.lockScheduled")}</p>
-                    <p>{t("lock.scheduledInfo")}</p>
-                    {lockedAtDate && (
-                      <p className="mt-2 font-mono text-xs">
-                        <TimeDisplay
-                          timestamp={game?.lockedAt || ""}
-                          displayFormat="friendly"
-                        />
-                      </p>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-
           {/* Participants Section */}
           {isPublished && (
             <div className="px-8 py-6 border-t border-gray-100">
@@ -1787,9 +1759,7 @@ export default function GameDetailPage() {
                     }`}
                   >
                     <p className="font-semibold">
-                      {isLocked
-                        ? t("reimbursements.sendNowGameLocked")
-                        : t("reimbursements.waitForLockToSend")}
+                      {t("reimbursements.waitForLockToSend")}
                     </p>
                   </div>
                 )}

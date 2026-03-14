@@ -37,12 +37,12 @@ export function ParticipantReimbursementCard({
           return;
         }
         if (!resp.ok) {
-          setError(t("reimbursements.failedToLoad"));
+          setError(t("reimbursements.failedToLoadSingle"));
           return;
         }
         setRecord(await resp.json());
       } catch {
-        setError(t("reimbursements.failedToLoad"));
+        setError(t("reimbursements.failedToLoadSingle"));
       } finally {
         setIsLoading(false);
       }
