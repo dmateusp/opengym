@@ -1641,7 +1641,6 @@ export default function GameDetailPage() {
           )}
 
           {/* Action Buttons */}
-          {!(isOrganizer && isPublished) && (
           <div className="px-8 py-6 border-t border-gray-100 bg-gray-50/50">
             {isOrganizer && !isPublished ? (
               <div className="space-y-4">
@@ -1934,7 +1933,6 @@ export default function GameDetailPage() {
               </div>
             ) : null}
           </div>
-          )}
         </Card>
         
         {/* Organizer Warning Dialog */}
