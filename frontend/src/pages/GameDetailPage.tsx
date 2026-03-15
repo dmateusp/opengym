@@ -756,7 +756,7 @@ export default function GameDetailPage() {
   }
 
   async function handleJoinWithGuests() {
-    const guestCount = parseInt(guestCountInput, 10);
+    const guestCount = guestCountInput === "" ? 0 : parseInt(guestCountInput, 10);
     if (isNaN(guestCount) || guestCount < 0) {
       return;
     }
@@ -1851,7 +1851,7 @@ export default function GameDetailPage() {
                             disabled={
                               joinButtonDisabled ||
                               (() => {
-                                const count = parseInt(guestCountInput, 10);
+                                const count = guestCountInput === "" ? 0 : parseInt(guestCountInput, 10);
                                 if (isNaN(count) || count < 0) return true;
                                 const maxGuests = game?.maxGuestsPerPlayer ?? 0;
                                 if (maxGuests !== -1 && count > maxGuests)
