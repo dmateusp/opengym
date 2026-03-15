@@ -124,7 +124,7 @@ func TestGetApiGamesIdReimbursements_OrganizerSeesParticipants(t *testing.T) {
 		GoingUpdatedAt:         staticClock.Now(),
 		ConfirmedAt:            sql.NullTime{},
 		Guests:                 sql.NullInt64{},
-		ReimbursementReference: sql.NullString{String: "A1b2", Valid: true},
+		ReimbursementReference: "A1b2",
 	}); err != nil {
 		t.Fatalf("failed to insert participant: %v", err)
 	}
@@ -190,7 +190,7 @@ func TestGetApiGamesIdReimbursements_NotGoingParticipantsExcluded(t *testing.T) 
 			GameID:                 "g1",
 			Going:                  sql.NullBool{Valid: true, Bool: going},
 			GoingUpdatedAt:         staticClock.Now(),
-			ReimbursementReference: sql.NullString{String: map[bool]string{true: "C3d4", false: "E5f6"}[going], Valid: true},
+			ReimbursementReference: map[bool]string{true: "C3d4", false: "E5f6"}[going],
 		}); err != nil {
 			t.Fatalf("failed to insert participant: %v", err)
 		}
@@ -242,7 +242,7 @@ func TestGetApiGamesIdReimbursements_AmountOwedExcludesWaitlistAndIncludesGuests
 		Going:                  sql.NullBool{Valid: true, Bool: true},
 		GoingUpdatedAt:         staticClock.Now().Add(1 * time.Minute),
 		Guests:                 sql.NullInt64{Valid: true, Int64: 1},
-		ReimbursementReference: sql.NullString{String: "A1b2", Valid: true},
+		ReimbursementReference: "A1b2",
 	}); err != nil {
 		t.Fatalf("failed to insert participant 1: %v", err)
 	}
@@ -253,7 +253,7 @@ func TestGetApiGamesIdReimbursements_AmountOwedExcludesWaitlistAndIncludesGuests
 		Going:                  sql.NullBool{Valid: true, Bool: true},
 		GoingUpdatedAt:         staticClock.Now().Add(2 * time.Minute),
 		Guests:                 sql.NullInt64{Valid: true, Int64: 0},
-		ReimbursementReference: sql.NullString{String: "C3d4", Valid: true},
+		ReimbursementReference: "C3d4",
 	}); err != nil {
 		t.Fatalf("failed to insert participant 2: %v", err)
 	}
@@ -264,7 +264,7 @@ func TestGetApiGamesIdReimbursements_AmountOwedExcludesWaitlistAndIncludesGuests
 		Going:                  sql.NullBool{Valid: true, Bool: true},
 		GoingUpdatedAt:         staticClock.Now().Add(3 * time.Minute),
 		Guests:                 sql.NullInt64{Valid: true, Int64: 0},
-		ReimbursementReference: sql.NullString{String: "E5f6", Valid: true},
+		ReimbursementReference: "E5f6",
 	}); err != nil {
 		t.Fatalf("failed to insert waitlisted participant: %v", err)
 	}
@@ -320,7 +320,7 @@ func TestPutApiGamesIdReimbursements_Unauthorized(t *testing.T) {
 	querier := db.New(sqlDB)
 	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
 
-	body := []byte(`{"reimbursed_at":null}`)
+	body := []byte(`{"reimbursedAt":null}`)
 	r := httptest.NewRequest(http.MethodPut, "/api/games/g1/reimbursements", bytes.NewReader(body))
 	w := httptest.NewRecorder()
 
@@ -341,7 +341,7 @@ func TestPutApiGamesIdReimbursements_GameNotFound(t *testing.T) {
 	querier := db.New(sqlDB)
 	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
 
-	body := []byte(`{"reimbursed_at":null}`)
+	body := []byte(`{"reimbursedAt":null}`)
 	r := httptest.NewRequest(http.MethodPut, "/api/games/missing/reimbursements", bytes.NewReader(body))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(userID)}))
 	w := httptest.NewRecorder()
@@ -373,7 +373,7 @@ func TestPutApiGamesIdReimbursements_OrganizerUpdatesParticipant(t *testing.T) {
 		GoingUpdatedAt:         staticClock.Now(),
 		ConfirmedAt:            sql.NullTime{},
 		Guests:                 sql.NullInt64{},
-		ReimbursementReference: sql.NullString{String: "G7h8", Valid: true},
+		ReimbursementReference: "G7h8",
 	}); err != nil {
 		t.Fatalf("failed to insert participant: %v", err)
 	}
@@ -438,7 +438,7 @@ func TestPutApiGamesIdReimbursements_ParticipantUpdatesSelf(t *testing.T) {
 		GoingUpdatedAt:         staticClock.Now(),
 		ConfirmedAt:            sql.NullTime{},
 		Guests:                 sql.NullInt64{},
-		ReimbursementReference: sql.NullString{String: "J9k0", Valid: true},
+		ReimbursementReference: "J9k0",
 	}); err != nil {
 		t.Fatalf("failed to insert participant: %v", err)
 	}
@@ -492,7 +492,7 @@ func TestPutApiGamesIdReimbursements_ParticipantCannotSetParticipantId(t *testin
 		GoingUpdatedAt:         staticClock.Now(),
 		ConfirmedAt:            sql.NullTime{},
 		Guests:                 sql.NullInt64{},
-		ReimbursementReference: sql.NullString{String: "L1m2", Valid: true},
+		ReimbursementReference: "L1m2",
 	}); err != nil {
 		t.Fatalf("failed to insert participant: %v", err)
 	}
@@ -503,7 +503,7 @@ func TestPutApiGamesIdReimbursements_ParticipantCannotSetParticipantId(t *testin
 		GoingUpdatedAt:         staticClock.Now(),
 		ConfirmedAt:            sql.NullTime{},
 		Guests:                 sql.NullInt64{},
-		ReimbursementReference: sql.NullString{String: "N3p4", Valid: true},
+		ReimbursementReference: "N3p4",
 	}); err != nil {
 		t.Fatalf("failed to insert other participant: %v", err)
 	}

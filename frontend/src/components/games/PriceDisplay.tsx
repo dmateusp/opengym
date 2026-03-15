@@ -64,7 +64,9 @@ export function PriceDisplay({
 
       <div className="flex items-center justify-between gap-3">
         <span className="text-base font-semibold text-gray-900">
-          {perPlayerNow !== undefined ? formatCentsAsDollars(perPlayerNow) : "n/a"}
+          {perPlayerNow !== undefined
+            ? formatCentsAsDollars(perPlayerNow)
+            : t("common.notAvailable", { defaultValue: "n/a" })}
         </span>
         <span className="text-xs text-gray-600">
           {t("game.perPersonNow", { defaultValue: "per person now" })}

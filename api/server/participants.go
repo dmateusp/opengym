@@ -360,7 +360,7 @@ func (s *server) PutApiGamesIdParticipants(w http.ResponseWriter, r *http.Reques
 			ConfirmedAt:            confirmedAt,
 			GoingUpdatedAt:         s.clock.Now(),
 			Guests:                 guests,
-			ReimbursementReference: sql.NullString{String: s.randomAlphanumericGenerator.Generate(reimbursementReferenceLength), Valid: true},
+			ReimbursementReference: s.randomAlphanumericGenerator.Generate(reimbursementReferenceLength),
 		})
 		if err == nil {
 			break

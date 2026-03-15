@@ -168,7 +168,7 @@ insert into game_participants(
     confirmed_at,
     guests,
     reimbursement_reference
-) values (?, ?, ?, ?, ?, ?, ?7)
+) values (?, ?, ?, ?, ?, ?, ?)
 on conflict(user_id, game_id) do update set
     updated_at = current_timestamp,
     going = coalesce(excluded.going, game_participants.going),
@@ -179,7 +179,8 @@ on conflict(user_id, game_id) do update set
         excluded.going_updated_at
     ),
     confirmed_at = coalesce(excluded.confirmed_at, game_participants.confirmed_at),
-    guests = coalesce(excluded.guests, game_participants.guests)
+    guests = coalesce(excluded.guests, game_participants.guests),
+    reimbursement_reference = coalesce(game_participants.reimbursement_reference, excluded.reimbursement_reference)
 `
 
 type ParticipantsUpsertParams struct {
@@ -189,7 +190,7 @@ type ParticipantsUpsertParams struct {
 	GoingUpdatedAt         time.Time
 	ConfirmedAt            sql.NullTime
 	Guests                 sql.NullInt64
-	ReimbursementReference sql.NullString
+	ReimbursementReference string
 }
 
 func (q *Queries) ParticipantsUpsert(ctx context.Context, arg ParticipantsUpsertParams) error {
@@ -221,7 +222,7 @@ order by
 
 type ReimbursementsListByGameRow struct {
 	User                    User
-	ReimbursementReference  sql.NullString
+	ReimbursementReference  string
 	ReimbursedAt            sql.NullTime
 	ReimbursementReceivedAt sql.NullTime
 }

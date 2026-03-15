@@ -503,7 +503,7 @@ paths:
   /api/games/{id}/reimbursements:
     get:
       summary: List reimbursements for a game
-      description: Returns the reimbursement tracking entries needed to build the reimbursements page. Only the organizer and participants of the game can access it.
+      description: Returns the reimbursement tracking entries needed to build the reimbursements page. Accessible only to the game organizer and only after the game is frozen.
       tags:
         - Games
       security:
@@ -531,7 +531,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Forbidden - not the organizer or a participant of this game
+          description: Forbidden - only the organizer can access this endpoint
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Bad request - reimbursements are only available for frozen games
           content:
             text/plain:
               schema:
@@ -545,7 +551,7 @@ paths:
 
     put:
       summary: Update reimbursement status for a participant
-      description: Update reimbursement tracking for a game participant. Organizers provide participantId and can set reimbursement_received_at. Participants set their own reimbursed_at without providing participantId.
+      description: Update reimbursement tracking for a game participant. Organizers provide participantId and reimbursementReceivedAt. Participants set their own reimbursedAt without providing participantId.
       tags:
         - Games
       security:
@@ -571,7 +577,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ReimbursementRecord'
         '400':
-          description: Invalid request data or participant tried to include participantId field
+          description: Invalid request data or participant tried to include participantId/reimbursementReceivedAt fields
           content:
             text/plain:
               schema:
@@ -1061,11 +1067,12 @@ components:
           description: Organizer request - update a participant's reimbursement status
           required:
             - participantId
+            - reimbursementReceivedAt
           properties:
             participantId:
               type: string
               description: ID of the participant to update reimbursement for
-            reimbursement_received_at:
+            reimbursementReceivedAt:
               type: string
               format: date-time
               description: When the organizer received and confirmed the reimbursement. Set to null to clear.
@@ -1073,9 +1080,9 @@ components:
         - type: object
           description: Participant request - set their own reimbursement date
           required:
-            - reimbursed_at
+            - reimbursedAt
           properties:
-            reimbursed_at:
+            reimbursedAt:
               type: string
               format: date-time
               description: When the participant sent the reimbursement. Set to null to clear.
@@ -1100,12 +1107,12 @@ components:
           minLength: 4
           maxLength: 4
           pattern: '^[A-Za-z0-9]{4}$'
-        reimbursed_at:
+        reimbursedAt:
           type: string
           format: date-time
           description: When the participant sent the reimbursement
           nullable: true
-        reimbursement_received_at:
+        reimbursementReceivedAt:
           type: string
           format: date-time
           description: When the organizer received and confirmed the reimbursement

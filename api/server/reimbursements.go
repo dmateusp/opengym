@@ -63,7 +63,7 @@ func (s *server) GetApiGamesIdReimbursementsParticipantId(w http.ResponseWriter,
 	response := api.ReimbursementRecord{
 		ParticipantId:           participantId,
 		GameId:                  id,
-		ReimbursementReference:  participant.ReimbursementReference.String,
+		ReimbursementReference:  participant.ReimbursementReference,
 		CreatedAt:               ptr.Ptr(participant.CreatedAt),
 		UpdatedAt:               ptr.Ptr(participant.UpdatedAt),
 		ReimbursedAt:            sqlNullTimeToNullable(participant.ReimbursedAt),
@@ -163,7 +163,7 @@ func (s *server) GetApiGamesIdReimbursements(w http.ResponseWriter, r *http.Requ
 		amountOwedCents := ceilDiv(game.TotalPriceCents*participant.groupSize, totalBillableCount)
 
 		entries = append(entries, api.GameReimbursementEntry{
-			ReimbursementReference: row.GameParticipant.ReimbursementReference.String,
+			ReimbursementReference: row.GameParticipant.ReimbursementReference,
 			AmountOwedCents:        amountOwedCents,
 			Guests:                 guests,
 			Participant: api.User{
@@ -255,7 +255,7 @@ func (s *server) PutApiGamesIdReimbursements(w http.ResponseWriter, r *http.Requ
 			return
 		}
 		if organizerReq.ParticipantId != "" || organizerReq.ReimbursementReceivedAt.IsSpecified() {
-			http.Error(w, "participants cannot set participantId or reimbursement_received_at", http.StatusBadRequest)
+			http.Error(w, "participants cannot set participantId or reimbursementReceivedAt", http.StatusBadRequest)
 			return
 		}
 
@@ -313,7 +313,7 @@ func (s *server) PutApiGamesIdReimbursements(w http.ResponseWriter, r *http.Requ
 	response := api.ReimbursementRecord{
 		ParticipantId:           strconv.FormatInt(participantID, 10),
 		GameId:                  id,
-		ReimbursementReference:  participant.ReimbursementReference.String,
+		ReimbursementReference:  participant.ReimbursementReference,
 		CreatedAt:               ptr.Ptr(participant.CreatedAt),
 		UpdatedAt:               ptr.Ptr(participant.UpdatedAt),
 		ReimbursedAt:            sqlNullTimeToNullable(participant.ReimbursedAt),

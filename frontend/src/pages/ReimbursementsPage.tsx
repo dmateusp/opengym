@@ -105,7 +105,7 @@ export default function ReimbursementsPage() {
           credentials: "include",
           body: JSON.stringify({
             participantId,
-            reimbursement_received_at: value,
+            reimbursementReceivedAt: value,
           }),
         }
       );

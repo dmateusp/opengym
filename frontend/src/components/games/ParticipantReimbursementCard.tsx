@@ -61,7 +61,7 @@ export function ParticipantReimbursementCard({
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ reimbursed_at: value }),
+          body: JSON.stringify({ reimbursedAt: value }),
         }
       );
       if (resp.status === 401) {
@@ -107,8 +107,8 @@ export function ParticipantReimbursementCard({
 
   if (!record) return null;
 
-  const hasSent = !!record.reimbursed_at;
-  const hasReceived = !!record.reimbursement_received_at;
+  const hasSent = !!record.reimbursedAt;
+  const hasReceived = !!record.reimbursementReceivedAt;
 
   return (
     <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 space-y-4">
@@ -156,7 +156,7 @@ export function ParticipantReimbursementCard({
               <>
                 {t("reimbursements.youSentAt")}{" "}
                 <TimeDisplay
-                  timestamp={record.reimbursed_at!}
+                  timestamp={record.reimbursedAt!}
                   displayFormat="relative"
                 />
               </>
@@ -177,7 +177,7 @@ export function ParticipantReimbursementCard({
               <>
                 {t("reimbursements.organizerConfirmedAt")}{" "}
                 <TimeDisplay
-                  timestamp={record.reimbursement_received_at!}
+                  timestamp={record.reimbursementReceivedAt!}
                   displayFormat="relative"
                 />
               </>
