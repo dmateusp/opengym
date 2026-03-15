@@ -702,7 +702,9 @@ export default function GameDetailPage() {
       const updated = await resp.json();
       setGame(updated.game);
       setOrganizer(updated.organizer);
-      setEditingField(null);
+      setEditingField((currentField) =>
+        currentField === field ? null : currentField
+      );
     } catch (e) {
       console.error("Failed to save field:", field, e);
     }
