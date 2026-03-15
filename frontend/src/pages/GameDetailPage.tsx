@@ -1532,7 +1532,6 @@ export default function GameDetailPage() {
                   </h4>
                   {isFrozen ? (
                     <Button
-                      variant="outline"
                       onClick={() => navigate(`/games/${id}/reimbursements`)}
                     >
                       {t("reimbursements.viewReimbursements")}
