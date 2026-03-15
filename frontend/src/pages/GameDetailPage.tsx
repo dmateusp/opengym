@@ -1435,13 +1435,13 @@ export default function GameDetailPage() {
                   </ul>
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   {!isFrozen && !isFreezeScheduled && (
                     <>
                       <Button
                         onClick={() => setShowFreezeNowWarning(true)}
                         disabled={isFreezing}
-                        className="bg-yellow-600 hover:bg-yellow-700"
+                        className="bg-yellow-600 hover:bg-yellow-700 w-full sm:w-auto"
                       >
                         {isFreezing ? (
                           <>
@@ -1460,6 +1460,7 @@ export default function GameDetailPage() {
                         onClick={() => {
                           setIsEditingFreezeSchedule(true);
                         }}
+                        className="w-full sm:w-auto"
                       >
                         {t("freeze.scheduleFreeze")}
                       </Button>
@@ -1471,6 +1472,7 @@ export default function GameDetailPage() {
                         variant="outline"
                         onClick={() => setShowFreezeClearWarning(true)}
                         disabled={isFreezing}
+                        className="w-full sm:w-auto"
                       >
                         {t("freeze.clearFreeze")}
                       </Button>
@@ -1478,6 +1480,7 @@ export default function GameDetailPage() {
                         <Button
                           variant="outline"
                           onClick={() => setIsEditingFreezeSchedule(true)}
+                          className="w-full sm:w-auto"
                         >
                           {t("freeze.rescheduleFreeze")}
                         </Button>
@@ -1495,19 +1498,21 @@ export default function GameDetailPage() {
                       dateLabel={t("game.date", { defaultValue: "Date" })}
                       timeLabel={t("game.time", { defaultValue: "Time" })}
                     />
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <Button
                         variant="outline"
                         onClick={() => {
                           setIsEditingFreezeSchedule(false);
                           setShowFreezeScheduleWarning(false);
                         }}
+                        className="w-full sm:w-auto"
                       >
                         {t("common.cancel")}
                       </Button>
                       <Button
                         onClick={() => setShowFreezeScheduleWarning(true)}
                         disabled={isFreezing || !freezeAtInput}
+                        className="w-full sm:w-auto"
                       >
                         {isFreezeScheduled ? t("freeze.updateSchedule") : t("freeze.schedulePublish")}
                       </Button>
@@ -1683,11 +1688,11 @@ export default function GameDetailPage() {
                     ))}
                   </div>
 
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <Button
                       onClick={handlePublishNow}
                       disabled={isPublishing || !canPublish}
-                      className={canPublish ? "bg-success" : "bg-gray-400"}
+                      className={`${canPublish ? "bg-success" : "bg-gray-400"} w-full sm:w-auto`}
                     >
                       {isPublishing ? (
                         <>
@@ -1705,6 +1710,7 @@ export default function GameDetailPage() {
                       <Button
                         variant="outline"
                         onClick={() => setIsEditingSchedule(!isEditingSchedule)}
+                        className="w-full sm:w-auto"
                       >
                         {isScheduled
                           ? t("publish.reschedule")
@@ -1722,14 +1728,15 @@ export default function GameDetailPage() {
                         dateLabel={t("game.date", { defaultValue: "Date" })}
                         timeLabel={t("game.time", { defaultValue: "Time" })}
                       />
-                      <div className="flex gap-2">
+                      <div className="flex flex-col sm:flex-row gap-2">
                         <Button
                           variant="outline"
                           onClick={() => setIsEditingSchedule(false)}
+                          className="w-full sm:w-auto"
                         >
                           {t("common.cancel")}
                         </Button>
-                        <Button onClick={handleSchedulePublish}>
+                        <Button onClick={handleSchedulePublish} className="w-full sm:w-auto">
                           {isScheduled ? t("publish.updateSchedule") : t("publish.schedulePublish")}
                         </Button>
                       </div>
