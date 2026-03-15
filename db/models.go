@@ -38,7 +38,7 @@ type GameParticipant struct {
 	Guests                  sql.NullInt64
 	ReimbursedAt            sql.NullTime
 	ReimbursementReceivedAt sql.NullTime
-	ReimbursementReference  sql.NullString
+	ReimbursementReference  string
 }
 
 type User struct {

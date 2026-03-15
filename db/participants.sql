@@ -7,7 +7,7 @@ insert into game_participants(
     confirmed_at,
     guests,
     reimbursement_reference
-) values (?, ?, ?, ?, ?, ?, sqlc.narg(reimbursement_reference))
+) values (?, ?, ?, ?, ?, ?, ?)
 on conflict(user_id, game_id) do update set
     updated_at = current_timestamp,
     going = coalesce(excluded.going, game_participants.going),

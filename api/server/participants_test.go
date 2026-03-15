@@ -27,6 +27,13 @@ type sequenceRandomAlphanumericGenerator struct {
 	index  int
 }
 
+var reimbursementReferenceCounter int64
+
+func nextReimbursementReference() string {
+	reimbursementReferenceCounter++
+	return strconv.FormatInt(reimbursementReferenceCounter, 36)
+}
+
 func (g *sequenceRandomAlphanumericGenerator) Generate(length int) string {
 	if len(g.values) == 0 {
 		return ""
@@ -555,36 +562,40 @@ func TestGetApiGamesIdParticipants_StatusComputation(t *testing.T) {
 
 	// User 1 & 2: going (should be in main list)
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		GoingUpdatedAt: staticClock.Now(),
-		UserID:         int64(user1),
-		GameID:         "g1",
-		Going:          sql.NullBool{Bool: true, Valid: true},
-		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt:         staticClock.Now(),
+		ReimbursementReference: nextReimbursementReference(),
+		UserID:                 int64(user1),
+		GameID:                 "g1",
+		Going:                  sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:            sql.NullTime{Time: time.Now(), Valid: true},
 	})
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		GoingUpdatedAt: staticClock.Now(),
-		UserID:         int64(user2),
-		GameID:         "g1",
-		Going:          sql.NullBool{Bool: true, Valid: true},
-		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt:         staticClock.Now(),
+		ReimbursementReference: nextReimbursementReference(),
+		UserID:                 int64(user2),
+		GameID:                 "g1",
+		Going:                  sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:            sql.NullTime{Time: time.Now(), Valid: true},
 	})
 
 	// User 3: going (should be waitlisted because max is 2)
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		GoingUpdatedAt: staticClock.Now(),
-		UserID:         int64(user3),
-		GameID:         "g1",
-		Going:          sql.NullBool{Bool: true, Valid: true},
-		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt:         staticClock.Now(),
+		ReimbursementReference: nextReimbursementReference(),
+		UserID:                 int64(user3),
+		GameID:                 "g1",
+		Going:                  sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:            sql.NullTime{Time: time.Now(), Valid: true},
 	})
 
 	// User 4: not going
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		GoingUpdatedAt: staticClock.Now(),
-		UserID:         int64(user4),
-		GameID:         "g1",
-		Going:          sql.NullBool{Bool: false, Valid: true},
-		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt:         staticClock.Now(),
+		ReimbursementReference: nextReimbursementReference(),
+		UserID:                 int64(user4),
+		GameID:                 "g1",
+		Going:                  sql.NullBool{Bool: false, Valid: true},
+		ConfirmedAt:            sql.NullTime{Time: time.Now(), Valid: true},
 	})
 
 	// Get participants list
@@ -677,29 +688,32 @@ func TestGetApiGamesIdParticipants_OrganizerPriorityEvenWhenLate(t *testing.T) {
 
 	// Fill both player slots before the organizer marks as going.
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		GoingUpdatedAt: staticClock.Now(),
-		UserID:         int64(userEarly),
-		GameID:         "g1",
-		Going:          sql.NullBool{Bool: true, Valid: true},
-		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt:         staticClock.Now(),
+		ReimbursementReference: nextReimbursementReference(),
+		UserID:                 int64(userEarly),
+		GameID:                 "g1",
+		Going:                  sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:            sql.NullTime{Time: time.Now(), Valid: true},
 	})
 
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		GoingUpdatedAt: staticClock.Now(),
-		UserID:         int64(userLate),
-		GameID:         "g1",
-		Going:          sql.NullBool{Bool: true, Valid: true},
-		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt:         staticClock.Now(),
+		ReimbursementReference: nextReimbursementReference(),
+		UserID:                 int64(userLate),
+		GameID:                 "g1",
+		Going:                  sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:            sql.NullTime{Time: time.Now(), Valid: true},
 	})
 
 	// Organizer joins after the other two but should still be prioritized into the main list.
 
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		GoingUpdatedAt: staticClock.Now(),
-		UserID:         int64(organizerID),
-		GameID:         "g1",
-		Going:          sql.NullBool{Bool: true, Valid: true},
-		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt:         staticClock.Now(),
+		ReimbursementReference: nextReimbursementReference(),
+		UserID:                 int64(organizerID),
+		GameID:                 "g1",
+		Going:                  sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:            sql.NullTime{Time: time.Now(), Valid: true},
 	})
 
 	r := httptest.NewRequest(http.MethodGet, "/api/games/g1/participants", nil)
@@ -778,27 +792,30 @@ func TestGetApiGamesIdParticipants_NonGoingDoesNotConsumeSlot(t *testing.T) {
 	}
 
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		GoingUpdatedAt: staticClock.Now(),
-		UserID:         int64(going1),
-		GameID:         "g1",
-		Going:          sql.NullBool{Bool: true, Valid: true},
-		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt:         staticClock.Now(),
+		ReimbursementReference: nextReimbursementReference(),
+		UserID:                 int64(going1),
+		GameID:                 "g1",
+		Going:                  sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:            sql.NullTime{Time: time.Now(), Valid: true},
 	})
 
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		GoingUpdatedAt: staticClock.Now(),
-		UserID:         int64(notGoing),
-		GameID:         "g1",
-		Going:          sql.NullBool{Bool: false, Valid: true},
-		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt:         staticClock.Now(),
+		ReimbursementReference: nextReimbursementReference(),
+		UserID:                 int64(notGoing),
+		GameID:                 "g1",
+		Going:                  sql.NullBool{Bool: false, Valid: true},
+		ConfirmedAt:            sql.NullTime{Time: time.Now(), Valid: true},
 	})
 
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		GoingUpdatedAt: staticClock.Now(),
-		UserID:         int64(going2),
-		GameID:         "g1",
-		Going:          sql.NullBool{Bool: true, Valid: true},
-		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt:         staticClock.Now(),
+		ReimbursementReference: nextReimbursementReference(),
+		UserID:                 int64(going2),
+		GameID:                 "g1",
+		Going:                  sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:            sql.NullTime{Time: time.Now(), Valid: true},
 	})
 
 	r := httptest.NewRequest(http.MethodGet, "/api/games/g1/participants", nil)
@@ -866,27 +883,30 @@ func TestGetApiGamesIdParticipants_OrganizerNotGoingDoesNotBlockSlots(t *testing
 
 	// Organizer marks not going; should not consume a slot or change waitlist math.
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		GoingUpdatedAt: staticClock.Now(),
-		UserID:         int64(organizerID),
-		GameID:         "g1",
-		Going:          sql.NullBool{Bool: false, Valid: true},
-		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt:         staticClock.Now(),
+		ReimbursementReference: nextReimbursementReference(),
+		UserID:                 int64(organizerID),
+		GameID:                 "g1",
+		Going:                  sql.NullBool{Bool: false, Valid: true},
+		ConfirmedAt:            sql.NullTime{Time: time.Now(), Valid: true},
 	})
 
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		GoingUpdatedAt: staticClock.Now(),
-		UserID:         int64(going1),
-		GameID:         "g1",
-		Going:          sql.NullBool{Bool: true, Valid: true},
-		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt:         staticClock.Now(),
+		ReimbursementReference: nextReimbursementReference(),
+		UserID:                 int64(going1),
+		GameID:                 "g1",
+		Going:                  sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:            sql.NullTime{Time: time.Now(), Valid: true},
 	})
 
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		GoingUpdatedAt: staticClock.Now(),
-		UserID:         int64(going2),
-		GameID:         "g1",
-		Going:          sql.NullBool{Bool: true, Valid: true},
-		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt:         staticClock.Now(),
+		ReimbursementReference: nextReimbursementReference(),
+		UserID:                 int64(going2),
+		GameID:                 "g1",
+		Going:                  sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:            sql.NullTime{Time: time.Now(), Valid: true},
 	})
 
 	r := httptest.NewRequest(http.MethodGet, "/api/games/g1/participants", nil)
@@ -957,27 +977,30 @@ func TestGetApiGamesIdParticipants_NoWaitlistCapacityStillReturnsWaitlisted(t *t
 	}
 
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		GoingUpdatedAt: staticClock.Now(),
-		UserID:         int64(user1),
-		GameID:         "g1",
-		Going:          sql.NullBool{Bool: true, Valid: true},
-		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt:         staticClock.Now(),
+		ReimbursementReference: nextReimbursementReference(),
+		UserID:                 int64(user1),
+		GameID:                 "g1",
+		Going:                  sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:            sql.NullTime{Time: time.Now(), Valid: true},
 	})
 
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		GoingUpdatedAt: staticClock.Now(),
-		UserID:         int64(user2),
-		GameID:         "g1",
-		Going:          sql.NullBool{Bool: true, Valid: true},
-		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt:         staticClock.Now(),
+		ReimbursementReference: nextReimbursementReference(),
+		UserID:                 int64(user2),
+		GameID:                 "g1",
+		Going:                  sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:            sql.NullTime{Time: time.Now(), Valid: true},
 	})
 
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		GoingUpdatedAt: staticClock.Now(),
-		UserID:         int64(user3),
-		GameID:         "g1",
-		Going:          sql.NullBool{Bool: true, Valid: true},
-		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt:         staticClock.Now(),
+		ReimbursementReference: nextReimbursementReference(),
+		UserID:                 int64(user3),
+		GameID:                 "g1",
+		Going:                  sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:            sql.NullTime{Time: time.Now(), Valid: true},
 	})
 
 	r := httptest.NewRequest(http.MethodGet, "/api/games/g1/participants", nil)
@@ -1045,11 +1068,12 @@ func TestGetApiGamesIdParticipants_LargeCapacityAllGoing(t *testing.T) {
 	for i := 1; i <= 3; i++ {
 		userID := dbtesting.UpsertTestUser(t, sqlDB, "user"+strconv.Itoa(i)+"@example.com")
 		querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-			GoingUpdatedAt: staticClock.Now(),
-			UserID:         int64(userID),
-			GameID:         "g1",
-			Going:          sql.NullBool{Bool: true, Valid: true},
-			ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
+			GoingUpdatedAt:         staticClock.Now(),
+			ReimbursementReference: nextReimbursementReference(),
+			UserID:                 int64(userID),
+			GameID:                 "g1",
+			Going:                  sql.NullBool{Bool: true, Valid: true},
+			ConfirmedAt:            sql.NullTime{Time: time.Now(), Valid: true},
 		})
 
 	}
@@ -1119,31 +1143,34 @@ func TestGetApiGamesIdParticipants_GuestsCountTowardsMaxPlayers(t *testing.T) {
 
 	// User 1: going with 2 guests (3 total)
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		GoingUpdatedAt: staticClock.Now(),
-		UserID:         int64(user1),
-		GameID:         "g1",
-		Going:          sql.NullBool{Bool: true, Valid: true},
-		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
-		Guests:         sql.NullInt64{Int64: 2, Valid: true},
+		GoingUpdatedAt:         staticClock.Now(),
+		ReimbursementReference: nextReimbursementReference(),
+		UserID:                 int64(user1),
+		GameID:                 "g1",
+		Going:                  sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:            sql.NullTime{Time: time.Now(), Valid: true},
+		Guests:                 sql.NullInt64{Int64: 2, Valid: true},
 	})
 
 	// User 2: going with 1 guest (2 total, should fit in main list since 3+2=5 > 4)
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		GoingUpdatedAt: staticClock.Now(),
-		UserID:         int64(user2),
-		GameID:         "g1",
-		Going:          sql.NullBool{Bool: true, Valid: true},
-		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
-		Guests:         sql.NullInt64{Int64: 1, Valid: true},
+		GoingUpdatedAt:         staticClock.Now(),
+		ReimbursementReference: nextReimbursementReference(),
+		UserID:                 int64(user2),
+		GameID:                 "g1",
+		Going:                  sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:            sql.NullTime{Time: time.Now(), Valid: true},
+		Guests:                 sql.NullInt64{Int64: 1, Valid: true},
 	})
 
 	// User 3: going with no guests (should be waitlisted because 3+2+1=6 > 4)
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		GoingUpdatedAt: staticClock.Now(),
-		UserID:         int64(user3),
-		GameID:         "g1",
-		Going:          sql.NullBool{Bool: true, Valid: true},
-		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt:         staticClock.Now(),
+		ReimbursementReference: nextReimbursementReference(),
+		UserID:                 int64(user3),
+		GameID:                 "g1",
+		Going:                  sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:            sql.NullTime{Time: time.Now(), Valid: true},
 	})
 
 	r := httptest.NewRequest(http.MethodGet, "/api/games/g1/participants", nil)
@@ -1475,20 +1502,22 @@ func TestPutApiGamesIdParticipants_UpdateGuestsChangesQueueOrder(t *testing.T) {
 
 	// User 1: going first at time T0
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		GoingUpdatedAt: time.Now().Add(-2 * time.Second), // T0 - earlier
-		UserID:         int64(user1),
-		GameID:         "g1",
-		Going:          sql.NullBool{Bool: true, Valid: true},
-		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt:         time.Now().Add(-2 * time.Second), // T0 - earlier
+		ReimbursementReference: nextReimbursementReference(),
+		UserID:                 int64(user1),
+		GameID:                 "g1",
+		Going:                  sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:            sql.NullTime{Time: time.Now(), Valid: true},
 	})
 
 	// User 2: going second at time T1 (slightly later)
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		GoingUpdatedAt: time.Now().Add(-1 * time.Second), // T1 - later
-		UserID:         int64(user2),
-		GameID:         "g1",
-		Going:          sql.NullBool{Bool: true, Valid: true},
-		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt:         time.Now().Add(-1 * time.Second), // T1 - later
+		ReimbursementReference: nextReimbursementReference(),
+		UserID:                 int64(user2),
+		GameID:                 "g1",
+		Going:                  sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:            sql.NullTime{Time: time.Now(), Valid: true},
 	})
 
 	// Now user1 updates their participation to add a guest (should trigger going_updated_at to update)
@@ -1711,18 +1740,20 @@ func TestOrganizerLateJoinFullGamePushesLastToWaitlist(t *testing.T) {
 
 	// Fill main list
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		GoingUpdatedAt: staticClock.Now().Add(-2 * time.Second),
-		UserID:         int64(userEarly),
-		GameID:         "gorgpush",
-		Going:          sql.NullBool{Bool: true, Valid: true},
-		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt:         staticClock.Now().Add(-2 * time.Second),
+		ReimbursementReference: nextReimbursementReference(),
+		UserID:                 int64(userEarly),
+		GameID:                 "gorgpush",
+		Going:                  sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:            sql.NullTime{Time: time.Now(), Valid: true},
 	})
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		GoingUpdatedAt: staticClock.Now().Add(-1 * time.Second),
-		UserID:         int64(userLate),
-		GameID:         "gorgpush",
-		Going:          sql.NullBool{Bool: true, Valid: true},
-		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt:         staticClock.Now().Add(-1 * time.Second),
+		ReimbursementReference: nextReimbursementReference(),
+		UserID:                 int64(userLate),
+		GameID:                 "gorgpush",
+		Going:                  sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:            sql.NullTime{Time: time.Now(), Valid: true},
 	})
 
 	// Organizer joins late via POST
@@ -1963,11 +1994,12 @@ func TestPutApiGamesIdParticipants_NonOrganizerWaitlistedWhenFull(t *testing.T) 
 
 	// First user already in the game
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		GoingUpdatedAt: staticClock.Now().Add(-time.Second),
-		UserID:         int64(user1),
-		GameID:         "gfull",
-		Going:          sql.NullBool{Bool: true, Valid: true},
-		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt:         staticClock.Now().Add(-time.Second),
+		ReimbursementReference: nextReimbursementReference(),
+		UserID:                 int64(user1),
+		GameID:                 "gfull",
+		Going:                  sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:            sql.NullTime{Time: time.Now(), Valid: true},
 	})
 
 	// Second user (non-organizer) tries to join - should be waitlisted
@@ -2037,11 +2069,12 @@ func TestPutApiGamesIdParticipants_OrganizerAlwaysGetsGoingStatus(t *testing.T) 
 
 	// First user already in the game
 	querier.ParticipantsUpsert(context.Background(), db.ParticipantsUpsertParams{
-		GoingUpdatedAt: staticClock.Now().Add(-time.Second),
-		UserID:         int64(user1),
-		GameID:         "gorgfull",
-		Going:          sql.NullBool{Bool: true, Valid: true},
-		ConfirmedAt:    sql.NullTime{Time: time.Now(), Valid: true},
+		GoingUpdatedAt:         staticClock.Now().Add(-time.Second),
+		ReimbursementReference: nextReimbursementReference(),
+		UserID:                 int64(user1),
+		GameID:                 "gorgfull",
+		Going:                  sql.NullBool{Bool: true, Valid: true},
+		ConfirmedAt:            sql.NullTime{Time: time.Now(), Valid: true},
 	})
 
 	// Organizer tries to join - should always get "going" even when full
