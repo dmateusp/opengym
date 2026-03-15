@@ -32,6 +32,260 @@ const getInitials = (name?: string | null, email?: string) => {
 
 const formatCents = (amountCents: number) => (amountCents / 100).toFixed(2);
 
+type EntriesProps = {
+  entries: GameReimbursementEntry[];
+  updating: string | null;
+  onSetReceivedAt: (participantId: string, value: string | null) => void;
+};
+
+function ReimbursementsTable({ entries, updating, onSetReceivedAt }: EntriesProps) {
+  const { t } = useTranslation();
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-gray-200 text-left text-gray-500 text-xs uppercase tracking-wider">
+            <th className="pb-3 pr-4">{t("reimbursements.reference")}</th>
+            <th className="pb-3 pr-4 text-right">{t("reimbursements.amountOwed")}</th>
+            <th className="pb-3 pr-4">{t("reimbursements.participant")}</th>
+            <th className="pb-3 pr-4">{t("reimbursements.sentAt")}</th>
+            <th className="pb-3 pr-4">{t("reimbursements.receivedAt")}</th>
+            <th className="pb-3">{t("reimbursements.actions")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {entries.map((entry) => {
+            const p = entry.participant;
+            const isUpdating = updating === p.id;
+            const hasReceived = !!entry.reimbursementReceivedAt;
+            return (
+              <tr key={p.id} className="border-b border-gray-100 last:border-0">
+                <td className="py-4 pr-4">
+                  <span className="inline-flex min-w-12 justify-center rounded-md bg-gray-100 px-2 py-1 font-mono text-xs font-semibold text-gray-700">
+                    {entry.reimbursementReference || "----"}
+                  </span>
+                </td>
+
+                <td className="py-4 pr-4 text-right">
+                  <span className="inline-flex min-w-16 justify-end rounded-md bg-emerald-50 px-2 py-1 font-mono text-xs font-semibold text-emerald-700">
+                    {formatCents(entry.amountOwedCents)}
+                  </span>
+                </td>
+
+                <td className="py-4 pr-4">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-9 w-9">
+                      {p.picture && (
+                        <AvatarImage src={p.picture} alt={p.name ?? p.email} />
+                      )}
+                      <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                        {getInitials(p.name, p.email)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-gray-900">{p.name ?? p.email}</p>
+                        {entry.guests > 0 && (
+                          <span
+                            className="inline-flex items-center justify-center rounded-full bg-secondary px-2 py-0.5 text-[11px] font-bold leading-none text-white"
+                            title={`+${entry.guests}`}
+                          >
+                            +{entry.guests}
+                          </span>
+                        )}
+                      </div>
+                      {p.name && <p className="text-xs text-gray-400">{p.email}</p>}
+                    </div>
+                  </div>
+                </td>
+
+                <td className="py-4 pr-4 text-gray-600">
+                  {entry.reimbursedAt ? (
+                    <div className="flex items-center gap-1.5 text-success">
+                      <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+                      <TimeDisplay timestamp={entry.reimbursedAt} displayFormat="relative" />
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 text-gray-400">
+                      <XCircle className="h-4 w-4 flex-shrink-0" />
+                      <span>{t("reimbursements.notSent")}</span>
+                    </div>
+                  )}
+                </td>
+
+                <td className="py-4 pr-4 text-gray-600">
+                  {entry.reimbursementReceivedAt ? (
+                    <div className="flex items-center gap-1.5 text-success">
+                      <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+                      <TimeDisplay
+                        timestamp={entry.reimbursementReceivedAt}
+                        displayFormat="relative"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 text-gray-400">
+                      <XCircle className="h-4 w-4 flex-shrink-0" />
+                      <span>{t("reimbursements.notReceived")}</span>
+                    </div>
+                  )}
+                </td>
+
+                <td className="py-4">
+                  {hasReceived ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={isUpdating}
+                      onClick={() => onSetReceivedAt(p.id, null)}
+                    >
+                      {isUpdating ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        t("reimbursements.clearReceived")
+                      )}
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      disabled={isUpdating}
+                      onClick={() => onSetReceivedAt(p.id, new Date().toISOString())}
+                    >
+                      {isUpdating ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        t("reimbursements.markReceived")
+                      )}
+                    </Button>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function ReimbursementCards({ entries, updating, onSetReceivedAt }: EntriesProps) {
+  const { t } = useTranslation();
+  return (
+    <div className="space-y-4">
+      {entries.map((entry) => {
+        const p = entry.participant;
+        const isUpdating = updating === p.id;
+        const hasReceived = !!entry.reimbursementReceivedAt;
+        return (
+          <Card key={p.id} className="p-4">
+            {/* Participant header row */}
+            <div className="flex items-center gap-3 mb-3">
+              <Avatar className="h-10 w-10 flex-shrink-0">
+                {p.picture && (
+                  <AvatarImage src={p.picture} alt={p.name ?? p.email} />
+                )}
+                <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                  {getInitials(p.name, p.email)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="font-medium text-gray-900 truncate">
+                    {p.name ?? p.email}
+                  </p>
+                  {entry.guests > 0 && (
+                    <span
+                      className="inline-flex items-center justify-center rounded-full bg-secondary px-2 py-0.5 text-[11px] font-bold leading-none text-white flex-shrink-0"
+                      title={`+${entry.guests}`}
+                    >
+                      +{entry.guests}
+                    </span>
+                  )}
+                </div>
+                {p.name && (
+                  <p className="text-xs text-gray-400 truncate">{p.email}</p>
+                )}
+              </div>
+              <span className="inline-flex items-center rounded-md bg-emerald-50 px-2 py-1 font-mono text-xs font-semibold text-emerald-700 flex-shrink-0">
+                {formatCents(entry.amountOwedCents)}
+              </span>
+            </div>
+
+            {/* Reference + status row */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-4">
+              <span className="inline-flex items-center rounded-md bg-gray-100 px-2 py-1 font-mono text-xs font-semibold text-gray-700">
+                {entry.reimbursementReference || "----"}
+              </span>
+
+              <div className="flex items-center gap-1.5 text-xs">
+                <span className="text-gray-500">{t("reimbursements.sentAt")}:</span>
+                {entry.reimbursedAt ? (
+                  <div className="flex items-center gap-1 text-success">
+                    <CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0" />
+                    <TimeDisplay timestamp={entry.reimbursedAt} displayFormat="relative" />
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1 text-gray-400">
+                    <XCircle className="h-3.5 w-3.5 flex-shrink-0" />
+                    <span>{t("reimbursements.notSent")}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1.5 text-xs">
+                <span className="text-gray-500">{t("reimbursements.receivedAt")}:</span>
+                {entry.reimbursementReceivedAt ? (
+                  <div className="flex items-center gap-1 text-success">
+                    <CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0" />
+                    <TimeDisplay
+                      timestamp={entry.reimbursementReceivedAt}
+                      displayFormat="relative"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1 text-gray-400">
+                    <XCircle className="h-3.5 w-3.5 flex-shrink-0" />
+                    <span>{t("reimbursements.notReceived")}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Action button */}
+            {hasReceived ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                disabled={isUpdating}
+                onClick={() => onSetReceivedAt(p.id, null)}
+              >
+                {isUpdating ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  t("reimbursements.clearReceived")
+                )}
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                className="w-full"
+                disabled={isUpdating}
+                onClick={() => onSetReceivedAt(p.id, new Date().toISOString())}
+              >
+                {isUpdating ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  t("reimbursements.markReceived")
+                )}
+              </Button>
+            )}
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function ReimbursementsPage() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
@@ -212,153 +466,22 @@ export default function ReimbursementsPage() {
                 {t("reimbursements.noParticipants")}
               </p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-200 text-left text-gray-500 text-xs uppercase tracking-wider">
-                      <th className="pb-3 pr-4">{t("reimbursements.reference")}</th>
-                      <th className="pb-3 pr-4 text-right">{t("reimbursements.amountOwed")}</th>
-                      <th className="pb-3 pr-4">{t("reimbursements.participant")}</th>
-                      <th className="pb-3 pr-4">{t("reimbursements.sentAt")}</th>
-                      <th className="pb-3 pr-4">{t("reimbursements.receivedAt")}</th>
-                      <th className="pb-3">{t("reimbursements.actions")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {entries.map((entry) => {
-                      const p = entry.participant;
-                      const isUpdating = updating === p.id;
-                      const hasReceived = !!entry.reimbursementReceivedAt;
-                      return (
-                        <tr
-                          key={p.id}
-                          className="border-b border-gray-100 last:border-0"
-                        >
-                          <td className="py-4 pr-4">
-                            <span className="inline-flex min-w-12 justify-center rounded-md bg-gray-100 px-2 py-1 font-mono text-xs font-semibold text-gray-700">
-                              {entry.reimbursementReference || "----"}
-                            </span>
-                          </td>
-
-                          <td className="py-4 pr-4 text-right">
-                            <span className="inline-flex min-w-16 justify-end rounded-md bg-emerald-50 px-2 py-1 font-mono text-xs font-semibold text-emerald-700">
-                              {formatCents(entry.amountOwedCents)}
-                            </span>
-                          </td>
-
-                          {/* Participant */}
-                          <td className="py-4 pr-4">
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-9 w-9">
-                                {p.picture && (
-                                  <AvatarImage
-                                    src={p.picture}
-                                    alt={p.name ?? p.email}
-                                  />
-                                )}
-                                <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                                  {getInitials(p.name, p.email)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <p className="font-medium text-gray-900">
-                                    {p.name ?? p.email}
-                                  </p>
-                                  {entry.guests > 0 && (
-                                    <span
-                                      className="inline-flex items-center justify-center rounded-full bg-secondary px-2 py-0.5 text-[11px] font-bold leading-none text-white"
-                                      title={`+${entry.guests}`}
-                                    >
-                                      +{entry.guests}
-                                    </span>
-                                  )}
-                                </div>
-                                {p.name && (
-                                  <p className="text-xs text-gray-400">{p.email}</p>
-                                )}
-                              </div>
-                            </div>
-                          </td>
-
-                          {/* Sent at (participant-set) */}
-                          <td className="py-4 pr-4 text-gray-600">
-                            {entry.reimbursedAt ? (
-                              <div className="flex items-center gap-1.5 text-success">
-                                <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
-                                <TimeDisplay
-                                  timestamp={entry.reimbursedAt}
-                                  displayFormat="relative"
-                                />
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-1.5 text-gray-400">
-                                <XCircle className="h-4 w-4 flex-shrink-0" />
-                                <span>{t("reimbursements.notSent")}</span>
-                              </div>
-                            )}
-                          </td>
-
-                          {/* Received at (organizer-set) */}
-                          <td className="py-4 pr-4 text-gray-600">
-                            {entry.reimbursementReceivedAt ? (
-                              <div className="flex items-center gap-1.5 text-success">
-                                <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
-                                <TimeDisplay
-                                  timestamp={entry.reimbursementReceivedAt}
-                                  displayFormat="relative"
-                                />
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-1.5 text-gray-400">
-                                <XCircle className="h-4 w-4 flex-shrink-0" />
-                                <span>{t("reimbursements.notReceived")}</span>
-                              </div>
-                            )}
-                          </td>
-
-                          {/* Organizer action */}
-                          <td className="py-4">
-                            {hasReceived ? (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={isUpdating}
-                                onClick={() =>
-                                  handleSetReceivedAt(p.id, null)
-                                }
-                              >
-                                {isUpdating ? (
-                                  <Loader2 className="h-3 w-3 animate-spin" />
-                                ) : (
-                                  t("reimbursements.clearReceived")
-                                )}
-                              </Button>
-                            ) : (
-                              <Button
-                                size="sm"
-                                disabled={isUpdating}
-                                onClick={() =>
-                                  handleSetReceivedAt(
-                                    p.id,
-                                    new Date().toISOString()
-                                  )
-                                }
-                              >
-                                {isUpdating ? (
-                                  <Loader2 className="h-3 w-3 animate-spin" />
-                                ) : (
-                                  t("reimbursements.markReceived")
-                                )}
-                              </Button>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <>
+                <div className="hidden md:block">
+                  <ReimbursementsTable
+                    entries={entries}
+                    updating={updating}
+                    onSetReceivedAt={handleSetReceivedAt}
+                  />
+                </div>
+                <div className="md:hidden">
+                  <ReimbursementCards
+                    entries={entries}
+                    updating={updating}
+                    onSetReceivedAt={handleSetReceivedAt}
+                  />
+                </div>
+              </>
             )}
           </div>
         </Card>
