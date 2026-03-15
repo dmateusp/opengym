@@ -163,7 +163,7 @@ export const getApiGamesByIdReimbursementsByParticipantId = <ThrowOnError extend
 /**
  * List reimbursements for a game
  *
- * Returns the reimbursement tracking entries needed to build the reimbursements page. Only the organizer and participants of the game can access it.
+ * Returns the reimbursement tracking entries needed to build the reimbursements page. Accessible only to the game organizer and only after the game is frozen.
  */
 export const getApiGamesByIdReimbursements = <ThrowOnError extends boolean = false>(options: Options<GetApiGamesByIdReimbursementsData, ThrowOnError>) => (options.client ?? client).get<GetApiGamesByIdReimbursementsResponses, GetApiGamesByIdReimbursementsErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -174,7 +174,7 @@ export const getApiGamesByIdReimbursements = <ThrowOnError extends boolean = fal
 /**
  * Update reimbursement status for a participant
  *
- * Update reimbursement tracking for a game participant. Organizers provide participantId and can set reimbursement_received_at. Participants set their own reimbursed_at without providing participantId.
+ * Update reimbursement tracking for a game participant. Organizers provide participantId and reimbursementReceivedAt. Participants set their own reimbursedAt without providing participantId.
  */
 export const putApiGamesByIdReimbursements = <ThrowOnError extends boolean = false>(options: Options<PutApiGamesByIdReimbursementsData, ThrowOnError>) => (options.client ?? client).put<PutApiGamesByIdReimbursementsResponses, PutApiGamesByIdReimbursementsErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],

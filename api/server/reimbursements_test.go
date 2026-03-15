@@ -320,7 +320,7 @@ func TestPutApiGamesIdReimbursements_Unauthorized(t *testing.T) {
 	querier := db.New(sqlDB)
 	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
 
-	body := []byte(`{"reimbursed_at":null}`)
+	body := []byte(`{"reimbursedAt":null}`)
 	r := httptest.NewRequest(http.MethodPut, "/api/games/g1/reimbursements", bytes.NewReader(body))
 	w := httptest.NewRecorder()
 
@@ -341,7 +341,7 @@ func TestPutApiGamesIdReimbursements_GameNotFound(t *testing.T) {
 	querier := db.New(sqlDB)
 	srv := server.NewServer(db.NewQuerierWrapper(querier), server.NewRandomAlphanumericGenerator(), staticClock, sqlDB)
 
-	body := []byte(`{"reimbursed_at":null}`)
+	body := []byte(`{"reimbursedAt":null}`)
 	r := httptest.NewRequest(http.MethodPut, "/api/games/missing/reimbursements", bytes.NewReader(body))
 	r = r.WithContext(auth.WithAuthInfo(r.Context(), auth.AuthInfo{UserId: int(userID)}))
 	w := httptest.NewRecorder()

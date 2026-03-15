@@ -339,12 +339,12 @@ export type UpdateReimbursementRequest = {
     /**
      * When the organizer received and confirmed the reimbursement. Set to null to clear.
      */
-    reimbursement_received_at?: string | null;
+    reimbursementReceivedAt: string | null;
 } | {
     /**
      * When the participant sent the reimbursement. Set to null to clear.
      */
-    reimbursed_at: string | null;
+    reimbursedAt: string | null;
 };
 
 export type ReimbursementRecord = {
@@ -363,11 +363,11 @@ export type ReimbursementRecord = {
     /**
      * When the participant sent the reimbursement
      */
-    reimbursed_at?: string | null;
+    reimbursedAt?: string | null;
     /**
      * When the organizer received and confirmed the reimbursement
      */
-    reimbursement_received_at?: string | null;
+    reimbursementReceivedAt?: string | null;
     /**
      * Timestamp when the reimbursement record was created
      */
@@ -848,11 +848,15 @@ export type GetApiGamesByIdReimbursementsData = {
 
 export type GetApiGamesByIdReimbursementsErrors = {
     /**
+     * Bad request - reimbursements are only available for frozen games
+     */
+    400: Error;
+    /**
      * Unauthorized - invalid or missing token
      */
     401: Error;
     /**
-     * Forbidden - not the organizer or a participant of this game
+     * Forbidden - only the organizer can access this endpoint
      */
     403: Error;
     /**
@@ -886,7 +890,7 @@ export type PutApiGamesByIdReimbursementsData = {
 
 export type PutApiGamesByIdReimbursementsErrors = {
     /**
-     * Invalid request data or participant tried to include participantId field
+     * Invalid request data or participant tried to include participantId/reimbursementReceivedAt fields
      */
     400: Error;
     /**

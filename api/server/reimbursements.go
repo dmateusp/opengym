@@ -255,7 +255,7 @@ func (s *server) PutApiGamesIdReimbursements(w http.ResponseWriter, r *http.Requ
 			return
 		}
 		if organizerReq.ParticipantId != "" || organizerReq.ReimbursementReceivedAt.IsSpecified() {
-			http.Error(w, "participants cannot set participantId or reimbursement_received_at", http.StatusBadRequest)
+			http.Error(w, "participants cannot set participantId or reimbursementReceivedAt", http.StatusBadRequest)
 			return
 		}
 
