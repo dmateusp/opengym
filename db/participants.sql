@@ -18,7 +18,8 @@ on conflict(user_id, game_id) do update set
         excluded.going_updated_at
     ),
     confirmed_at = coalesce(excluded.confirmed_at, game_participants.confirmed_at),
-    guests = coalesce(excluded.guests, game_participants.guests);
+    guests = coalesce(excluded.guests, game_participants.guests),
+    reimbursement_reference = coalesce(game_participants.reimbursement_reference, excluded.reimbursement_reference);
 
 -- name: ParticipantsList :many
 select
